@@ -53,3 +53,25 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   2's ticket says "on a schedule" — full background scheduling (WorkManager/BGTaskScheduler)
   is its own dependency and its own testing surface. Revisit: call `createBackup` on app
   launch if the last backup is older than 24h, before reaching for a background-task package.
+
+## Sprint 3
+
+- **Default categories/wallet are seeded in code (`domain/default_categories.dart`)**, not
+  entered by the user, since category management (create/edit/reorder, Sprint 5+ territory)
+  doesn't exist yet and the capture sheet needs something real to select. Not fabricated
+  transaction data — structural config only, seeded once, idempotent. Revisit: replace with
+  user-editable categories once that screen exists; the seed stays as the first-run default.
+- **Only IDR is wired through the capture sheet.** The numpad's decimal key and the currency
+  picker are conditioned on `CurrencyInfo.of(currency).exponent`, so the plumbing is currency-
+  aware already, but only one account/currency is seeded. Revisit when Sprint 5 adds wallet
+  creation with a currency choice.
+- **Transfer is selectable in the segmented control but not saveable yet** (shows a snackbar).
+  A transfer needs two accounts, and wallets don't exist until Sprint 5. Building the two-leg
+  transfer write now, before there's a second account to transfer to, would be untested code.
+  Revisit: Sprint 5, "Transfer flow between wallets".
+- **No frequency templates, calculator toggle, date/time button, or receipt photo** — all
+  explicitly Sprint 4 ("the capture sheet, speed"). Sprint 3's done-when is an expense saved
+  end to end with a measured save; speed features come after structure works.
+- **Home screen is a placeholder** (`HomeShell`): the token demo screen plus a FAB into the
+  capture sheet. Real tab navigation (Catat/Kantong/Pantau) doesn't start until Sprint 6-9.
+  Revisit then, replacing `HomeShell` rather than growing it.
