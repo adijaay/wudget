@@ -1,0 +1,94 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Catat cepat (sheet)",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Catat.dc.html",
+      "title": "Catat (buku harian)",
+      "x": 470,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Pantau.dc.html",
+      "title": "Pantau (laju + perkiraan)",
+      "x": 940,
+      "y": 0,
+      "w": 390,
+      "h": 1060
+    },
+    {
+      "file": "Kantong.dc.html",
+      "title": "Kantong (dompet + kartu)",
+      "x": 1410,
+      "y": 0,
+      "w": 390,
+      "h": 920
+    },
+    {
+      "file": "BudgetProposal.dc.html",
+      "title": "Usulan anggaran (hari ke-14)",
+      "x": 1880,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PeriodClose.dc.html",
+      "title": "Tutup bulan",
+      "x": 2350,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Tokens.dc.html",
+      "title": "Token dan aturan",
+      "x": 0,
+      "y": 1180,
+      "w": 880,
+      "h": 1180
+    },
+    {
+      "file": "States.dc.html",
+      "title": "Keadaan kosong, menunggu, error",
+      "x": 960,
+      "y": 1180,
+      "w": 1720,
+      "h": 960
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -150,
+      "w": 620,
+      "text": "wudget, mockup statis.\nArah: kepribadian lokal yang hangat, ENERGY 2 / RHYTHM 2 / MOTION 2 (DESIGN.md).\nAksen, huruf, dan motif masih usulan, belum diputuskan. Coba chip Warna di artboard pertama."
+    },
+    {
+      "id": "pace-bet",
+      "x": 940,
+      "y": -150,
+      "w": 400,
+      "text": "Taruhan yang membedakan wudget:\nlaju dan perkiraan di depan, sisa anggaran satu tap di belakang.\nAlasannya di research/05, bagian 11."
+    },
+    {
+      "id": "states-note",
+      "x": 960,
+      "y": 1086,
+      "w": 520,
+      "text": "Tidak satu pun dari 28 screenshot pesaing menunjukkan layar kosong, menunggu, atau error. Justru di situ mereka rusak menurut review. Empat layar ini yang dibedakan."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

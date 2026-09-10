@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; }
+    a { color: oklch(0.52 0.09 205); } a:hover { color: oklch(0.42 0.09 205); }
+    .amt { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 1060px; background: oklch(0.985 0.006 80); position: relative; color: oklch(0.22 0.015 60);">
+
+  <div style="padding: 56px 20px 10px 20px;">
+    <div style="font-size: 24px; font-weight: 700; letter-spacing: -0.01em;">Pantau</div>
+  </div>
+
+  <div style="padding: 0 20px 12px 20px; display: flex; align-items: center; gap: 10px;">
+    <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="oklch(0.48 0.02 60)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></div>
+    <div style="flex-grow: 1; text-align: center;">
+      <div style="font-size: 14px; font-weight: 600;">September 2026</div>
+      <div style="font-size: 11px; color: oklch(0.55 0.02 60);">hari ke-11 dari 30</div>
+    </div>
+    <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="oklch(0.48 0.02 60)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></div>
+  </div>
+
+  <div style="padding: 0 16px 108px 16px; display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- PACE, not remaining balance. The sentence is the point. -->
+    <div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.92 0.008 70); border-radius: 16px; padding: 16px;">
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <svg width="84" height="84" viewBox="0 0 84 84">
+          <circle cx="42" cy="42" r="34" fill="none" stroke="oklch(0.93 0.008 70)" stroke-width="9"/>
+          <circle cx="42" cy="42" r="34" fill="none" stroke="oklch(0.52 0.09 205)" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="115 214" transform="rotate(-90 42 42)"/>
+          <text x="42" y="39" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="19" font-weight="700" fill="oklch(0.22 0.015 60)">54%</text>
+          <text x="42" y="53" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.50 0.02 60)">terpakai</text>
+        </svg>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: oklch(0.55 0.02 60); margin-bottom: 4px;">LAJU BELANJA</div>
+          <div style="font-size: 15px; font-weight: 600; line-height: 1.35; text-wrap: pretty;">Bulan jalan 37%, belanjamu 54%. Agak lebih cepat dari waktunya.</div>
+          <div style="font-size: 12px; color: oklch(0.50 0.02 60); margin-top: 6px;">Rp 2.430.000 dari Rp 4.500.000</div>
+        </div>
+      </div>
+      <!-- over-pace marked by icon and sign, never by hue alone -->
+      <div style="display: flex; align-items: center; gap: 7px; margin-top: 12px; padding: 9px 11px; background: oklch(0.96 0.02 40); border-radius: 10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="oklch(0.48 0.11 40)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+        <span style="font-size: 12.5px; font-weight: 600; color: oklch(0.40 0.09 40);">+17 poin di atas waktu berjalan</span>
+      </div>
+    </div>
+
+    <!-- ACTUAL vs FORECAST. Projection is always dashed and labelled. -->
+    <div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.92 0.008 70); border-radius: 16px; padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+        <div style="font-size: 14px; font-weight: 700;">Perkiraan akhir bulan</div>
+        <div class="amt" style="font-size: 15px; font-weight: 700;">Rp 4.980.000</div>
+      </div>
+      <div style="font-size: 12.5px; color: oklch(0.44 0.02 60); margin-bottom: 10px;">Kalau lajunya begini terus, lewat Rp 480.000 dari rencana.</div>
+
+      <svg width="330" height="146" viewBox="0 0 330 146">
+        <!-- budget target line, dashed, labelled -->
+        <line x1="6" y1="34" x2="286" y2="34" stroke="oklch(0.58 0.02 60)" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <text x="292" y="31" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.50 0.02 60)">4,5jt</text>
+        <text x="292" y="42" font-family="Plus Jakarta Sans, sans-serif" font-size="8.5" fill="oklch(0.50 0.02 60)">rencana</text>
+
+        <!-- actual, solid to today -->
+        <path d="M6 122 C 34 115, 62 104, 88 95 L 124 82" fill="none" stroke="oklch(0.52 0.09 205)" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="124" cy="82" r="4" fill="oklch(0.52 0.09 205)"/>
+        <!-- forecast, dashed beyond today -->
+        <path d="M124 82 L 286 24" fill="none" stroke="oklch(0.60 0.04 205)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>
+        <circle cx="286" cy="24" r="3.4" fill="none" stroke="oklch(0.60 0.04 205)" stroke-width="2"/>
+
+        <!-- today marker -->
+        <line x1="124" y1="14" x2="124" y2="130" stroke="oklch(0.88 0.008 70)" stroke-width="1"/>
+        <text x="124" y="142" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="oklch(0.50 0.02 60)">hari ini</text>
+        <text x="6" y="142" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="oklch(0.50 0.02 60)">1</text>
+        <text x="286" y="142" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="oklch(0.50 0.02 60)">30</text>
+      </svg>
+
+      <div style="display: flex; gap: 16px; margin-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 14px; height: 2.6px; background: oklch(0.52 0.09 205); border-radius: 2px;"></span>
+          <span style="font-size: 11px; color: oklch(0.44 0.02 60);">Sudah terjadi</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke="oklch(0.60 0.04 205)" stroke-width="2.4" stroke-dasharray="4 3"/></svg>
+          <span style="font-size: 11px; color: oklch(0.44 0.02 60);">Perkiraan</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- remaining balance lives BEHIND a tap, not on the hero -->
+    <div style="display: flex; align-items: center; gap: 10px; padding: 13px 16px; background: oklch(0.965 0.005 75); border-radius: 12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="oklch(0.45 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v7A1.5 1.5 0 0 1 19.5 17h-15A1.5 1.5 0 0 1 3 15.5z"/><circle cx="12" cy="12" r="2.4"/></svg>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 600; color: oklch(0.34 0.02 60);">Lihat sisa anggaran</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+    </div>
+
+    <!-- ranked list, not a second pie -->
+    <div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.92 0.008 70); border-radius: 16px; padding: 14px 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="font-size: 14px; font-weight: 700;">Paling banyak keluar</div>
+        <div style="font-size: 11.5px; color: oklch(0.50 0.02 60);">Kategori &#183; Top 4</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="font-size: 11px; font-weight: 700; color: oklch(0.50 0.02 60); width: 12px;">1</span>
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.62 0.10 40);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Makan &amp; minum</div>
+            <div style="font-size: 11px; color: oklch(0.55 0.02 60);">41 transaksi &#183; 32%</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">780.000</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="font-size: 11px; font-weight: 700; color: oklch(0.50 0.02 60); width: 12px;">2</span>
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.09 205);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Transport</div>
+            <div style="font-size: 11px; color: oklch(0.55 0.02 60);">28 transaksi &#183; 19%</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">460.000</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="font-size: 11px; font-weight: 700; color: oklch(0.50 0.02 60); width: 12px;">3</span>
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.09 320);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Belanja</div>
+            <div style="font-size: 11px; color: oklch(0.55 0.02 60);">6 transaksi &#183; 16%</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">390.000</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="font-size: 11px; font-weight: 700; color: oklch(0.50 0.02 60); width: 12px;">4</span>
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.08 130);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Rumah</div>
+            <div style="font-size: 11px; color: oklch(0.55 0.02 60);">3 transaksi &#183; 14%</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">350.000</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- the exceptional-expense bucket, visible as one set -->
+    <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; background: oklch(0.995 0.003 80); border: 1px dashed oklch(0.84 0.02 70); border-radius: 14px;">
+      <div style="width: 36px; height: 36px; border-radius: 11px; background: oklch(0.95 0.02 70); display: flex; align-items: center; justify-content: center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="oklch(0.45 0.04 70)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v3M12 17v3M4.9 7.5l2.1 2.1M17 14.4l2.1 2.1M4 12h3M17 12h3M4.9 16.5 7 14.4M17 9.6l2.1-2.1"/></svg>
+      </div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; font-weight: 700;">Tak terduga</div>
+        <div style="font-size: 11.5px; color: oklch(0.50 0.02 60);">Kondangan, servis motor</div>
+      </div>
+      <span class="amt" style="font-size: 13.5px; font-weight: 700;">Rp 250.000</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 88px; background: oklch(0.995 0.003 80); border-top: 1px solid oklch(0.92 0.008 70);">
+    <div style="display: flex; padding: 10px 8px 0 8px;">
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7M8 17h4"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Catat</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.52 0.09 205)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19V11M12 19V6M19 19v-5"/></svg>
+        <span style="font-size: 10.5px; font-weight: 700; color: oklch(0.52 0.09 205);">Pantau</span>
+      </div>
+      <div style="width: 62px;"></div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H19v12H6.5A2.5 2.5 0 0 1 4 15.5z"/><path d="M16 12h2"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Kantong</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Saya</span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 50%; margin-left: -28px; top: -22px; width: 56px; height: 56px; border-radius: 18px; background: oklch(0.52 0.09 205); box-shadow: 0 6px 18px oklch(0.52 0.09 205 / 0.34); display: flex; align-items: center; justify-content: center;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="oklch(0.99 0.005 80)" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":1060}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

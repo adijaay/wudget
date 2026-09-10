@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; }
+    a { color: oklch(0.80 0.07 205); } a:hover { color: oklch(0.88 0.06 205); }
+    .amt { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+  </style>
+</helmet>
+
+<!-- The one screen allowed to look different: it is a moment, not a tab. -->
+<div style="width: 390px; height: 844px; background: oklch(0.24 0.02 60); position: relative; overflow: hidden; color: oklch(0.97 0.005 80);">
+
+  <!-- the envelope motif, as a light form behind the content -->
+  <svg width="390" height="330" viewBox="0 0 390 330" style="position: absolute; top: 30px; left: 0; opacity: 0.16;">
+    <path d="M40 90h310v170H40z" fill="none" stroke="oklch(0.80 0.06 205)" stroke-width="1.6"/>
+    <path d="M40 90l155 105L350 90" fill="none" stroke="oklch(0.80 0.06 205)" stroke-width="1.6"/>
+  </svg>
+
+  <div style="position: relative; padding: 72px 24px 0 24px;">
+    <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: oklch(0.72 0.05 205);">TUTUP BULAN</div>
+    <div style="font-size: 30px; font-weight: 700; line-height: 1.15; margin-top: 10px; letter-spacing: -0.02em;">September sudah kelar</div>
+    <div style="font-size: 14.5px; color: oklch(0.78 0.01 70); line-height: 1.45; margin-top: 10px; text-wrap: pretty;">Bulan ini kamu catat 96 transaksi. Cukup buat lihat pola, bukan cuma angka.</div>
+  </div>
+
+  <div style="position: relative; padding: 26px 20px 0 20px; display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- what happened -->
+    <div style="background: oklch(0.29 0.02 60); border-radius: 16px; padding: 16px;">
+      <div style="display: flex; gap: 12px;">
+        <div style="flex-grow: 1;">
+          <div style="font-size: 11px; font-weight: 600; color: oklch(0.74 0.01 70); letter-spacing: 0.02em;">MASUK</div>
+          <div class="amt" style="font-size: 17px; font-weight: 700; margin-top: 3px; color: oklch(0.82 0.11 150);">+8.500.000</div>
+        </div>
+        <div style="width: 1px; background: oklch(0.36 0.02 60);"></div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 11px; font-weight: 600; color: oklch(0.74 0.01 70); letter-spacing: 0.02em;">KELUAR</div>
+          <div class="amt" style="font-size: 17px; font-weight: 700; margin-top: 3px; color: oklch(0.80 0.13 30);">&#8722;6.430.000</div>
+        </div>
+      </div>
+      <div style="height: 1px; background: oklch(0.36 0.02 60); margin: 14px 0;"></div>
+      <div style="display: flex; align-items: flex-start; gap: 9px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="oklch(0.80 0.06 205)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M4 17 9.5 11 13 14l7-8"/><path d="M15 6h5v5"/></svg>
+        <div style="font-size: 13.5px; line-height: 1.45; color: oklch(0.93 0.01 70); text-wrap: pretty;">Beda paling besar dari Agustus: belanja naik Rp 310.000, transport turun Rp 90.000.</div>
+      </div>
+    </div>
+
+    <!-- surplus sweep: the surplus is moved, not left on screen to spend -->
+    <div style="background: oklch(0.995 0.003 80); border-radius: 16px; padding: 16px; color: oklch(0.22 0.015 60);">
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: oklch(0.52 0.02 60);">SISA BULAN INI</div>
+      <div class="amt" style="font-size: 28px; font-weight: 700; margin-top: 3px; letter-spacing: -0.015em;">Rp 2.070.000</div>
+      <div style="font-size: 13px; color: oklch(0.44 0.02 60); line-height: 1.45; margin-top: 7px; text-wrap: pretty;">Kalau didiamkan, biasanya kepakai. Mau dipindah sekarang?</div>
+
+      <div style="display: flex; align-items: center; gap: 11px; margin-top: 14px; padding: 12px; background: oklch(0.96 0.008 75); border-radius: 12px;">
+        <div style="width: 36px; height: 36px; border-radius: 11px; background: oklch(0.52 0.09 205); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="oklch(0.99 0.005 80)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a7 7 0 0 1 7-7h3a6 6 0 0 1 6 6v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 11h.01"/><path d="M7 18v2M15 18v2"/></svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 13.5px; font-weight: 600;">Dana darurat</div>
+          <div style="font-size: 11.5px; color: oklch(0.52 0.02 60);">Rp 11.800.000 dari target Rp 20.000.000</div>
+          <!-- milestone chips: something completes early -->
+          <div style="display: flex; gap: 4px; margin-top: 7px;">
+            <span style="height: 5px; flex-grow: 1; border-radius: 3px; background: oklch(0.52 0.09 205);"></span>
+            <span style="height: 5px; flex-grow: 1; border-radius: 3px; background: oklch(0.52 0.09 205);"></span>
+            <span style="height: 5px; flex-grow: 1; border-radius: 3px; background: oklch(0.52 0.09 205);"></span>
+            <span style="height: 5px; flex-grow: 1; border-radius: 3px; background: oklch(0.87 0.02 205);"></span>
+            <span style="height: 5px; flex-grow: 1; border-radius: 3px; background: oklch(0.91 0.008 70);"></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 14px 0; border-radius: 12px; background: oklch(0.52 0.09 205); color: oklch(0.99 0.005 80); font-size: 14.5px; font-weight: 700; text-align: center; margin-top: 12px;">Sisihkan Rp 2.070.000</div>
+    </div>
+
+    <!-- next period, prefilled -->
+    <div style="background: oklch(0.29 0.02 60); border-radius: 16px; padding: 15px 16px; display: flex; align-items: center; gap: 12px;">
+      <div style="flex-grow: 1;">
+        <div style="font-size: 13.5px; font-weight: 600;">Anggaran Oktober</div>
+        <div style="font-size: 11.5px; color: oklch(0.76 0.01 70); margin-top: 2px;">Sudah diisi dari September, tinggal ubah kalau perlu</div>
+      </div>
+      <span class="amt" style="font-size: 14px; font-weight: 700;">Rp 4.900.000</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="oklch(0.76 0.01 70)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 20px 30px 20px;">
+    <div style="text-align: center; font-size: 13.5px; font-weight: 600; color: oklch(0.78 0.01 70);">Lanjut ke Oktober</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>
