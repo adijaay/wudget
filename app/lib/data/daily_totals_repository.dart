@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import 'actual_transactions.dart';
 import 'database.dart';
 
 const _millisPerDay = 86400000;
@@ -45,7 +46,7 @@ class DailyTotalsRepository {
   /// call this once after a restore instead. See DECISIONS.md, Sprint 6.
   Future<void> recomputeAll() async {
     final transactions = await (_db.select(_db.transactions)
-          ..where((t) => t.deletedAt.isNull()))
+          ..where((t) => isActualTransaction(t)))
         .get();
     final days = transactions.map((t) => dayBucketFor(t.occurredAt, t.tzOffsetMinutes)).toSet();
     await _db.delete(_db.dailyTotals).go();
@@ -69,7 +70,7 @@ class DailyTotalsRepository {
       innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
     ])
           ..where(_db.postings.accountId.isNotNull() &
-              _db.transactions.deletedAt.isNull() &
+              isActualTransaction(_db.transactions) &
               _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
               _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
         .get();

@@ -149,6 +149,50 @@ class AnalyticsEvents extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// A recurring item's rule, materialised forward to [generatedUntil] (the
+/// watermark) — plan/03-architecture.md "Recurrence". `templateJson` is the
+/// transaction to create each occurrence (kind, accounts, category, note,
+/// currency, and the amount when `amountMode` is `fixed`); a `varies` item
+/// carries [expectedMinMinor]/[expectedMaxMinor] instead of one fixed
+/// amount — plan/05-sprints.md Sprint 12, "variable-amount items with an
+/// expected range".
+class Recurrences extends Table {
+  TextColumn get id => text()();
+  TextColumn get templateJson => text()();
+  TextColumn get freq => text()(); // daily|weekly|monthly|yearly
+  IntColumn get intervalN => integer().withDefault(const Constant(1))();
+  IntColumn get byMonthDay => integer().nullable()(); // 1..31, or -1 for last day
+  IntColumn get byWeekday => integer().nullable()(); // ISO weekday, 1..7
+  TextColumn get weekendRule => text().withDefault(const Constant('none'))(); // none|before|after
+  TextColumn get amountMode => text().withDefault(const Constant('fixed'))(); // fixed|varies
+  IntColumn get expectedMinMinor => integer().nullable()();
+  IntColumn get expectedMaxMinor => integer().nullable()();
+  IntColumn get startsOn => integer()(); // day bucket
+  IntColumn get endsOn => integer().nullable()(); // day bucket
+  IntColumn get generatedUntil => integer()(); // day bucket watermark
+  IntColumn get updatedAt => integer()();
+  IntColumn get deletedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// A per-instance exception to a recurrence's schedule, keyed by the
+/// occurrence's *logical* (unshifted) day — plan/03-architecture.md:
+/// "Editing an instance writes an override." `action` is `skip` (nothing
+/// generated that occurrence), `move` (generated on [newDate] instead), or
+/// `amend` (generated with [newAmountMinor] instead of the template's).
+class RecurrenceOverrides extends Table {
+  TextColumn get recurrenceId => text()();
+  IntColumn get instanceDate => integer()(); // logical day bucket
+  TextColumn get action => text()(); // skip|move|amend
+  IntColumn get newDate => integer().nullable()();
+  IntColumn get newAmountMinor => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {recurrenceId, instanceDate};
+}
+
 @DriftDatabase(tables: [
   Accounts,
   Categories,
@@ -159,12 +203,14 @@ class AnalyticsEvents extends Table {
   Budgets,
   FeatureFlags,
   AnalyticsEvents,
+  Recurrences,
+  RecurrenceOverrides,
 ])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -185,6 +231,10 @@ class WudgetDatabase extends _$WudgetDatabase {
           if (from < 6) {
             await m.createTable(featureFlags);
             await m.createTable(analyticsEvents);
+          }
+          if (from < 7) {
+            await m.createTable(recurrences);
+            await m.createTable(recurrenceOverrides);
           }
         },
       );

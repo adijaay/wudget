@@ -364,3 +364,57 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   The experiment is specifically about the hero number (plan/01-features.md: "pace-first
   against remaining-first"), not about the rest of the review surface — narrowing the
   variance to the one contested bet keeps the measurement honest.
+
+## Sprint 12
+
+- **The date math lives entirely in `domain/recurrence.dart`, pure and DB-free** —
+  `RecurrenceRule.logicalOccurrence(n)` computes the nth occurrence fresh from `startsOn`
+  and the rule's own fields every time, never by stepping forward from the previous
+  occurrence. That's what makes the month-end clamp non-permanent for free: April's
+  clamped 30th has no memory that carries into May's fresh calculation of the 31st.
+  `weekend_rule` is applied only afterward, by `shiftForWeekend`, and the *next* occurrence
+  is always computed from the unshifted logical date — so a Sunday due date shifted to
+  Monday can never leak into where the following month's occurrence lands.
+- **Materialisation is idempotent by watermark, not by trying to detect existing rows.**
+  `_materializeOne` returns immediately if `toDayInclusive <= generatedUntil`; a rule is
+  never asked "does this occurrence already exist," it just doesn't try to make one earlier
+  than its own watermark. This is plan/03-architecture.md's stated failure mode
+  ("a missed run cannot produce... a month of entries all appear at once") turned directly
+  into the loop condition rather than a dedupe step layered on top.
+  `test/recurrence_repository_test.dart` proves calling `materializeAll` twice at the same
+  watermark, and once more at an earlier one, produces no new rows either time.
+  Deterministic transaction ids (`${recurrenceId}_${occurredOnDay}`) are a second, redundant
+  safety net, not the primary idempotency mechanism.
+- **A per-instance override (`skip`/`move`/`amend`) only takes effect at materialisation
+  time, for an occurrence not yet generated.** Overriding an instance that was already
+  materialised before the override was written does not retroactively edit or delete that
+  row — known gap, not attempted this sprint. The "one-instance against all-future" split
+  from the done-when is `editFutureFrom`: it ends the existing rule the day before the
+  effective date and starts a fresh `Recurrences` row from there, so a series-level edit
+  changes the rule going forward while every past (and already-materialised future) instance
+  under the old rule is untouched — a genuinely different operation from an override, not
+  the same mechanism reused.
+- **A `varies`-amount item materialises using its `expected_min_minor` as a placeholder
+  amount**, since a real `transactions` row needs a concrete number and inventing a midpoint
+  would look more precise than it is. Showing the range itself (`Rp X - Rp Y`) rather than
+  the placeholder number is Sprint 13's upcoming/active UI's job, not this sprint's.
+- **The shared `isActualTransaction` predicate (`data/actual_transactions.dart`) replaced
+  every ad hoc `transactions.deletedAt.isNull()` across the query layer** — period totals,
+  budget history, category ranking, `spending_queries`, `daily_totals`, capture templates,
+  and wallet balances. The wallet-balance case needed more than a search-and-replace: the
+  existing query excluded a non-actual posting's row from the join's WHERE clause, which
+  silently dropped the *account* from the wallet list entirely once its only posting was
+  projected (or soft-deleted) — an account with a lone future bill would vanish from Kantong.
+  Fixed by moving the filter onto the SUM itself (`amountMinor.sum(filter:
+  isActualTransaction(...))`, a SQL `FILTER (WHERE ...)`) so the account row always survives
+  the join and the sum treats a non-actual posting as contributing zero, rather than the
+  WHERE clause excluding the row that carries it.
+  `test/actual_transactions_test.dart` pins this down directly: a projected future bill must
+  move neither a wallet balance nor `totalCategorySpendMinor`/period totals, and confirming
+  it must make it count everywhere at once, with no per-surface flag to remember.
+- **`LedgerQueries` (Catat's list) now also excludes projected instances**, not just the
+  aggregates the ticket names outright — plan/03-architecture.md says "everywhere," and
+  showing an unconfirmed forecast mixed into recorded history would misrepresent it as
+  something that already happened. Sprint 13 ("Recurring and bills UI, split into upcoming
+  and active") owns giving projected instances their own surface; until then they're simply
+  not shown, which is truer than showing them unlabelled.

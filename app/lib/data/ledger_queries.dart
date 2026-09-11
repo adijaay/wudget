@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import 'actual_transactions.dart';
 import 'database.dart';
 
 /// One row in the Catat list: a transaction plus the names a human reads,
@@ -67,6 +68,11 @@ class LedgerFilter {
   }
 }
 
+/// Projected (recurrence-generated, unconfirmed) transactions are excluded
+/// here for now — Sprint 13 gives them their own "upcoming" surface, and
+/// mixing a forecast into the recorded-history list would misrepresent it
+/// as something that already happened. Confirming an instance clears
+/// `is_projected`, at which point it appears here like any other entry.
 class LedgerQueries {
   LedgerQueries(this._db);
   final WudgetDatabase _db;
@@ -104,7 +110,7 @@ class LedgerQueries {
       leftOuterJoin(catLeg,
           catLeg.transactionId.equalsExp(_db.transactions.id) & catLeg.categoryId.isNotNull()),
     ])
-      ..where(_db.transactions.deletedAt.isNull())
+      ..where(isActualTransaction(_db.transactions))
       ..groupBy([_db.transactions.id])
       ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
       ..limit(limit, offset: offset);

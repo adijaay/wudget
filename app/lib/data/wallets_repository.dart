@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import 'actual_transactions.dart';
 import 'database.dart';
 
 /// A wallet with its running balance — opening balance plus every posting
@@ -16,15 +17,17 @@ class WalletsRepository {
   final WudgetDatabase _db;
 
   Stream<List<WalletWithBalance>> watchWallets() {
-    final balanceSum = _db.postings.amountMinor.sum();
+    // A FILTER on the sum, not a row-excluding WHERE: an account whose
+    // only posting is soft-deleted or still projected must still appear
+    // (at its opening balance), which a WHERE that dropped non-actual
+    // posting rows would have hidden entirely once it had no other rows
+    // left to join on.
+    final balanceSum = _db.postings.amountMinor.sum(filter: isActualTransaction(_db.transactions));
     final query = _db.select(_db.accounts).join([
       leftOuterJoin(_db.postings, _db.postings.accountId.equalsExp(_db.accounts.id)),
       leftOuterJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
     ])
-      ..where(_db.accounts.archivedAt.isNull() &
-          // Keep accounts with no postings at all (left-joined nulls) as
-          // well as postings whose transaction isn't soft-deleted.
-          (_db.postings.id.isNull() | _db.transactions.deletedAt.isNull()))
+      ..where(_db.accounts.archivedAt.isNull())
       ..addColumns([balanceSum])
       ..groupBy([_db.accounts.id]);
 

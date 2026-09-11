@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import 'actual_transactions.dart';
 import 'database.dart';
 
 /// One entry in the frequency-templates row: a (category, last amount,
@@ -45,7 +46,7 @@ class CaptureQueries {
     ])
           ..where(catLeg.categoryId.isNotNull() &
               _db.transactions.kind.equals(kind) &
-              _db.transactions.deletedAt.isNull())
+              isActualTransaction(_db.transactions))
           ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
           ..limit(scanLimit))
         .get();
@@ -84,7 +85,7 @@ class CaptureQueries {
         acctLeg.transactionId.equalsExp(catLeg.transactionId) & acctLeg.accountId.isNotNull(),
       ),
     ])
-          ..where(catLeg.categoryId.equals(categoryId) & _db.transactions.deletedAt.isNull())
+          ..where(catLeg.categoryId.equals(categoryId) & isActualTransaction(_db.transactions))
           ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
           ..limit(1))
         .getSingleOrNull();

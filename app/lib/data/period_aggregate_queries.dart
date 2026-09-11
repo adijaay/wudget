@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../domain/period.dart';
+import 'actual_transactions.dart';
 import 'daily_totals_repository.dart' show dayBucketFor;
 import 'database.dart';
 
@@ -32,7 +33,7 @@ class PeriodAggregateQueries {
       innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
     ])
           ..where(_db.postings.categoryId.isNotNull() &
-              _db.transactions.deletedAt.isNull() &
+              isActualTransaction(_db.transactions) &
               _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
               _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
         .get();
@@ -53,11 +54,13 @@ class PeriodAggregateQueries {
     return PeriodTotals(expenseMinor: expenseMinor, incomeMinor: incomeMinor);
   }
 
-  /// The local day the earliest non-deleted transaction falls on, or null
-  /// with no history yet. Backs Pantau's first-14-days waiting state.
+  /// The local day the earliest actual transaction falls on, or null with
+  /// no history yet. Backs Pantau's first-14-days waiting state — a
+  /// projected future recurrence instance never counts as the user's
+  /// "first" entry, even if it was materialized before anything real.
   Future<int?> firstTransactionDay() async {
     final row = await (_db.select(_db.transactions)
-          ..where((t) => t.deletedAt.isNull())
+          ..where((t) => isActualTransaction(t))
           ..orderBy([(t) => OrderingTerm.asc(t.occurredAt)])
           ..limit(1))
         .getSingleOrNull();
@@ -86,7 +89,7 @@ class PeriodAggregateQueries {
     ])
           ..where(_db.postings.categoryId.isNotNull() &
               _db.transactions.kind.equals('expense') &
-              _db.transactions.deletedAt.isNull() &
+              isActualTransaction(_db.transactions) &
               _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
               _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
         .get();

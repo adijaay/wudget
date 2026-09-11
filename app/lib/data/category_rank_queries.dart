@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import 'actual_transactions.dart';
 import 'daily_totals_repository.dart' show dayBucketFor;
 import 'database.dart';
 
@@ -33,7 +34,7 @@ class CategoryRankQueries {
     ])
           ..where(_db.postings.categoryId.isNotNull() &
               _db.transactions.kind.equals('expense') &
-              _db.transactions.deletedAt.isNull() &
+              isActualTransaction(_db.transactions) &
               _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
               _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
         .get();

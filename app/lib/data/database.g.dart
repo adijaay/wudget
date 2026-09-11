@@ -3530,6 +3530,1071 @@ class AnalyticsEventsCompanion extends UpdateCompanion<AnalyticsEvent> {
   }
 }
 
+class $RecurrencesTable extends Recurrences
+    with TableInfo<$RecurrencesTable, Recurrence> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecurrencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _templateJsonMeta =
+      const VerificationMeta('templateJson');
+  @override
+  late final GeneratedColumn<String> templateJson = GeneratedColumn<String>(
+      'template_json', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _freqMeta = const VerificationMeta('freq');
+  @override
+  late final GeneratedColumn<String> freq = GeneratedColumn<String>(
+      'freq', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _intervalNMeta =
+      const VerificationMeta('intervalN');
+  @override
+  late final GeneratedColumn<int> intervalN = GeneratedColumn<int>(
+      'interval_n', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _byMonthDayMeta =
+      const VerificationMeta('byMonthDay');
+  @override
+  late final GeneratedColumn<int> byMonthDay = GeneratedColumn<int>(
+      'by_month_day', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _byWeekdayMeta =
+      const VerificationMeta('byWeekday');
+  @override
+  late final GeneratedColumn<int> byWeekday = GeneratedColumn<int>(
+      'by_weekday', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _weekendRuleMeta =
+      const VerificationMeta('weekendRule');
+  @override
+  late final GeneratedColumn<String> weekendRule = GeneratedColumn<String>(
+      'weekend_rule', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('none'));
+  static const VerificationMeta _amountModeMeta =
+      const VerificationMeta('amountMode');
+  @override
+  late final GeneratedColumn<String> amountMode = GeneratedColumn<String>(
+      'amount_mode', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('fixed'));
+  static const VerificationMeta _expectedMinMinorMeta =
+      const VerificationMeta('expectedMinMinor');
+  @override
+  late final GeneratedColumn<int> expectedMinMinor = GeneratedColumn<int>(
+      'expected_min_minor', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _expectedMaxMinorMeta =
+      const VerificationMeta('expectedMaxMinor');
+  @override
+  late final GeneratedColumn<int> expectedMaxMinor = GeneratedColumn<int>(
+      'expected_max_minor', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _startsOnMeta =
+      const VerificationMeta('startsOn');
+  @override
+  late final GeneratedColumn<int> startsOn = GeneratedColumn<int>(
+      'starts_on', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _endsOnMeta = const VerificationMeta('endsOn');
+  @override
+  late final GeneratedColumn<int> endsOn = GeneratedColumn<int>(
+      'ends_on', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _generatedUntilMeta =
+      const VerificationMeta('generatedUntil');
+  @override
+  late final GeneratedColumn<int> generatedUntil = GeneratedColumn<int>(
+      'generated_until', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        templateJson,
+        freq,
+        intervalN,
+        byMonthDay,
+        byWeekday,
+        weekendRule,
+        amountMode,
+        expectedMinMinor,
+        expectedMaxMinor,
+        startsOn,
+        endsOn,
+        generatedUntil,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recurrences';
+  @override
+  VerificationContext validateIntegrity(Insertable<Recurrence> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('template_json')) {
+      context.handle(
+          _templateJsonMeta,
+          templateJson.isAcceptableOrUnknown(
+              data['template_json']!, _templateJsonMeta));
+    } else if (isInserting) {
+      context.missing(_templateJsonMeta);
+    }
+    if (data.containsKey('freq')) {
+      context.handle(
+          _freqMeta, freq.isAcceptableOrUnknown(data['freq']!, _freqMeta));
+    } else if (isInserting) {
+      context.missing(_freqMeta);
+    }
+    if (data.containsKey('interval_n')) {
+      context.handle(_intervalNMeta,
+          intervalN.isAcceptableOrUnknown(data['interval_n']!, _intervalNMeta));
+    }
+    if (data.containsKey('by_month_day')) {
+      context.handle(
+          _byMonthDayMeta,
+          byMonthDay.isAcceptableOrUnknown(
+              data['by_month_day']!, _byMonthDayMeta));
+    }
+    if (data.containsKey('by_weekday')) {
+      context.handle(_byWeekdayMeta,
+          byWeekday.isAcceptableOrUnknown(data['by_weekday']!, _byWeekdayMeta));
+    }
+    if (data.containsKey('weekend_rule')) {
+      context.handle(
+          _weekendRuleMeta,
+          weekendRule.isAcceptableOrUnknown(
+              data['weekend_rule']!, _weekendRuleMeta));
+    }
+    if (data.containsKey('amount_mode')) {
+      context.handle(
+          _amountModeMeta,
+          amountMode.isAcceptableOrUnknown(
+              data['amount_mode']!, _amountModeMeta));
+    }
+    if (data.containsKey('expected_min_minor')) {
+      context.handle(
+          _expectedMinMinorMeta,
+          expectedMinMinor.isAcceptableOrUnknown(
+              data['expected_min_minor']!, _expectedMinMinorMeta));
+    }
+    if (data.containsKey('expected_max_minor')) {
+      context.handle(
+          _expectedMaxMinorMeta,
+          expectedMaxMinor.isAcceptableOrUnknown(
+              data['expected_max_minor']!, _expectedMaxMinorMeta));
+    }
+    if (data.containsKey('starts_on')) {
+      context.handle(_startsOnMeta,
+          startsOn.isAcceptableOrUnknown(data['starts_on']!, _startsOnMeta));
+    } else if (isInserting) {
+      context.missing(_startsOnMeta);
+    }
+    if (data.containsKey('ends_on')) {
+      context.handle(_endsOnMeta,
+          endsOn.isAcceptableOrUnknown(data['ends_on']!, _endsOnMeta));
+    }
+    if (data.containsKey('generated_until')) {
+      context.handle(
+          _generatedUntilMeta,
+          generatedUntil.isAcceptableOrUnknown(
+              data['generated_until']!, _generatedUntilMeta));
+    } else if (isInserting) {
+      context.missing(_generatedUntilMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Recurrence map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Recurrence(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      templateJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}template_json'])!,
+      freq: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}freq'])!,
+      intervalN: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}interval_n'])!,
+      byMonthDay: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}by_month_day']),
+      byWeekday: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}by_weekday']),
+      weekendRule: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}weekend_rule'])!,
+      amountMode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}amount_mode'])!,
+      expectedMinMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}expected_min_minor']),
+      expectedMaxMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}expected_max_minor']),
+      startsOn: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}starts_on'])!,
+      endsOn: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ends_on']),
+      generatedUntil: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}generated_until'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $RecurrencesTable createAlias(String alias) {
+    return $RecurrencesTable(attachedDatabase, alias);
+  }
+}
+
+class Recurrence extends DataClass implements Insertable<Recurrence> {
+  final String id;
+  final String templateJson;
+  final String freq;
+  final int intervalN;
+  final int? byMonthDay;
+  final int? byWeekday;
+  final String weekendRule;
+  final String amountMode;
+  final int? expectedMinMinor;
+  final int? expectedMaxMinor;
+  final int startsOn;
+  final int? endsOn;
+  final int generatedUntil;
+  final int updatedAt;
+  final int? deletedAt;
+  const Recurrence(
+      {required this.id,
+      required this.templateJson,
+      required this.freq,
+      required this.intervalN,
+      this.byMonthDay,
+      this.byWeekday,
+      required this.weekendRule,
+      required this.amountMode,
+      this.expectedMinMinor,
+      this.expectedMaxMinor,
+      required this.startsOn,
+      this.endsOn,
+      required this.generatedUntil,
+      required this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['template_json'] = Variable<String>(templateJson);
+    map['freq'] = Variable<String>(freq);
+    map['interval_n'] = Variable<int>(intervalN);
+    if (!nullToAbsent || byMonthDay != null) {
+      map['by_month_day'] = Variable<int>(byMonthDay);
+    }
+    if (!nullToAbsent || byWeekday != null) {
+      map['by_weekday'] = Variable<int>(byWeekday);
+    }
+    map['weekend_rule'] = Variable<String>(weekendRule);
+    map['amount_mode'] = Variable<String>(amountMode);
+    if (!nullToAbsent || expectedMinMinor != null) {
+      map['expected_min_minor'] = Variable<int>(expectedMinMinor);
+    }
+    if (!nullToAbsent || expectedMaxMinor != null) {
+      map['expected_max_minor'] = Variable<int>(expectedMaxMinor);
+    }
+    map['starts_on'] = Variable<int>(startsOn);
+    if (!nullToAbsent || endsOn != null) {
+      map['ends_on'] = Variable<int>(endsOn);
+    }
+    map['generated_until'] = Variable<int>(generatedUntil);
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  RecurrencesCompanion toCompanion(bool nullToAbsent) {
+    return RecurrencesCompanion(
+      id: Value(id),
+      templateJson: Value(templateJson),
+      freq: Value(freq),
+      intervalN: Value(intervalN),
+      byMonthDay: byMonthDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(byMonthDay),
+      byWeekday: byWeekday == null && nullToAbsent
+          ? const Value.absent()
+          : Value(byWeekday),
+      weekendRule: Value(weekendRule),
+      amountMode: Value(amountMode),
+      expectedMinMinor: expectedMinMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedMinMinor),
+      expectedMaxMinor: expectedMaxMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedMaxMinor),
+      startsOn: Value(startsOn),
+      endsOn:
+          endsOn == null && nullToAbsent ? const Value.absent() : Value(endsOn),
+      generatedUntil: Value(generatedUntil),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory Recurrence.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Recurrence(
+      id: serializer.fromJson<String>(json['id']),
+      templateJson: serializer.fromJson<String>(json['templateJson']),
+      freq: serializer.fromJson<String>(json['freq']),
+      intervalN: serializer.fromJson<int>(json['intervalN']),
+      byMonthDay: serializer.fromJson<int?>(json['byMonthDay']),
+      byWeekday: serializer.fromJson<int?>(json['byWeekday']),
+      weekendRule: serializer.fromJson<String>(json['weekendRule']),
+      amountMode: serializer.fromJson<String>(json['amountMode']),
+      expectedMinMinor: serializer.fromJson<int?>(json['expectedMinMinor']),
+      expectedMaxMinor: serializer.fromJson<int?>(json['expectedMaxMinor']),
+      startsOn: serializer.fromJson<int>(json['startsOn']),
+      endsOn: serializer.fromJson<int?>(json['endsOn']),
+      generatedUntil: serializer.fromJson<int>(json['generatedUntil']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      deletedAt: serializer.fromJson<int?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'templateJson': serializer.toJson<String>(templateJson),
+      'freq': serializer.toJson<String>(freq),
+      'intervalN': serializer.toJson<int>(intervalN),
+      'byMonthDay': serializer.toJson<int?>(byMonthDay),
+      'byWeekday': serializer.toJson<int?>(byWeekday),
+      'weekendRule': serializer.toJson<String>(weekendRule),
+      'amountMode': serializer.toJson<String>(amountMode),
+      'expectedMinMinor': serializer.toJson<int?>(expectedMinMinor),
+      'expectedMaxMinor': serializer.toJson<int?>(expectedMaxMinor),
+      'startsOn': serializer.toJson<int>(startsOn),
+      'endsOn': serializer.toJson<int?>(endsOn),
+      'generatedUntil': serializer.toJson<int>(generatedUntil),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'deletedAt': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  Recurrence copyWith(
+          {String? id,
+          String? templateJson,
+          String? freq,
+          int? intervalN,
+          Value<int?> byMonthDay = const Value.absent(),
+          Value<int?> byWeekday = const Value.absent(),
+          String? weekendRule,
+          String? amountMode,
+          Value<int?> expectedMinMinor = const Value.absent(),
+          Value<int?> expectedMaxMinor = const Value.absent(),
+          int? startsOn,
+          Value<int?> endsOn = const Value.absent(),
+          int? generatedUntil,
+          int? updatedAt,
+          Value<int?> deletedAt = const Value.absent()}) =>
+      Recurrence(
+        id: id ?? this.id,
+        templateJson: templateJson ?? this.templateJson,
+        freq: freq ?? this.freq,
+        intervalN: intervalN ?? this.intervalN,
+        byMonthDay: byMonthDay.present ? byMonthDay.value : this.byMonthDay,
+        byWeekday: byWeekday.present ? byWeekday.value : this.byWeekday,
+        weekendRule: weekendRule ?? this.weekendRule,
+        amountMode: amountMode ?? this.amountMode,
+        expectedMinMinor: expectedMinMinor.present
+            ? expectedMinMinor.value
+            : this.expectedMinMinor,
+        expectedMaxMinor: expectedMaxMinor.present
+            ? expectedMaxMinor.value
+            : this.expectedMaxMinor,
+        startsOn: startsOn ?? this.startsOn,
+        endsOn: endsOn.present ? endsOn.value : this.endsOn,
+        generatedUntil: generatedUntil ?? this.generatedUntil,
+        updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  Recurrence copyWithCompanion(RecurrencesCompanion data) {
+    return Recurrence(
+      id: data.id.present ? data.id.value : this.id,
+      templateJson: data.templateJson.present
+          ? data.templateJson.value
+          : this.templateJson,
+      freq: data.freq.present ? data.freq.value : this.freq,
+      intervalN: data.intervalN.present ? data.intervalN.value : this.intervalN,
+      byMonthDay:
+          data.byMonthDay.present ? data.byMonthDay.value : this.byMonthDay,
+      byWeekday: data.byWeekday.present ? data.byWeekday.value : this.byWeekday,
+      weekendRule:
+          data.weekendRule.present ? data.weekendRule.value : this.weekendRule,
+      amountMode:
+          data.amountMode.present ? data.amountMode.value : this.amountMode,
+      expectedMinMinor: data.expectedMinMinor.present
+          ? data.expectedMinMinor.value
+          : this.expectedMinMinor,
+      expectedMaxMinor: data.expectedMaxMinor.present
+          ? data.expectedMaxMinor.value
+          : this.expectedMaxMinor,
+      startsOn: data.startsOn.present ? data.startsOn.value : this.startsOn,
+      endsOn: data.endsOn.present ? data.endsOn.value : this.endsOn,
+      generatedUntil: data.generatedUntil.present
+          ? data.generatedUntil.value
+          : this.generatedUntil,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Recurrence(')
+          ..write('id: $id, ')
+          ..write('templateJson: $templateJson, ')
+          ..write('freq: $freq, ')
+          ..write('intervalN: $intervalN, ')
+          ..write('byMonthDay: $byMonthDay, ')
+          ..write('byWeekday: $byWeekday, ')
+          ..write('weekendRule: $weekendRule, ')
+          ..write('amountMode: $amountMode, ')
+          ..write('expectedMinMinor: $expectedMinMinor, ')
+          ..write('expectedMaxMinor: $expectedMaxMinor, ')
+          ..write('startsOn: $startsOn, ')
+          ..write('endsOn: $endsOn, ')
+          ..write('generatedUntil: $generatedUntil, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      templateJson,
+      freq,
+      intervalN,
+      byMonthDay,
+      byWeekday,
+      weekendRule,
+      amountMode,
+      expectedMinMinor,
+      expectedMaxMinor,
+      startsOn,
+      endsOn,
+      generatedUntil,
+      updatedAt,
+      deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Recurrence &&
+          other.id == this.id &&
+          other.templateJson == this.templateJson &&
+          other.freq == this.freq &&
+          other.intervalN == this.intervalN &&
+          other.byMonthDay == this.byMonthDay &&
+          other.byWeekday == this.byWeekday &&
+          other.weekendRule == this.weekendRule &&
+          other.amountMode == this.amountMode &&
+          other.expectedMinMinor == this.expectedMinMinor &&
+          other.expectedMaxMinor == this.expectedMaxMinor &&
+          other.startsOn == this.startsOn &&
+          other.endsOn == this.endsOn &&
+          other.generatedUntil == this.generatedUntil &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
+  final Value<String> id;
+  final Value<String> templateJson;
+  final Value<String> freq;
+  final Value<int> intervalN;
+  final Value<int?> byMonthDay;
+  final Value<int?> byWeekday;
+  final Value<String> weekendRule;
+  final Value<String> amountMode;
+  final Value<int?> expectedMinMinor;
+  final Value<int?> expectedMaxMinor;
+  final Value<int> startsOn;
+  final Value<int?> endsOn;
+  final Value<int> generatedUntil;
+  final Value<int> updatedAt;
+  final Value<int?> deletedAt;
+  final Value<int> rowid;
+  const RecurrencesCompanion({
+    this.id = const Value.absent(),
+    this.templateJson = const Value.absent(),
+    this.freq = const Value.absent(),
+    this.intervalN = const Value.absent(),
+    this.byMonthDay = const Value.absent(),
+    this.byWeekday = const Value.absent(),
+    this.weekendRule = const Value.absent(),
+    this.amountMode = const Value.absent(),
+    this.expectedMinMinor = const Value.absent(),
+    this.expectedMaxMinor = const Value.absent(),
+    this.startsOn = const Value.absent(),
+    this.endsOn = const Value.absent(),
+    this.generatedUntil = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecurrencesCompanion.insert({
+    required String id,
+    required String templateJson,
+    required String freq,
+    this.intervalN = const Value.absent(),
+    this.byMonthDay = const Value.absent(),
+    this.byWeekday = const Value.absent(),
+    this.weekendRule = const Value.absent(),
+    this.amountMode = const Value.absent(),
+    this.expectedMinMinor = const Value.absent(),
+    this.expectedMaxMinor = const Value.absent(),
+    required int startsOn,
+    this.endsOn = const Value.absent(),
+    required int generatedUntil,
+    required int updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        templateJson = Value(templateJson),
+        freq = Value(freq),
+        startsOn = Value(startsOn),
+        generatedUntil = Value(generatedUntil),
+        updatedAt = Value(updatedAt);
+  static Insertable<Recurrence> custom({
+    Expression<String>? id,
+    Expression<String>? templateJson,
+    Expression<String>? freq,
+    Expression<int>? intervalN,
+    Expression<int>? byMonthDay,
+    Expression<int>? byWeekday,
+    Expression<String>? weekendRule,
+    Expression<String>? amountMode,
+    Expression<int>? expectedMinMinor,
+    Expression<int>? expectedMaxMinor,
+    Expression<int>? startsOn,
+    Expression<int>? endsOn,
+    Expression<int>? generatedUntil,
+    Expression<int>? updatedAt,
+    Expression<int>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (templateJson != null) 'template_json': templateJson,
+      if (freq != null) 'freq': freq,
+      if (intervalN != null) 'interval_n': intervalN,
+      if (byMonthDay != null) 'by_month_day': byMonthDay,
+      if (byWeekday != null) 'by_weekday': byWeekday,
+      if (weekendRule != null) 'weekend_rule': weekendRule,
+      if (amountMode != null) 'amount_mode': amountMode,
+      if (expectedMinMinor != null) 'expected_min_minor': expectedMinMinor,
+      if (expectedMaxMinor != null) 'expected_max_minor': expectedMaxMinor,
+      if (startsOn != null) 'starts_on': startsOn,
+      if (endsOn != null) 'ends_on': endsOn,
+      if (generatedUntil != null) 'generated_until': generatedUntil,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecurrencesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? templateJson,
+      Value<String>? freq,
+      Value<int>? intervalN,
+      Value<int?>? byMonthDay,
+      Value<int?>? byWeekday,
+      Value<String>? weekendRule,
+      Value<String>? amountMode,
+      Value<int?>? expectedMinMinor,
+      Value<int?>? expectedMaxMinor,
+      Value<int>? startsOn,
+      Value<int?>? endsOn,
+      Value<int>? generatedUntil,
+      Value<int>? updatedAt,
+      Value<int?>? deletedAt,
+      Value<int>? rowid}) {
+    return RecurrencesCompanion(
+      id: id ?? this.id,
+      templateJson: templateJson ?? this.templateJson,
+      freq: freq ?? this.freq,
+      intervalN: intervalN ?? this.intervalN,
+      byMonthDay: byMonthDay ?? this.byMonthDay,
+      byWeekday: byWeekday ?? this.byWeekday,
+      weekendRule: weekendRule ?? this.weekendRule,
+      amountMode: amountMode ?? this.amountMode,
+      expectedMinMinor: expectedMinMinor ?? this.expectedMinMinor,
+      expectedMaxMinor: expectedMaxMinor ?? this.expectedMaxMinor,
+      startsOn: startsOn ?? this.startsOn,
+      endsOn: endsOn ?? this.endsOn,
+      generatedUntil: generatedUntil ?? this.generatedUntil,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (templateJson.present) {
+      map['template_json'] = Variable<String>(templateJson.value);
+    }
+    if (freq.present) {
+      map['freq'] = Variable<String>(freq.value);
+    }
+    if (intervalN.present) {
+      map['interval_n'] = Variable<int>(intervalN.value);
+    }
+    if (byMonthDay.present) {
+      map['by_month_day'] = Variable<int>(byMonthDay.value);
+    }
+    if (byWeekday.present) {
+      map['by_weekday'] = Variable<int>(byWeekday.value);
+    }
+    if (weekendRule.present) {
+      map['weekend_rule'] = Variable<String>(weekendRule.value);
+    }
+    if (amountMode.present) {
+      map['amount_mode'] = Variable<String>(amountMode.value);
+    }
+    if (expectedMinMinor.present) {
+      map['expected_min_minor'] = Variable<int>(expectedMinMinor.value);
+    }
+    if (expectedMaxMinor.present) {
+      map['expected_max_minor'] = Variable<int>(expectedMaxMinor.value);
+    }
+    if (startsOn.present) {
+      map['starts_on'] = Variable<int>(startsOn.value);
+    }
+    if (endsOn.present) {
+      map['ends_on'] = Variable<int>(endsOn.value);
+    }
+    if (generatedUntil.present) {
+      map['generated_until'] = Variable<int>(generatedUntil.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurrencesCompanion(')
+          ..write('id: $id, ')
+          ..write('templateJson: $templateJson, ')
+          ..write('freq: $freq, ')
+          ..write('intervalN: $intervalN, ')
+          ..write('byMonthDay: $byMonthDay, ')
+          ..write('byWeekday: $byWeekday, ')
+          ..write('weekendRule: $weekendRule, ')
+          ..write('amountMode: $amountMode, ')
+          ..write('expectedMinMinor: $expectedMinMinor, ')
+          ..write('expectedMaxMinor: $expectedMaxMinor, ')
+          ..write('startsOn: $startsOn, ')
+          ..write('endsOn: $endsOn, ')
+          ..write('generatedUntil: $generatedUntil, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RecurrenceOverridesTable extends RecurrenceOverrides
+    with TableInfo<$RecurrenceOverridesTable, RecurrenceOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecurrenceOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _recurrenceIdMeta =
+      const VerificationMeta('recurrenceId');
+  @override
+  late final GeneratedColumn<String> recurrenceId = GeneratedColumn<String>(
+      'recurrence_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _instanceDateMeta =
+      const VerificationMeta('instanceDate');
+  @override
+  late final GeneratedColumn<int> instanceDate = GeneratedColumn<int>(
+      'instance_date', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+      'action', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _newDateMeta =
+      const VerificationMeta('newDate');
+  @override
+  late final GeneratedColumn<int> newDate = GeneratedColumn<int>(
+      'new_date', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _newAmountMinorMeta =
+      const VerificationMeta('newAmountMinor');
+  @override
+  late final GeneratedColumn<int> newAmountMinor = GeneratedColumn<int>(
+      'new_amount_minor', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [recurrenceId, instanceDate, action, newDate, newAmountMinor];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recurrence_overrides';
+  @override
+  VerificationContext validateIntegrity(Insertable<RecurrenceOverride> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('recurrence_id')) {
+      context.handle(
+          _recurrenceIdMeta,
+          recurrenceId.isAcceptableOrUnknown(
+              data['recurrence_id']!, _recurrenceIdMeta));
+    } else if (isInserting) {
+      context.missing(_recurrenceIdMeta);
+    }
+    if (data.containsKey('instance_date')) {
+      context.handle(
+          _instanceDateMeta,
+          instanceDate.isAcceptableOrUnknown(
+              data['instance_date']!, _instanceDateMeta));
+    } else if (isInserting) {
+      context.missing(_instanceDateMeta);
+    }
+    if (data.containsKey('action')) {
+      context.handle(_actionMeta,
+          action.isAcceptableOrUnknown(data['action']!, _actionMeta));
+    } else if (isInserting) {
+      context.missing(_actionMeta);
+    }
+    if (data.containsKey('new_date')) {
+      context.handle(_newDateMeta,
+          newDate.isAcceptableOrUnknown(data['new_date']!, _newDateMeta));
+    }
+    if (data.containsKey('new_amount_minor')) {
+      context.handle(
+          _newAmountMinorMeta,
+          newAmountMinor.isAcceptableOrUnknown(
+              data['new_amount_minor']!, _newAmountMinorMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {recurrenceId, instanceDate};
+  @override
+  RecurrenceOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecurrenceOverride(
+      recurrenceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}recurrence_id'])!,
+      instanceDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}instance_date'])!,
+      action: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}action'])!,
+      newDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}new_date']),
+      newAmountMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}new_amount_minor']),
+    );
+  }
+
+  @override
+  $RecurrenceOverridesTable createAlias(String alias) {
+    return $RecurrenceOverridesTable(attachedDatabase, alias);
+  }
+}
+
+class RecurrenceOverride extends DataClass
+    implements Insertable<RecurrenceOverride> {
+  final String recurrenceId;
+  final int instanceDate;
+  final String action;
+  final int? newDate;
+  final int? newAmountMinor;
+  const RecurrenceOverride(
+      {required this.recurrenceId,
+      required this.instanceDate,
+      required this.action,
+      this.newDate,
+      this.newAmountMinor});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['recurrence_id'] = Variable<String>(recurrenceId);
+    map['instance_date'] = Variable<int>(instanceDate);
+    map['action'] = Variable<String>(action);
+    if (!nullToAbsent || newDate != null) {
+      map['new_date'] = Variable<int>(newDate);
+    }
+    if (!nullToAbsent || newAmountMinor != null) {
+      map['new_amount_minor'] = Variable<int>(newAmountMinor);
+    }
+    return map;
+  }
+
+  RecurrenceOverridesCompanion toCompanion(bool nullToAbsent) {
+    return RecurrenceOverridesCompanion(
+      recurrenceId: Value(recurrenceId),
+      instanceDate: Value(instanceDate),
+      action: Value(action),
+      newDate: newDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newDate),
+      newAmountMinor: newAmountMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newAmountMinor),
+    );
+  }
+
+  factory RecurrenceOverride.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecurrenceOverride(
+      recurrenceId: serializer.fromJson<String>(json['recurrenceId']),
+      instanceDate: serializer.fromJson<int>(json['instanceDate']),
+      action: serializer.fromJson<String>(json['action']),
+      newDate: serializer.fromJson<int?>(json['newDate']),
+      newAmountMinor: serializer.fromJson<int?>(json['newAmountMinor']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'recurrenceId': serializer.toJson<String>(recurrenceId),
+      'instanceDate': serializer.toJson<int>(instanceDate),
+      'action': serializer.toJson<String>(action),
+      'newDate': serializer.toJson<int?>(newDate),
+      'newAmountMinor': serializer.toJson<int?>(newAmountMinor),
+    };
+  }
+
+  RecurrenceOverride copyWith(
+          {String? recurrenceId,
+          int? instanceDate,
+          String? action,
+          Value<int?> newDate = const Value.absent(),
+          Value<int?> newAmountMinor = const Value.absent()}) =>
+      RecurrenceOverride(
+        recurrenceId: recurrenceId ?? this.recurrenceId,
+        instanceDate: instanceDate ?? this.instanceDate,
+        action: action ?? this.action,
+        newDate: newDate.present ? newDate.value : this.newDate,
+        newAmountMinor:
+            newAmountMinor.present ? newAmountMinor.value : this.newAmountMinor,
+      );
+  RecurrenceOverride copyWithCompanion(RecurrenceOverridesCompanion data) {
+    return RecurrenceOverride(
+      recurrenceId: data.recurrenceId.present
+          ? data.recurrenceId.value
+          : this.recurrenceId,
+      instanceDate: data.instanceDate.present
+          ? data.instanceDate.value
+          : this.instanceDate,
+      action: data.action.present ? data.action.value : this.action,
+      newDate: data.newDate.present ? data.newDate.value : this.newDate,
+      newAmountMinor: data.newAmountMinor.present
+          ? data.newAmountMinor.value
+          : this.newAmountMinor,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurrenceOverride(')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write('instanceDate: $instanceDate, ')
+          ..write('action: $action, ')
+          ..write('newDate: $newDate, ')
+          ..write('newAmountMinor: $newAmountMinor')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(recurrenceId, instanceDate, action, newDate, newAmountMinor);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecurrenceOverride &&
+          other.recurrenceId == this.recurrenceId &&
+          other.instanceDate == this.instanceDate &&
+          other.action == this.action &&
+          other.newDate == this.newDate &&
+          other.newAmountMinor == this.newAmountMinor);
+}
+
+class RecurrenceOverridesCompanion extends UpdateCompanion<RecurrenceOverride> {
+  final Value<String> recurrenceId;
+  final Value<int> instanceDate;
+  final Value<String> action;
+  final Value<int?> newDate;
+  final Value<int?> newAmountMinor;
+  final Value<int> rowid;
+  const RecurrenceOverridesCompanion({
+    this.recurrenceId = const Value.absent(),
+    this.instanceDate = const Value.absent(),
+    this.action = const Value.absent(),
+    this.newDate = const Value.absent(),
+    this.newAmountMinor = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecurrenceOverridesCompanion.insert({
+    required String recurrenceId,
+    required int instanceDate,
+    required String action,
+    this.newDate = const Value.absent(),
+    this.newAmountMinor = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : recurrenceId = Value(recurrenceId),
+        instanceDate = Value(instanceDate),
+        action = Value(action);
+  static Insertable<RecurrenceOverride> custom({
+    Expression<String>? recurrenceId,
+    Expression<int>? instanceDate,
+    Expression<String>? action,
+    Expression<int>? newDate,
+    Expression<int>? newAmountMinor,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (recurrenceId != null) 'recurrence_id': recurrenceId,
+      if (instanceDate != null) 'instance_date': instanceDate,
+      if (action != null) 'action': action,
+      if (newDate != null) 'new_date': newDate,
+      if (newAmountMinor != null) 'new_amount_minor': newAmountMinor,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecurrenceOverridesCompanion copyWith(
+      {Value<String>? recurrenceId,
+      Value<int>? instanceDate,
+      Value<String>? action,
+      Value<int?>? newDate,
+      Value<int?>? newAmountMinor,
+      Value<int>? rowid}) {
+    return RecurrenceOverridesCompanion(
+      recurrenceId: recurrenceId ?? this.recurrenceId,
+      instanceDate: instanceDate ?? this.instanceDate,
+      action: action ?? this.action,
+      newDate: newDate ?? this.newDate,
+      newAmountMinor: newAmountMinor ?? this.newAmountMinor,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (recurrenceId.present) {
+      map['recurrence_id'] = Variable<String>(recurrenceId.value);
+    }
+    if (instanceDate.present) {
+      map['instance_date'] = Variable<int>(instanceDate.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (newDate.present) {
+      map['new_date'] = Variable<int>(newDate.value);
+    }
+    if (newAmountMinor.present) {
+      map['new_amount_minor'] = Variable<int>(newAmountMinor.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurrenceOverridesCompanion(')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write('instanceDate: $instanceDate, ')
+          ..write('action: $action, ')
+          ..write('newDate: $newDate, ')
+          ..write('newAmountMinor: $newAmountMinor, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WudgetDatabase extends GeneratedDatabase {
   _$WudgetDatabase(QueryExecutor e) : super(e);
   $WudgetDatabaseManager get managers => $WudgetDatabaseManager(this);
@@ -3543,6 +4608,9 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
   late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
   late final $AnalyticsEventsTable analyticsEvents =
       $AnalyticsEventsTable(this);
+  late final $RecurrencesTable recurrences = $RecurrencesTable(this);
+  late final $RecurrenceOverridesTable recurrenceOverrides =
+      $RecurrenceOverridesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3556,7 +4624,9 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
         appSettings,
         budgets,
         featureFlags,
-        analyticsEvents
+        analyticsEvents,
+        recurrences,
+        recurrenceOverrides
       ];
 }
 
@@ -5939,6 +7009,518 @@ typedef $$AnalyticsEventsTableProcessedTableManager = ProcessedTableManager<
     ),
     AnalyticsEvent,
     PrefetchHooks Function()>;
+typedef $$RecurrencesTableCreateCompanionBuilder = RecurrencesCompanion
+    Function({
+  required String id,
+  required String templateJson,
+  required String freq,
+  Value<int> intervalN,
+  Value<int?> byMonthDay,
+  Value<int?> byWeekday,
+  Value<String> weekendRule,
+  Value<String> amountMode,
+  Value<int?> expectedMinMinor,
+  Value<int?> expectedMaxMinor,
+  required int startsOn,
+  Value<int?> endsOn,
+  required int generatedUntil,
+  required int updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$RecurrencesTableUpdateCompanionBuilder = RecurrencesCompanion
+    Function({
+  Value<String> id,
+  Value<String> templateJson,
+  Value<String> freq,
+  Value<int> intervalN,
+  Value<int?> byMonthDay,
+  Value<int?> byWeekday,
+  Value<String> weekendRule,
+  Value<String> amountMode,
+  Value<int?> expectedMinMinor,
+  Value<int?> expectedMaxMinor,
+  Value<int> startsOn,
+  Value<int?> endsOn,
+  Value<int> generatedUntil,
+  Value<int> updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+
+class $$RecurrencesTableFilterComposer
+    extends Composer<_$WudgetDatabase, $RecurrencesTable> {
+  $$RecurrencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get templateJson => $composableBuilder(
+      column: $table.templateJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get freq => $composableBuilder(
+      column: $table.freq, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get intervalN => $composableBuilder(
+      column: $table.intervalN, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get byMonthDay => $composableBuilder(
+      column: $table.byMonthDay, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get byWeekday => $composableBuilder(
+      column: $table.byWeekday, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get weekendRule => $composableBuilder(
+      column: $table.weekendRule, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get amountMode => $composableBuilder(
+      column: $table.amountMode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get expectedMinMinor => $composableBuilder(
+      column: $table.expectedMinMinor,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get expectedMaxMinor => $composableBuilder(
+      column: $table.expectedMaxMinor,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get startsOn => $composableBuilder(
+      column: $table.startsOn, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get endsOn => $composableBuilder(
+      column: $table.endsOn, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get generatedUntil => $composableBuilder(
+      column: $table.generatedUntil,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$RecurrencesTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $RecurrencesTable> {
+  $$RecurrencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get templateJson => $composableBuilder(
+      column: $table.templateJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get freq => $composableBuilder(
+      column: $table.freq, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get intervalN => $composableBuilder(
+      column: $table.intervalN, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get byMonthDay => $composableBuilder(
+      column: $table.byMonthDay, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get byWeekday => $composableBuilder(
+      column: $table.byWeekday, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get weekendRule => $composableBuilder(
+      column: $table.weekendRule, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get amountMode => $composableBuilder(
+      column: $table.amountMode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get expectedMinMinor => $composableBuilder(
+      column: $table.expectedMinMinor,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get expectedMaxMinor => $composableBuilder(
+      column: $table.expectedMaxMinor,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get startsOn => $composableBuilder(
+      column: $table.startsOn, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get endsOn => $composableBuilder(
+      column: $table.endsOn, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get generatedUntil => $composableBuilder(
+      column: $table.generatedUntil,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RecurrencesTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $RecurrencesTable> {
+  $$RecurrencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get templateJson => $composableBuilder(
+      column: $table.templateJson, builder: (column) => column);
+
+  GeneratedColumn<String> get freq =>
+      $composableBuilder(column: $table.freq, builder: (column) => column);
+
+  GeneratedColumn<int> get intervalN =>
+      $composableBuilder(column: $table.intervalN, builder: (column) => column);
+
+  GeneratedColumn<int> get byMonthDay => $composableBuilder(
+      column: $table.byMonthDay, builder: (column) => column);
+
+  GeneratedColumn<int> get byWeekday =>
+      $composableBuilder(column: $table.byWeekday, builder: (column) => column);
+
+  GeneratedColumn<String> get weekendRule => $composableBuilder(
+      column: $table.weekendRule, builder: (column) => column);
+
+  GeneratedColumn<String> get amountMode => $composableBuilder(
+      column: $table.amountMode, builder: (column) => column);
+
+  GeneratedColumn<int> get expectedMinMinor => $composableBuilder(
+      column: $table.expectedMinMinor, builder: (column) => column);
+
+  GeneratedColumn<int> get expectedMaxMinor => $composableBuilder(
+      column: $table.expectedMaxMinor, builder: (column) => column);
+
+  GeneratedColumn<int> get startsOn =>
+      $composableBuilder(column: $table.startsOn, builder: (column) => column);
+
+  GeneratedColumn<int> get endsOn =>
+      $composableBuilder(column: $table.endsOn, builder: (column) => column);
+
+  GeneratedColumn<int> get generatedUntil => $composableBuilder(
+      column: $table.generatedUntil, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$RecurrencesTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $RecurrencesTable,
+    Recurrence,
+    $$RecurrencesTableFilterComposer,
+    $$RecurrencesTableOrderingComposer,
+    $$RecurrencesTableAnnotationComposer,
+    $$RecurrencesTableCreateCompanionBuilder,
+    $$RecurrencesTableUpdateCompanionBuilder,
+    (
+      Recurrence,
+      BaseReferences<_$WudgetDatabase, $RecurrencesTable, Recurrence>
+    ),
+    Recurrence,
+    PrefetchHooks Function()> {
+  $$RecurrencesTableTableManager(_$WudgetDatabase db, $RecurrencesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecurrencesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecurrencesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecurrencesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> templateJson = const Value.absent(),
+            Value<String> freq = const Value.absent(),
+            Value<int> intervalN = const Value.absent(),
+            Value<int?> byMonthDay = const Value.absent(),
+            Value<int?> byWeekday = const Value.absent(),
+            Value<String> weekendRule = const Value.absent(),
+            Value<String> amountMode = const Value.absent(),
+            Value<int?> expectedMinMinor = const Value.absent(),
+            Value<int?> expectedMaxMinor = const Value.absent(),
+            Value<int> startsOn = const Value.absent(),
+            Value<int?> endsOn = const Value.absent(),
+            Value<int> generatedUntil = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurrencesCompanion(
+            id: id,
+            templateJson: templateJson,
+            freq: freq,
+            intervalN: intervalN,
+            byMonthDay: byMonthDay,
+            byWeekday: byWeekday,
+            weekendRule: weekendRule,
+            amountMode: amountMode,
+            expectedMinMinor: expectedMinMinor,
+            expectedMaxMinor: expectedMaxMinor,
+            startsOn: startsOn,
+            endsOn: endsOn,
+            generatedUntil: generatedUntil,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String templateJson,
+            required String freq,
+            Value<int> intervalN = const Value.absent(),
+            Value<int?> byMonthDay = const Value.absent(),
+            Value<int?> byWeekday = const Value.absent(),
+            Value<String> weekendRule = const Value.absent(),
+            Value<String> amountMode = const Value.absent(),
+            Value<int?> expectedMinMinor = const Value.absent(),
+            Value<int?> expectedMaxMinor = const Value.absent(),
+            required int startsOn,
+            Value<int?> endsOn = const Value.absent(),
+            required int generatedUntil,
+            required int updatedAt,
+            Value<int?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurrencesCompanion.insert(
+            id: id,
+            templateJson: templateJson,
+            freq: freq,
+            intervalN: intervalN,
+            byMonthDay: byMonthDay,
+            byWeekday: byWeekday,
+            weekendRule: weekendRule,
+            amountMode: amountMode,
+            expectedMinMinor: expectedMinMinor,
+            expectedMaxMinor: expectedMaxMinor,
+            startsOn: startsOn,
+            endsOn: endsOn,
+            generatedUntil: generatedUntil,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RecurrencesTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $RecurrencesTable,
+    Recurrence,
+    $$RecurrencesTableFilterComposer,
+    $$RecurrencesTableOrderingComposer,
+    $$RecurrencesTableAnnotationComposer,
+    $$RecurrencesTableCreateCompanionBuilder,
+    $$RecurrencesTableUpdateCompanionBuilder,
+    (
+      Recurrence,
+      BaseReferences<_$WudgetDatabase, $RecurrencesTable, Recurrence>
+    ),
+    Recurrence,
+    PrefetchHooks Function()>;
+typedef $$RecurrenceOverridesTableCreateCompanionBuilder
+    = RecurrenceOverridesCompanion Function({
+  required String recurrenceId,
+  required int instanceDate,
+  required String action,
+  Value<int?> newDate,
+  Value<int?> newAmountMinor,
+  Value<int> rowid,
+});
+typedef $$RecurrenceOverridesTableUpdateCompanionBuilder
+    = RecurrenceOverridesCompanion Function({
+  Value<String> recurrenceId,
+  Value<int> instanceDate,
+  Value<String> action,
+  Value<int?> newDate,
+  Value<int?> newAmountMinor,
+  Value<int> rowid,
+});
+
+class $$RecurrenceOverridesTableFilterComposer
+    extends Composer<_$WudgetDatabase, $RecurrenceOverridesTable> {
+  $$RecurrenceOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get recurrenceId => $composableBuilder(
+      column: $table.recurrenceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get instanceDate => $composableBuilder(
+      column: $table.instanceDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get action => $composableBuilder(
+      column: $table.action, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get newDate => $composableBuilder(
+      column: $table.newDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get newAmountMinor => $composableBuilder(
+      column: $table.newAmountMinor,
+      builder: (column) => ColumnFilters(column));
+}
+
+class $$RecurrenceOverridesTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $RecurrenceOverridesTable> {
+  $$RecurrenceOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get recurrenceId => $composableBuilder(
+      column: $table.recurrenceId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get instanceDate => $composableBuilder(
+      column: $table.instanceDate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get action => $composableBuilder(
+      column: $table.action, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get newDate => $composableBuilder(
+      column: $table.newDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get newAmountMinor => $composableBuilder(
+      column: $table.newAmountMinor,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$RecurrenceOverridesTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $RecurrenceOverridesTable> {
+  $$RecurrenceOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get recurrenceId => $composableBuilder(
+      column: $table.recurrenceId, builder: (column) => column);
+
+  GeneratedColumn<int> get instanceDate => $composableBuilder(
+      column: $table.instanceDate, builder: (column) => column);
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<int> get newDate =>
+      $composableBuilder(column: $table.newDate, builder: (column) => column);
+
+  GeneratedColumn<int> get newAmountMinor => $composableBuilder(
+      column: $table.newAmountMinor, builder: (column) => column);
+}
+
+class $$RecurrenceOverridesTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $RecurrenceOverridesTable,
+    RecurrenceOverride,
+    $$RecurrenceOverridesTableFilterComposer,
+    $$RecurrenceOverridesTableOrderingComposer,
+    $$RecurrenceOverridesTableAnnotationComposer,
+    $$RecurrenceOverridesTableCreateCompanionBuilder,
+    $$RecurrenceOverridesTableUpdateCompanionBuilder,
+    (
+      RecurrenceOverride,
+      BaseReferences<_$WudgetDatabase, $RecurrenceOverridesTable,
+          RecurrenceOverride>
+    ),
+    RecurrenceOverride,
+    PrefetchHooks Function()> {
+  $$RecurrenceOverridesTableTableManager(
+      _$WudgetDatabase db, $RecurrenceOverridesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecurrenceOverridesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecurrenceOverridesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecurrenceOverridesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> recurrenceId = const Value.absent(),
+            Value<int> instanceDate = const Value.absent(),
+            Value<String> action = const Value.absent(),
+            Value<int?> newDate = const Value.absent(),
+            Value<int?> newAmountMinor = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurrenceOverridesCompanion(
+            recurrenceId: recurrenceId,
+            instanceDate: instanceDate,
+            action: action,
+            newDate: newDate,
+            newAmountMinor: newAmountMinor,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String recurrenceId,
+            required int instanceDate,
+            required String action,
+            Value<int?> newDate = const Value.absent(),
+            Value<int?> newAmountMinor = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecurrenceOverridesCompanion.insert(
+            recurrenceId: recurrenceId,
+            instanceDate: instanceDate,
+            action: action,
+            newDate: newDate,
+            newAmountMinor: newAmountMinor,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RecurrenceOverridesTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $RecurrenceOverridesTable,
+    RecurrenceOverride,
+    $$RecurrenceOverridesTableFilterComposer,
+    $$RecurrenceOverridesTableOrderingComposer,
+    $$RecurrenceOverridesTableAnnotationComposer,
+    $$RecurrenceOverridesTableCreateCompanionBuilder,
+    $$RecurrenceOverridesTableUpdateCompanionBuilder,
+    (
+      RecurrenceOverride,
+      BaseReferences<_$WudgetDatabase, $RecurrenceOverridesTable,
+          RecurrenceOverride>
+    ),
+    RecurrenceOverride,
+    PrefetchHooks Function()>;
 
 class $WudgetDatabaseManager {
   final _$WudgetDatabase _db;
@@ -5961,4 +7543,8 @@ class $WudgetDatabaseManager {
       $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
   $$AnalyticsEventsTableTableManager get analyticsEvents =>
       $$AnalyticsEventsTableTableManager(_db, _db.analyticsEvents);
+  $$RecurrencesTableTableManager get recurrences =>
+      $$RecurrencesTableTableManager(_db, _db.recurrences);
+  $$RecurrenceOverridesTableTableManager get recurrenceOverrides =>
+      $$RecurrenceOverridesTableTableManager(_db, _db.recurrenceOverrides);
 }
