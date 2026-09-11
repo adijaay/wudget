@@ -109,4 +109,41 @@ void main() {
     final expectedDay = DateTime.utc(2026, 3, 10).difference(DateTime.utc(1970, 1, 1)).inDays;
     expect(await queries.firstTransactionDay(), expectedDay);
   });
+
+  test('dailyExpenseMinor buckets by day and excludes income and transfers', () async {
+    await insertExpense('tx1', DateTime.utc(2026, 3, 5), 10000);
+    await insertExpense('tx2', DateTime.utc(2026, 3, 5), 5000);
+    await insertIncome('tx3', DateTime.utc(2026, 3, 6), 999999);
+
+    final period = Period.containing(
+      DateTime.utc(2026, 3, 5).difference(DateTime.utc(1970, 1, 1)).inDays,
+      monthStartDay: 1,
+    );
+    final daily = await queries.dailyExpenseMinor(period);
+    final day5 = DateTime.utc(2026, 3, 5).difference(DateTime.utc(1970, 1, 1)).inDays;
+    expect(daily[day5], 15000);
+    expect(daily.values.fold<int>(0, (a, b) => a + b), 15000);
+  });
+
+  group('previousPeriodBaselineExpenseMinor', () {
+    test('null when the previous period predates any transaction', () async {
+      await insertExpense('tx1', DateTime.utc(2026, 3, 15), 10000);
+      final period = Period.containing(
+        DateTime.utc(2026, 3, 15).difference(DateTime.utc(1970, 1, 1)).inDays,
+        monthStartDay: 1,
+      );
+      expect(await queries.previousPeriodBaselineExpenseMinor(period), isNull);
+    });
+
+    test('the previous period\'s expense total once it is a full period of real history', () async {
+      await insertExpense('tx0', DateTime.utc(2026, 1, 5), 1000); // first ever, before the baseline period
+      await insertExpense('tx1', DateTime.utc(2026, 2, 10), 40000);
+      await insertExpense('tx2', DateTime.utc(2026, 3, 15), 10000);
+      final period = Period.containing(
+        DateTime.utc(2026, 3, 15).difference(DateTime.utc(1970, 1, 1)).inDays,
+        monthStartDay: 1,
+      );
+      expect(await queries.previousPeriodBaselineExpenseMinor(period), 40000);
+    });
+  });
 }

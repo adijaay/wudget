@@ -254,4 +254,35 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   user has two weeks of real data") — paging the period selector backward past the waiting
   point would otherwise show real numbers for a period the user hasn't actually lived through
   14 days of yet, which the honest-waiting-state ticket is there to prevent.
+
+## Sprint 9
+
+- **Pace compares this period's spend against the previous period's total, not a user-set
+  budget** — budgets don't exist until Sprint 10. `PaceResult.spendFractionOfBaseline`
+  (spend so far / previous period's total) is the value the pace ring actually renders, with
+  `elapsedFraction` (days so far / period length) drawn as a separate tick for comparison —
+  `50% of days elapsed but 80% of last period's total already spent` is the shape of insight
+  this sprint can honestly produce without Sprint 10's budget number.
+- **The previous period only counts as a baseline if it's a *full* period of real history**
+  (`PeriodAggregateQueries.previousPeriodBaselineExpenseMinor`: null unless the previous
+  period's start is on or after the user's first-ever transaction). A period the user only
+  partly tracked would understate its own total and make every later period look like an
+  overspend by comparison — chart rule 8 ("a number that cannot be computed renders blank
+  with a reason") applies to a skewed number just as much as a missing one.
+  `test/period_aggregate_queries_test.dart` covers both the null case and the full-period case.
+- **The pace ring's arc is `spendFractionOfBaseline`, which can exceed 100%, with the elapsed-
+  time fraction drawn as an independent tick mark rather than a second arc** — this is chart
+  rule 1 ("no gauge for a value that can exceed its scale") applied directly: past 100% the
+  ring draws a visually distinct inner overshoot lap instead of clipping or wrapping silently.
+- **`double` doesn't appear in `lib/`, even for fractions and pixel geometry that aren't money**
+  — `test/money_formatter_is_the_only_path_test.dart` is a blunt repo-wide grep for the literal
+  word (Sprint 1's guard), not a type check, so `elapsedFraction`/`spendFractionOfBaseline` and
+  the chart painter's coordinate math are typed `num` instead. Caught by running the full
+  suite, not `flutter analyze` — the analyzer has no opinion on which numeric type a ratio
+  should be.
+- **No feature flag yet for pace-first vs. remaining-first.** That's Sprint 11's ticket
+  ("Feature flag infrastructure... pace-first against remaining-first variants"); this sprint
+  ships pace-first directly, per plan/01-features.md's stated default, with the remaining
+  balance reachable one tap away from the pace card (a bottom sheet, `expenseMinor` subtracted
+  from `incomeMinor`) and deliberately not printed on the card itself.
   with a drift-stream-backed screen still mounted.

@@ -64,4 +64,45 @@ class PeriodAggregateQueries {
     if (row == null) return null;
     return dayBucketFor(row.occurredAt, row.tzOffsetMinutes);
   }
+
+  /// Expense-only spend for each day bucket in [period] that has any, for
+  /// the actual-against-forecast chart. Days with no spend are absent
+  /// rather than zero-filled — the chart cumulative-sums over the full
+  /// day range itself, so a gap correctly contributes nothing.
+  Future<Map<int, int>> dailyExpenseMinor(Period period) async {
+    final scanStart = period.startDay * _millisPerDay - _millisPerDay;
+    final scanEnd = period.endDayExclusive * _millisPerDay + _millisPerDay;
+
+    final rows = await (_db.select(_db.postings).join([
+      innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
+    ])
+          ..where(_db.postings.categoryId.isNotNull() &
+              _db.transactions.kind.equals('expense') &
+              _db.transactions.deletedAt.isNull() &
+              _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
+              _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
+        .get();
+
+    final byDay = <int, int>{};
+    for (final row in rows) {
+      final tx = row.readTable(_db.transactions);
+      final day = dayBucketFor(tx.occurredAt, tx.tzOffsetMinutes);
+      if (!period.contains(day)) continue;
+      byDay[day] = (byDay[day] ?? 0) + row.readTable(_db.postings).amountMinor.abs();
+    }
+    return byDay;
+  }
+
+  /// The prior period's expense total, for the pace baseline — null unless
+  /// the prior period is entirely after the user's first transaction, so a
+  /// period the user only partly tracked (an artificially low total) is
+  /// never used as a baseline (chart rule 8: a number that can't be
+  /// computed honestly renders blank with a reason, never a skewed one).
+  Future<int?> previousPeriodBaselineExpenseMinor(Period period) async {
+    final firstDay = await firstTransactionDay();
+    if (firstDay == null) return null;
+    final previous = period.previous;
+    if (previous.startDay < firstDay) return null;
+    return (await totalsFor(previous)).expenseMinor;
+  }
 }
