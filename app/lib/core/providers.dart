@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/budget_history_queries.dart';
+import '../data/budgets_repository.dart';
 import '../data/capture_queries.dart';
 import '../data/database.dart';
 import '../data/ledger_queries.dart';
@@ -37,6 +39,14 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 
 final periodAggregateQueriesProvider = Provider<PeriodAggregateQueries>((ref) {
   return PeriodAggregateQueries(ref.watch(databaseProvider));
+});
+
+final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
+  return BudgetsRepository(ref.watch(databaseProvider));
+});
+
+final budgetHistoryQueriesProvider = Provider<BudgetHistoryQueries>((ref) {
+  return BudgetHistoryQueries(ref.watch(databaseProvider));
 });
 
 final periodStartDayProvider = StreamProvider<int>((ref) {

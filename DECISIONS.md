@@ -285,4 +285,53 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   ships pace-first directly, per plan/01-features.md's stated default, with the remaining
   balance reachable one tap away from the pace card (a bottom sheet, `expenseMinor` subtracted
   from `incomeMinor`) and deliberately not printed on the card itself.
-  with a drift-stream-backed screen still mounted.
+
+## Sprint 10
+
+- **A budget's key is a top-level category id, or the fixed string `'irregular'` — never a
+  subcategory id.** `BudgetHistoryQueries.categorySpendByKey` rolls every subcategory's spend
+  up to its parent, and pools every `is_irregular` category (leaf or top-level) under one
+  shared key, per plan/01-features.md's "irregular expense bucket": exceptional spending needs
+  one home, not per-category noise, and a subcategory (e.g. "Sarapan") sharing one budget with
+  its parent ("Makan") is how a person actually thinks about a category budget.
+- **One query, two call sites.** `categorySpendByKey` takes a plain day range, used both for
+  the trailing lookback window (the proposal) and for the current period (the pace shown
+  against a saved budget) — same shape of question over a different range, so there's no
+  second, near-duplicate query to keep in sync with the first.
+- **The proposal denominator is the lookback window's actual length, not "days since that
+  category was last spent on."** A category spent on twice in the last 28 days gets
+  `spend / 28`, not `spend / 2` — the latter would scale a rare purchase up as if it recurred
+  every other day. `proposeBudgetMinor`'s doc comment states this explicitly since it's the
+  one place a reasonable-looking alternative formula would quietly be wrong.
+  `test/domain/budget_proposal_test.dart` pins the distinction with a "few days of spend"
+  case.
+- **A category with zero spend in the lookback window is never proposed, not proposed as
+  Rp 0.** `proposeBudgets` filters `entry.value > 0` before calling the formula at all — the
+  Definition of Done's "no fabricated content" rule applies to a fabricated zero exactly like
+  a fabricated real-looking number. `BudgetScreen` then unions proposal keys with already-saved
+  budget keys, so the sprint's own done-when ("no user is ever shown a blank budget field")
+  comes out of that union rather than a separate check: every row shown has either a real
+  proposal or a real saved value, and a category with neither simply isn't a row.
+- **Budgets are per-category-key, not per-period-instance.** One saved amount applies to
+  whichever period is current — there's no `Budgets` row per period the way `daily_totals` has
+  a row per day. Simpler, and matches "the user edits rather than authors" (plan/01-features.md):
+  there's one number to maintain per category, not one per period going forward. Per-period
+  overrides aren't a stated requirement anywhere in the sprint plan; revisit if dogfooding
+  wants a budget that changes between periods.
+- **Over-budget is marked by an icon and an explicit "Lebih dari anggaran" label plus the
+  progress bar's colour, never colour alone** — chart rule 7. The progress bar itself is
+  intentionally not a ring (chart rule 1's "no gauge for a value that can exceed its scale"
+  concern doesn't apply the same way to a bar, which can visibly extend past its container,
+  but the fill is still clamped to 1.0 and the over-state is carried by the icon/label instead
+  of an overshoot render — simpler than Sprint 9's ring for a value where "how far past" isn't
+  the point, just "past or not").
+- **A new drift-stream gotcha, found the hard way: `.watch().first` inside a widget's
+  `initState`-triggered async load hung `pumpAndSettle` forever**, even though the identical
+  call resolved instantly in a plain (non-widget) test — confirmed by reproducing
+  `BudgetScreen._load`'s exact sequence outside `testWidgets` first, where it completed in
+  under a second. `BudgetsRepository` now has a `getAll()` one-shot read (`.get()`, not
+  `.watch()`) for this call site; `watchAll()` stays for a future screen that wants live
+  updates, subscribed the way `StreamBuilder` already does elsewhere in this codebase — the
+  house pattern that's confirmed to work in a widget test. Rule of thumb going forward: a
+  one-off read inside an imperative `async` method uses a one-shot query; `.watch()` is only
+  for a subscription a widget keeps open for its own lifetime.

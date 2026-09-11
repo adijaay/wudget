@@ -108,12 +108,26 @@ class AppSettings extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals, AppSettings])
+/// A per-category (or, for `key == 'irregular'`, pooled) recurring budget
+/// amount, edited by the user from a proposal — see BudgetsRepository and
+/// plan/05-sprints.md Sprint 10. `key` is a top-level category id, never a
+/// subcategory's — BudgetHistoryQueries rolls subcategory spend up to its
+/// parent so one budget covers the whole category.
+class Budgets extends Table {
+  TextColumn get key => text()();
+  IntColumn get amountMinor => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals, AppSettings, Budgets])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -127,6 +141,9 @@ class WudgetDatabase extends _$WudgetDatabase {
           }
           if (from < 4) {
             await m.createTable(appSettings);
+          }
+          if (from < 5) {
+            await m.createTable(budgets);
           }
         },
       );

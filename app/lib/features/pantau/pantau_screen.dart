@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../data/period_aggregate_queries.dart';
 import '../../design/tokens.dart';
 import '../../domain/pace.dart';
+import '../budget/budget_screen.dart';
 import '../period/period_selector.dart';
 import 'actual_forecast_chart.dart';
 import 'pace_ring.dart';
@@ -101,7 +102,19 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     final daysSinceFirst = _firstDay == null ? 0 : todayDay - _firstDay! + 1;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pantau')),
+      appBar: AppBar(
+        title: const Text('Pantau'),
+        actions: [
+          if (daysSinceFirst >= _waitingDays)
+            IconButton(
+              icon: const Icon(Icons.pie_chart_outline),
+              tooltip: 'Anggaran',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BudgetScreen()),
+              ),
+            ),
+        ],
+      ),
       body: daysSinceFirst < _waitingDays
           ? _WaitingState(daysSoFar: daysSinceFirst)
           : _PaceBody(
