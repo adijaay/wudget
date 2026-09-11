@@ -1290,6 +1290,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
       'note', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _photoPathMeta =
+      const VerificationMeta('photoPath');
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+      'photo_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _recurrenceIdMeta =
       const VerificationMeta('recurrenceId');
   @override
@@ -1356,6 +1362,7 @@ class $TransactionsTable extends Transactions
         tzOffsetMinutes,
         title,
         note,
+        photoPath,
         recurrenceId,
         isProjected,
         lat,
@@ -1410,6 +1417,10 @@ class $TransactionsTable extends Transactions
     if (data.containsKey('note')) {
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('photo_path')) {
+      context.handle(_photoPathMeta,
+          photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
     }
     if (data.containsKey('recurrence_id')) {
       context.handle(
@@ -1478,6 +1489,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}title']),
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      photoPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo_path']),
       recurrenceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}recurrence_id']),
       isProjected: attachedDatabase.typeMapping
@@ -1512,6 +1525,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final int tzOffsetMinutes;
   final String? title;
   final String? note;
+  final String? photoPath;
   final String? recurrenceId;
   final bool isProjected;
   final double? lat;
@@ -1528,6 +1542,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.tzOffsetMinutes,
       this.title,
       this.note,
+      this.photoPath,
       this.recurrenceId,
       required this.isProjected,
       this.lat,
@@ -1549,6 +1564,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
     }
     if (!nullToAbsent || recurrenceId != null) {
       map['recurrence_id'] = Variable<String>(recurrenceId);
@@ -1583,6 +1601,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       title:
           title == null && nullToAbsent ? const Value.absent() : Value(title),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
       recurrenceId: recurrenceId == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrenceId),
@@ -1613,6 +1634,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       tzOffsetMinutes: serializer.fromJson<int>(json['tzOffsetMinutes']),
       title: serializer.fromJson<String?>(json['title']),
       note: serializer.fromJson<String?>(json['note']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
       recurrenceId: serializer.fromJson<String?>(json['recurrenceId']),
       isProjected: serializer.fromJson<bool>(json['isProjected']),
       lat: serializer.fromJson<double?>(json['lat']),
@@ -1634,6 +1656,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'tzOffsetMinutes': serializer.toJson<int>(tzOffsetMinutes),
       'title': serializer.toJson<String?>(title),
       'note': serializer.toJson<String?>(note),
+      'photoPath': serializer.toJson<String?>(photoPath),
       'recurrenceId': serializer.toJson<String?>(recurrenceId),
       'isProjected': serializer.toJson<bool>(isProjected),
       'lat': serializer.toJson<double?>(lat),
@@ -1653,6 +1676,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           int? tzOffsetMinutes,
           Value<String?> title = const Value.absent(),
           Value<String?> note = const Value.absent(),
+          Value<String?> photoPath = const Value.absent(),
           Value<String?> recurrenceId = const Value.absent(),
           bool? isProjected,
           Value<double?> lat = const Value.absent(),
@@ -1669,6 +1693,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         tzOffsetMinutes: tzOffsetMinutes ?? this.tzOffsetMinutes,
         title: title.present ? title.value : this.title,
         note: note.present ? note.value : this.note,
+        photoPath: photoPath.present ? photoPath.value : this.photoPath,
         recurrenceId:
             recurrenceId.present ? recurrenceId.value : this.recurrenceId,
         isProjected: isProjected ?? this.isProjected,
@@ -1691,6 +1716,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           : this.tzOffsetMinutes,
       title: data.title.present ? data.title.value : this.title,
       note: data.note.present ? data.note.value : this.note,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
       recurrenceId: data.recurrenceId.present
           ? data.recurrenceId.value
           : this.recurrenceId,
@@ -1717,6 +1743,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('tzOffsetMinutes: $tzOffsetMinutes, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
+          ..write('photoPath: $photoPath, ')
           ..write('recurrenceId: $recurrenceId, ')
           ..write('isProjected: $isProjected, ')
           ..write('lat: $lat, ')
@@ -1738,6 +1765,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       tzOffsetMinutes,
       title,
       note,
+      photoPath,
       recurrenceId,
       isProjected,
       lat,
@@ -1757,6 +1785,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.tzOffsetMinutes == this.tzOffsetMinutes &&
           other.title == this.title &&
           other.note == this.note &&
+          other.photoPath == this.photoPath &&
           other.recurrenceId == this.recurrenceId &&
           other.isProjected == this.isProjected &&
           other.lat == this.lat &&
@@ -1775,6 +1804,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<int> tzOffsetMinutes;
   final Value<String?> title;
   final Value<String?> note;
+  final Value<String?> photoPath;
   final Value<String?> recurrenceId;
   final Value<bool> isProjected;
   final Value<double?> lat;
@@ -1792,6 +1822,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.tzOffsetMinutes = const Value.absent(),
     this.title = const Value.absent(),
     this.note = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.recurrenceId = const Value.absent(),
     this.isProjected = const Value.absent(),
     this.lat = const Value.absent(),
@@ -1810,6 +1841,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required int tzOffsetMinutes,
     this.title = const Value.absent(),
     this.note = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.recurrenceId = const Value.absent(),
     this.isProjected = const Value.absent(),
     this.lat = const Value.absent(),
@@ -1832,6 +1864,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<int>? tzOffsetMinutes,
     Expression<String>? title,
     Expression<String>? note,
+    Expression<String>? photoPath,
     Expression<String>? recurrenceId,
     Expression<bool>? isProjected,
     Expression<double>? lat,
@@ -1850,6 +1883,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (tzOffsetMinutes != null) 'tz_offset_minutes': tzOffsetMinutes,
       if (title != null) 'title': title,
       if (note != null) 'note': note,
+      if (photoPath != null) 'photo_path': photoPath,
       if (recurrenceId != null) 'recurrence_id': recurrenceId,
       if (isProjected != null) 'is_projected': isProjected,
       if (lat != null) 'lat': lat,
@@ -1870,6 +1904,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<int>? tzOffsetMinutes,
       Value<String?>? title,
       Value<String?>? note,
+      Value<String?>? photoPath,
       Value<String?>? recurrenceId,
       Value<bool>? isProjected,
       Value<double?>? lat,
@@ -1887,6 +1922,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       tzOffsetMinutes: tzOffsetMinutes ?? this.tzOffsetMinutes,
       title: title ?? this.title,
       note: note ?? this.note,
+      photoPath: photoPath ?? this.photoPath,
       recurrenceId: recurrenceId ?? this.recurrenceId,
       isProjected: isProjected ?? this.isProjected,
       lat: lat ?? this.lat,
@@ -1920,6 +1956,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
+    }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
     }
     if (recurrenceId.present) {
       map['recurrence_id'] = Variable<String>(recurrenceId.value);
@@ -1963,6 +2002,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('tzOffsetMinutes: $tzOffsetMinutes, ')
           ..write('title: $title, ')
           ..write('note: $note, ')
+          ..write('photoPath: $photoPath, ')
           ..write('recurrenceId: $recurrenceId, ')
           ..write('isProjected: $isProjected, ')
           ..write('lat: $lat, ')
@@ -3277,6 +3317,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   required int tzOffsetMinutes,
   Value<String?> title,
   Value<String?> note,
+  Value<String?> photoPath,
   Value<String?> recurrenceId,
   Value<bool> isProjected,
   Value<double?> lat,
@@ -3296,6 +3337,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<int> tzOffsetMinutes,
   Value<String?> title,
   Value<String?> note,
+  Value<String?> photoPath,
   Value<String?> recurrenceId,
   Value<bool> isProjected,
   Value<double?> lat,
@@ -3355,6 +3397,9 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get recurrenceId => $composableBuilder(
       column: $table.recurrenceId, builder: (column) => ColumnFilters(column));
@@ -3433,6 +3478,9 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get recurrenceId => $composableBuilder(
       column: $table.recurrenceId,
       builder: (column) => ColumnOrderings(column));
@@ -3488,6 +3536,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
 
   GeneratedColumn<String> get recurrenceId => $composableBuilder(
       column: $table.recurrenceId, builder: (column) => column);
@@ -3567,6 +3618,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<int> tzOffsetMinutes = const Value.absent(),
             Value<String?> title = const Value.absent(),
             Value<String?> note = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
             Value<String?> recurrenceId = const Value.absent(),
             Value<bool> isProjected = const Value.absent(),
             Value<double?> lat = const Value.absent(),
@@ -3585,6 +3637,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             tzOffsetMinutes: tzOffsetMinutes,
             title: title,
             note: note,
+            photoPath: photoPath,
             recurrenceId: recurrenceId,
             isProjected: isProjected,
             lat: lat,
@@ -3603,6 +3656,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required int tzOffsetMinutes,
             Value<String?> title = const Value.absent(),
             Value<String?> note = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
             Value<String?> recurrenceId = const Value.absent(),
             Value<bool> isProjected = const Value.absent(),
             Value<double?> lat = const Value.absent(),
@@ -3621,6 +3675,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             tzOffsetMinutes: tzOffsetMinutes,
             title: title,
             note: note,
+            photoPath: photoPath,
             recurrenceId: recurrenceId,
             isProjected: isProjected,
             lat: lat,

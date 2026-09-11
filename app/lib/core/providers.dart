@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/capture_queries.dart';
 import '../data/database.dart';
 import '../data/postings_repository.dart';
 
@@ -11,4 +12,8 @@ final databaseProvider = Provider<WudgetDatabase>((ref) {
 
 final postingsRepositoryProvider = Provider<PostingsRepository>((ref) {
   return PostingsRepository(ref.watch(databaseProvider));
+});
+
+final captureQueriesProvider = Provider<CaptureQueries>((ref) {
+  return CaptureQueries(ref.watch(databaseProvider));
 });

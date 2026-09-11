@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/providers.dart';
 import 'data/database.dart';
@@ -10,6 +11,7 @@ import 'features/capture/capture_sheet.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID');
   final db = WudgetDatabase();
   await seedDefaultsIfEmpty(db);
 

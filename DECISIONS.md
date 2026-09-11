@@ -75,3 +75,40 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
 - **Home screen is a placeholder** (`HomeShell`): the token demo screen plus a FAB into the
   capture sheet. Real tab navigation (Catat/Kantong/Pantau) doesn't start until Sprint 6-9.
   Revisit then, replacing `HomeShell` rather than growing it.
+
+## Sprint 4
+
+- **Schema bumped to v2** (`transactions.photo_path`), which finally exercises the migration
+  harness deferred in Sprint 2 — `test/migration/schema_migration_test.dart` builds a real v1
+  fixture with raw SQL and asserts the upgrade adds the column and keeps every row. That
+  pattern (hand-written prior-version fixture + open through `WudgetDatabase`) is now the
+  template for every future schema bump, not just this one.
+  Bug found and fixed the same way: the templates `FutureBuilder` was calling
+  `ref.read(...).topTemplates(...)` inline in `build()`, creating a new unresolved query on
+  every rebuild. In production this meant needless repeated DB hits; the sharper symptom, and
+  how it was found, was a widget test that took 10 real minutes to time out because
+  `db.close()` sat waiting for the ever-growing pile of in-flight queries. Fixed by caching
+  the future in state (`_templatesFuture`, refreshed only on init and on kind change) —
+  general rule for this codebase: never construct a `Future` or `Stream` argument inline
+  inside `build()`, cache it in state instead.
+- **Calculator mode is left-to-right, no operator precedence** (`10000+5000×2` = `30000`, not
+  `20000`). Matches how a physical calculator works and needed no precedence-climbing parser.
+  Revisit only if users ask for `×`/`÷` to bind tighter than `+`/`-`.
+- **Wallet default-per-category is derived from the ledger itself**
+  (`CaptureQueries.lastAccountIdForCategory`), not stored in a settings table. One less table,
+  and it can't drift out of sync with what actually happened. Grouping/ranking for both new
+  queries happens in Dart over a capped, already-fetched window (`scanLimit`, default 100)
+  rather than in SQL — simpler to read than a group-by-with-last-value query, fine at personal-
+  finance data volumes. Revisit if that scan ever shows up in a performance pass.
+- **Receipt photo uses `image_picker`** (new dependency) — no stdlib/native-only way to reach
+  the camera from Flutter. Picker failures (no camera, permission denied, running in a test
+  harness) are caught and treated as "no photo," never a crash, since the photo is optional by
+  spec.
+- **"Back affordance audit" is trivially satisfied this sprint**: the sheet's only new
+  surfaces are native date/time picker dialogs, which ship their own Cancel/back affordance.
+  No custom pushed route exists yet to audit. Revisit once Sprint 5+ adds real pushed screens
+  (wallet detail, settings) reachable from the sheet.
+- **Median save-to-dismissed timing not measured this sprint.** The phone disconnected
+  (battery) mid-session before this sprint's UI was ready to profile, and Sprint 7 owns the
+  actual performance-gate ticket with a release build. Revisit: profile on the ASUS_AI2202
+  once reconnected, ahead of Sprint 7 if possible so a regression isn't discovered late.

@@ -52,6 +52,7 @@ class Transactions extends Table {
   IntColumn get tzOffsetMinutes => integer()();
   TextColumn get title => text().nullable()();
   TextColumn get note => text().nullable()();
+  TextColumn get photoPath => text().nullable()(); // added in schema v2
   TextColumn get recurrenceId => text().nullable()();
   BoolColumn get isProjected => boolean().withDefault(const Constant(false))();
   RealColumn get lat => real().nullable()();
@@ -88,7 +89,17 @@ class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(transactions, transactions.photoPath);
+          }
+        },
+      );
 
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {

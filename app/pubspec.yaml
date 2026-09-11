@@ -27,6 +27,9 @@ dependencies:
   intl: ^0.19.0
   uuid: ^4.5.1
 
+  # receipt photo attachment
+  image_picker: ^1.1.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -37,6 +40,7 @@ dev_dependencies:
 
   build_runner: ^2.4.13
   drift_dev: ^2.20.3
+  sqlite3: ^2.4.6
 
 flutter:
   uses-material-design: true
