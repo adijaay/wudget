@@ -1,4 +1,6 @@
-import 'package:drift/drift.dart' show Value;
+import 'dart:async';
+
+import 'package:drift/drift.dart' show TableUpdateQuery, Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +41,12 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   int? _maxAmountMinor;
   bool _loading = false;
   bool _hasMore = true;
+  StreamSubscription<void>? _txChangesSubscription;
+  // Bumped by every _loadFirstPage call so a reload triggered by the table
+  // listener and one triggered explicitly (e.g. the FAB's own .then) can
+  // race without both appending to _entries: a page fetch started under an
+  // older generation is discarded once a newer one has started.
+  int _loadGeneration = 0;
 
   LedgerFilter get _filter => LedgerFilter(
         categoryId: _categoryId,
@@ -55,11 +63,21 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadFirstPage();
+
+    // HomeShell keeps every tab alive in an IndexedStack, so this screen's
+    // one-shot page load never re-runs on its own when a transaction is
+    // added from Kantong's or Pantau's capture sheet instead of this
+    // screen's own FAB — only a real change notification catches that.
+    final db = ref.read(databaseProvider);
+    _txChangesSubscription = db
+        .tableUpdates(TableUpdateQuery.onTable(db.transactions))
+        .listen((_) => _loadFirstPage());
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _txChangesSubscription?.cancel();
     super.dispose();
   }
 
@@ -71,15 +89,17 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _entries.clear();
       _dayTotals.clear();
       _hasMore = true;
     });
-    await _loadNextPage();
+    await _loadNextPage(generation);
   }
 
-  Future<void> _loadNextPage() async {
+  Future<void> _loadNextPage([int? generation]) async {
+    generation ??= _loadGeneration;
     setState(() => _loading = true);
     final page = await ref
         .read(ledgerQueriesProvider)
@@ -95,7 +115,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       _dayTotals[day] = row?.netMinor ?? 0;
     }
 
-    if (!mounted) return;
+    if (!mounted || generation != _loadGeneration) return;
     setState(() {
       _entries.addAll(page);
       _hasMore = page.length == _pageSize;

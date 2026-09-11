@@ -742,3 +742,61 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   stated at the start of this run: app-store submission and publishing legal documents
   both stay with the owner to do deliberately. Everything buildable ahead of that line
   (policy/terms text, listing copy, ASO, the signing-config scaffold) is done.
+
+## Real-device pass (a connected Android 14 physical device)
+
+The owner connected a real device mid-session. This is the first time the app ran
+outside `flutter_tester`, and it surfaced three real bugs `flutter test` could not have
+caught, none of them theoretical:
+
+- **`flutter install` silently installed a stale APK from Sprint 0-2** (an old
+  `app-release.apk` sitting in `build/`, timestamped hours before this session, still
+  showing the "Design tokens" debug screen `main.dart` stopped using back in Sprint 3).
+  `flutter install` does not rebuild by default, it installs whatever is already in
+  `build/app/outputs/flutter-apk/`; nothing in this session's workflow had rebuilt a
+  *release* APK since. Fixed by always running `flutter build apk --release` explicitly
+  before `adb install -r`, not trusting `flutter install` to do both. No source change,
+  a build-workflow lesson.
+- **Catat never reflected a transaction saved from Kantong's or Pantau's capture
+  sheet.** `HomeShell` (`lib/main.dart`) keeps all three tabs alive in an
+  `IndexedStack` for exactly the reason drift's `.watch()`-based screens rely on
+  (preserve scroll position, filter state, search text across tab switches), but
+  `LedgerScreen` was the one screen still using a one-shot `Future` fetched once in
+  `initState` plus manual reloads after its *own* FAB/delete/edit actions. Since
+  `IndexedStack` never re-runs `initState` on a tab switch, a transaction added from
+  anywhere else silently vanished from Catat's view until the app was fully restarted.
+  Every other list-view screen in the app (`WalletsScreen`, the budget/recurring
+  screens) already uses a drift `.watch()` stream, which is exactly why this bug was
+  confined to one screen. Fixed by subscribing to
+  `db.tableUpdates(TableUpdateQuery.onTable(db.transactions))` in `initState` and
+  reloading on any change, since every write this screen cares about (insert, soft
+  delete, restore, note edit) touches the `transactions` table.
+- **That fix, on its own, introduced a real duplicate-row regression**: the existing
+  manual reload calls (the FAB's `.then`, `_deleteEntry`, `_editNote`) now race the new
+  table-update listener, both call `_loadFirstPage`, and an older in-flight page fetch
+  could still be appending to `_entries` after a newer one had already cleared and
+  reloaded it, doubling rows. Caught immediately by the existing widget test suite,
+  not by hand. Fixed with a generation counter (`_loadGeneration`): every
+  `_loadFirstPage` call bumps it, and a page fetch discards its own result if the
+  generation has moved on by the time it completes, rather than trying to track down
+  and remove every now-redundant manual reload call individually.
+- **The capture sheet's Pengeluaran/Pemasukan/Transfer `SegmentedButton` wrapped
+  "Pengeluaran" onto two lines, but only while selected**, on the real device's actual
+  font rendering, something the widget-test suite's default text metrics never
+  reproduced. Root cause: Material's `SegmentedButton` draws a checkmark inside the
+  selected segment by default, and that icon's width was exactly what pushed the
+  longest label over. Fixed with `showSelectedIcon: false` — the segment's fill and
+  border already carry the selected state, so the icon was a redundant signal, not the
+  only one, and removing it isn't a color-only-feedback regression.
+- **A regression test was added** (`test/features/ledger_screen_test.dart`) that
+  inserts a transaction directly against the database after `LedgerScreen` is already
+  pumped and mounted, with no reload call of the test's own, asserting the list picks
+  it up anyway — the scenario `flutter test`'s existing coverage had no test for,
+  because every prior test drove state changes through the screen's own UI.
+- **Nothing else needed fixing**: the golden path (open capture sheet, pick a category,
+  enter an amount, save, see the wallet balance and Kantong total update) worked
+  correctly on-device before and after these fixes; Pantau's 14-day waiting state
+  rendered correctly (this is a fresh install, so this is the real empty state, not a
+  bug); the add-wallet sheet opened cleanly; and `adb logcat` showed no app exceptions,
+  crashes, or ANRs across the whole session. `flutter analyze` and the full
+  `flutter test` suite (217 tests) both stayed clean after every fix.

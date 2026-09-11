@@ -66,4 +66,52 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
   });
+
+  testWidgets('picks up a transaction written elsewhere while this screen stays mounted', (tester) async {
+    // HomeShell holds Kantong, Catat and Pantau in an IndexedStack, so this
+    // screen's initState only ever runs once per app session, never again
+    // on a tab switch. A transaction saved from another tab's capture sheet
+    // has to reach this list through a real change notification, not
+    // through this screen re-loading itself.
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db);
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const LedgerScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Belum ada transaksi.'), findsOneWidget);
+
+    await PostingsRepository(db).insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx1',
+        kind: 'expense',
+        occurredAt: DateTime.utc(2024, 6, 1, 8).millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        note: const Value('sarapan'),
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p1a', transactionId: 'tx1', accountId: const Value('acc_cash'),
+            amountMinor: -15000, currency: 'IDR', baseAmountMinor: -15000),
+        PostingsCompanion.insert(id: 'p1c', transactionId: 'tx1', categoryId: const Value('cat_makan'),
+            amountMinor: 15000, currency: 'IDR', baseAmountMinor: 15000),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Makan'), findsOneWidget);
+    expect(find.textContaining('Belum ada transaksi.'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
 }

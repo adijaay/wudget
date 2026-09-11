@@ -521,6 +521,11 @@ class _TypeSegments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SegmentedButton<CaptureKind>(
+      // The default selected-state checkmark pushes "Pengeluaran" (the
+      // longest label) onto two lines on a real device at default text
+      // scale — the segment's own fill and border already carry the
+      // selected state, so the icon is redundant, not the only signal.
+      showSelectedIcon: false,
       segments: const [
         ButtonSegment(value: CaptureKind.expense, label: Text('Pengeluaran')),
         ButtonSegment(value: CaptureKind.income, label: Text('Pemasukan')),
