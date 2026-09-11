@@ -19,6 +19,8 @@ class LedgerEntry {
     required this.amountMinor,
     required this.accountName,
     this.categoryName,
+    this.categoryIconKey,
+    this.categoryHueIndex,
   });
   final String transactionId;
   final String kind;
@@ -28,6 +30,12 @@ class LedgerEntry {
   final int amountMinor;
   final String accountName;
   final String? categoryName;
+
+  /// The category's own icon and hue, so a row can draw the same chip the
+  /// capture sheet used to record it. Null on a transfer, which has no
+  /// category leg by design.
+  final String? categoryIconKey;
+  final int? categoryHueIndex;
 }
 
 /// Active filters for the ledger list. All optional; an unset field means
@@ -162,9 +170,9 @@ class LedgerQueries {
     ])
           ..where(_db.postings.transactionId.isIn(txIds) & _db.postings.categoryId.isNotNull()))
         .get();
-    final categoryNameByTx = <String, String>{
+    final categoryByTx = <String, Category>{
       for (final row in categoryLegRows)
-        row.readTable(_db.postings).transactionId: row.readTable(_db.categories).name,
+        row.readTable(_db.postings).transactionId: row.readTable(_db.categories),
     };
 
     final byId = {for (final t in transactions) t.id: t};
@@ -181,6 +189,7 @@ class LedgerQueries {
           ? primary.readTable(_db.accounts).name
           : '${primary.readTable(_db.accounts).name} -> ${legs.last.readTable(_db.accounts).name}';
 
+      final category = categoryByTx[txId];
       entries.add(LedgerEntry(
         transactionId: txId,
         kind: tx.kind,
@@ -189,7 +198,9 @@ class LedgerQueries {
         note: tx.note,
         amountMinor: primary.readTable(_db.postings).amountMinor,
         accountName: accountName,
-        categoryName: categoryNameByTx[txId],
+        categoryName: category?.name,
+        categoryIconKey: category?.iconKey,
+        categoryHueIndex: category?.hueIndex,
       ));
     }
 

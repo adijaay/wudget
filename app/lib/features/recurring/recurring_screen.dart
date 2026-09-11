@@ -10,6 +10,7 @@ import '../../core/providers.dart';
 import '../../data/database.dart';
 import '../../data/recurrence_repository.dart';
 import '../../data/recurring_queries.dart';
+import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/recurrence.dart';
 import '../capture/capture_sheet.dart';
@@ -95,48 +96,62 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Berulang & Tagihan'),
+        title: const Text('Berulang & tagihan'),
         actions: [
           IconButton(icon: const Icon(Icons.add), tooltip: 'Tambah item berulang', onPressed: _createRecurring),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(WudgetTokens.space4),
+        padding: const EdgeInsets.fromLTRB(
+          WudgetTokens.space4,
+          0,
+          WudgetTokens.space4,
+          WudgetTokens.space6,
+        ),
         children: [
-          Text('Akan datang', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: WudgetTokens.space2),
+          const SectionLabel('Akan datang'),
           if (upcoming.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: WudgetTokens.space3),
-              child: Text('Tidak ada yang akan datang.'),
+            WudgetCard(
+              child: Text(
+                'Tidak ada tagihan yang menunggu dikonfirmasi.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             )
           else
-            for (final instance in upcoming)
-              _UpcomingTile(
-                instance: instance,
-                onConfirm: () => _confirm(instance),
-                onSkip: () => _skip(instance),
-              ),
+            CardGroup(
+              children: [
+                for (final instance in upcoming)
+                  _UpcomingTile(
+                    instance: instance,
+                    onConfirm: () => _confirm(instance),
+                    onSkip: () => _skip(instance),
+                  ),
+              ],
+            ),
           const SizedBox(height: WudgetTokens.space5),
-          Text('Aktif', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: WudgetTokens.space2),
+          const SectionLabel('Aktif'),
           if (active.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space3),
+            WudgetCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Item berulang adalah tagihan atau pemasukan yang datang lagi tiap periode, '
                     'seperti "Listrik, Rp150.000, tiap tanggal 5".',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: WudgetTokens.space3),
-                  FilledButton(onPressed: _createRecurring, child: const Text('Tambah item berulang')),
+                  FilledButton(
+                    onPressed: _createRecurring,
+                    child: const Text('Tambah item berulang'),
+                  ),
                 ],
               ),
             )
           else
-            for (final row in active) _ActiveTile(row: row, today: today),
+            CardGroup(
+              children: [for (final row in active) _ActiveTile(row: row, today: today)],
+            ),
         ],
       ),
     );
@@ -211,7 +226,7 @@ class _CreateRecurringSheetState extends ConsumerState<_CreateRecurringSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Tambah item berulang', style: Theme.of(context).textTheme.titleMedium),
+            Text('Tambah item berulang', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: WudgetTokens.space3),
             TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Nama (mis. Listrik)')),
             const SizedBox(height: WudgetTokens.space3),
@@ -281,19 +296,39 @@ class _UpcomingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: WudgetTokens.space2),
-      child: ListTile(
-        title: Text(instance.note?.isNotEmpty == true ? instance.note! : 'Tagihan'),
-        subtitle: Text(_dateFormat.format(_dateForDay(instance.dueDay))),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_formatter.format(Money.fromMinor(instance.amountMinor, 'IDR'))),
-            IconButton(icon: const Icon(Icons.close), tooltip: 'Lewati', onPressed: onSkip),
-            IconButton(icon: const Icon(Icons.check), tooltip: 'Konfirmasi', onPressed: onConfirm),
-          ],
-        ),
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final dueIn = instance.dueDay - _todayDayBucket();
+    return CardRow(
+      leading: IconChip(
+        icon: Icons.event_repeat_outlined,
+        background: tokens.surfaceMuted,
+        foreground: tokens.ink2,
+      ),
+      title: instance.note?.isNotEmpty == true ? instance.note! : 'Tagihan',
+      // Days remaining as well as the date: "3 hari lagi" is what decides
+      // whether this needs attention now.
+      subtitle: switch (dueIn) {
+        0 => 'Jatuh tempo hari ini',
+        1 => 'Besok, ${_dateFormat.format(_dateForDay(instance.dueDay))}',
+        final d when d > 1 => '$d hari lagi, ${_dateFormat.format(_dateForDay(instance.dueDay))}',
+        _ => 'Terlewat, ${_dateFormat.format(_dateForDay(instance.dueDay))}',
+      },
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AmountText(minor: instance.amountMinor),
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            tooltip: 'Lewati',
+            onPressed: onSkip,
+          ),
+          IconButton(
+            icon: const Icon(Icons.check, size: 20),
+            tooltip: 'Konfirmasi',
+            color: tokens.accent,
+            onPressed: onConfirm,
+          ),
+        ],
       ),
     );
   }
@@ -325,15 +360,23 @@ class _ActiveTile extends StatelessWidget {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     final error = row.lastGenerationError;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: WudgetTokens.space2),
-      child: ListTile(
-        title: Text(template.note?.isNotEmpty == true ? template.note! : 'Item berulang'),
-        subtitle: error != null
-            ? Text('Gagal membuat: $error', style: TextStyle(color: tokens.negative))
-            : Text('Berikutnya: ${_dateFormat.format(_dateForDay(nextDue))}'),
-        leading: error != null ? Icon(Icons.warning_amber_rounded, color: tokens.negative) : null,
-        trailing: Text(amountLabel),
+    return CardRow(
+      leading: IconChip(
+        // A failed rule is flagged by its icon as well as its text, so the
+        // state is not carried by colour alone (R-25).
+        icon: error != null ? Icons.warning_amber_rounded : Icons.autorenew,
+        background: error != null ? tokens.warning.withOpacity(0.14) : tokens.surfaceMuted,
+        foreground: error != null ? tokens.warning : tokens.ink2,
+      ),
+      title: template.note?.isNotEmpty == true ? template.note! : 'Item berulang',
+      subtitle: error != null
+          ? 'Gagal membuat: $error'
+          : 'Berikutnya ${_dateFormat.format(_dateForDay(nextDue))}',
+      trailing: Text(
+        amountLabel,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
       ),
     );
   }

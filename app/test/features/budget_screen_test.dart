@@ -83,7 +83,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '999000');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    // The proposal is accepted as one set, not field by field: its total is
+    // what the footer asks the user to agree to (design/BudgetProposal.dc.html).
+    await tester.tap(find.text('Pakai anggaran ini'));
     await tester.pumpAndSettle();
 
     final saved = await (db.select(db.budgets)..where((b) => b.key.equals('cat_makan'))).getSingle();
@@ -108,7 +111,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Belum ada riwayat'), findsOneWidget);
+    expect(find.textContaining('Belum ada yang bisa diusulkan'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
 
     await tester.pumpWidget(const SizedBox());

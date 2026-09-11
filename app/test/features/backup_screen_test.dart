@@ -34,11 +34,11 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Belum ada cadangan.'), findsOneWidget);
+    expect(find.text('Belum ada cadangan'), findsOneWidget);
     expect(find.text('Buat cadangan sekarang'), findsOneWidget);
-    expect(find.text('Ekspor JSON (lengkap)'), findsOneWidget);
-    expect(find.text('Ekspor CSV (spreadsheet)'), findsOneWidget);
-    expect(find.text('Pulihkan dari file JSON...'), findsOneWidget);
+    expect(find.text('Ekspor JSON'), findsOneWidget);
+    expect(find.text('Ekspor CSV'), findsOneWidget);
+    expect(find.text('Pulihkan dari file JSON'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

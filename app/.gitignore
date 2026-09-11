@@ -41,3 +41,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Design-review renders: regenerate on demand with
+#   flutter test --update-goldens test/design_review.dart
+# Not committed, because they change with every visual tweak and the golden
+# tests in test/golden/ are the actual regression guard.
+/test/design_review/
+
+# Diff images flutter_test writes when a golden does not match.
+/test/golden/failures/
+__pycache__/

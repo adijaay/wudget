@@ -31,7 +31,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Catat dulu'), findsOneWidget);
+    expect(find.textContaining('Catat beberapa hari dulu'), findsOneWidget);
     expect(find.text('Pengeluaran'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
@@ -94,9 +94,9 @@ void main() {
     // reason instead of fabricating a comparison (chart rule 8).
     expect(find.text('Belum ada periode sebelumnya untuk dibandingkan.'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Lihat sisa saldo periode ini'));
+    await tester.ensureVisible(find.text('Lihat sisa anggaran'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Lihat sisa saldo periode ini'));
+    await tester.tap(find.text('Lihat sisa anggaran'));
     await tester.pumpAndSettle();
     expect(find.text('Sisa periode ini'), findsOneWidget);
     await tester.tapAt(const Offset(20, 20)); // dismiss the sheet
@@ -205,9 +205,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Sisa periode ini'), findsOneWidget);
+    expect(find.text('SISA PERIODE INI'), findsOneWidget);
     expect(find.text('Lihat laju & perkiraan'), findsOneWidget);
-    expect(find.text('Lihat sisa saldo periode ini'), findsNothing);
+    expect(find.text('Lihat sisa anggaran'), findsNothing);
 
     await tester.ensureVisible(find.text('Lihat laju & perkiraan'));
     await tester.pumpAndSettle();

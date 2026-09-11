@@ -800,3 +800,110 @@ caught, none of them theoretical:
   bug); the add-wallet sheet opened cleanly; and `adb logcat` showed no app exceptions,
   crashes, or ANRs across the whole session. `flutter analyze` and the full
   `flutter test` suite (217 tests) both stayed clean after every fix.
+
+## Front-end rebuild to the mockups
+
+The implementation had drifted a long way from `design/*.dc.html`: default Material 3
+seeded from a green that appears in no mockup, pure-white surfaces instead of the warm
+off-white, no card/page surface distinction, the system font instead of the commissioned
+one, `ChoiceChip`/`ListTile`/`Card` defaults where the mockups specify grouped card lists
+with icon chips, a corner FAB and three tabs instead of four plus a docked capture
+button. Rebuilt the whole UI layer against the artboards, with the data, domain and
+query layers untouched.
+
+Decisions the owner made when asked, rather than assumed: accent **Petrol**
+oklch(0.52 0.09 205) of the three candidates in Tokens.dc.html, Plus Jakarta Sans
+**bundled** as an app asset, and the mockups' **four-tab bar with the centre capture
+button**. antislop was applied during the work, not as an audit after.
+
+- **The tokens are ported from OKLCH by a committed script** (`app/tool/oklch.py`),
+  not eyeballed into hex: the mockups are authored in OKLCH, and every value in
+  `lib/design/tokens.dart` comes from that conversion with its WCAG ratio printed
+  alongside. `ColorScheme.fromSeed` is gone — a generated scheme overwrote every value
+  with its own harmonised guess, which is the direct reason none of the mockup's colours
+  had ever reached the screen.
+- **Checking contrast rather than trusting the mockup caught four real failures.** The
+  plain accent on `surfaceInverse` (the dark snackbar) is 2.94:1, so an
+  `accentOnInverse` token exists purely for that; a selected subcategory chip filled with
+  its category hue and written in near-white measured 3.56:1 on the lightest hue, so
+  selected chips now use the tint-plus-border treatment the category tiles use; the
+  Pendidikan hue at the mockup's own lightness was 2.96:1 against its own tint, so it is
+  darkened to oklch(0.58 0.09 85); and the mockup's subtitle grey fails 4.5:1 as text, so
+  row subtitles use ink2 and `ink3` is now documented as decoration-only. R-25 outranks
+  matching a hex value. `test/domain/contrast_test.dart` grew from 14 assertions to 32,
+  covering every ground text actually lands on in both themes.
+- **Plus Jakarta Sans is bundled, not fetched** (`app/assets/fonts`, with its OFL
+  licence): the app makes no network calls at all, so a runtime-fetched font would simply
+  never arrive. The face lacks some symbol codepoints — the numpad's `✓` rendered as
+  tofu once it became the default family — so the save and calculator keys are icons now
+  (as the mockup draws them anyway) and the theme carries a `fontFamilyFallback` so no
+  missing glyph can ever render as a box again.
+- **Four real layout bugs surfaced from the 200% text-scale test**, all of the same
+  shape: a fixed height that a scaled glyph cannot fit in. The numpad keys had a hard
+  52px height (now a minimum), the category tiles and chip rows were fixed-height
+  horizontal `ListView`s (now intrinsically-sized scrolling `Row`s), and the pace ring
+  clipped its own percentage (it now grows with the text scale, capped at 1.8, because
+  that percentage appears nowhere else on the screen).
+- **A button theme using `Size.fromHeight` broke every button inside a Row.**
+  `Size.fromHeight(44)` is `Size(infinity, 44)`, so it forces full-width buttons
+  everywhere and is unsatisfiable in a `Row` — the budget footer's two actions could not
+  be laid out at all. Only the height is a minimum now.
+- **Catat keeps no period selector, deliberately, against the mockup.** Filtering the
+  ledger by period needs a local-day expression (`occurred_at + tz_offset`) that cannot
+  use the `occurred_at` index, and the category-rank query already shows the cost of
+  that: it scans a widened range and filters in Dart. A continuous list whose day-group
+  cards carry the date never dead-ends at a period boundary, and the period concept is
+  what Pantau is for. The day header prints the year only when the date is not in the
+  current one.
+- **The ledger row leads with the category, not the note**, matching the mockup: the
+  category is what the eye scans a day's rows for. The note joins the detail line, which
+  now reads "note, wallet, time" — recognising an entry you made yesterday needs the
+  wallet and the time, which the query did not previously return (`LedgerEntry` gained
+  the category's icon and hue, and `CategoryRank` gained its hue index, so a row draws
+  the same chip the capture sheet recorded it with).
+- **Wallet chips take a neutral ground and a type icon, not a colour.** The eight hues
+  mean "this category" everywhere else, so a green chip would be ambiguous between
+  Kesehatan and some e-wallet, and real provider colours would be invented brand assets
+  (R-23). The type icon carries the distinction, and the raw English enum values a user
+  was reading under their wallet name ("cash", "ewallet") are Indonesian labels now.
+- **The credit card is drawn once.** It first appeared both as a row in its group and as
+  the detail block below it; the block already carries the name and what is owed, so the
+  group now renders the block alone. Rename and archive moved into a shared actions sheet
+  so neither surface quietly drops them.
+- **Calculator mode had a real bug the rebuild fixed.** The operators were swapped into
+  the fourth column, which replaced the toggle key itself — so there was no way back out
+  of calculator mode — and hid the date key while it was on. The operators are their own
+  row now, revealed by the toggle, with all four operators instead of two, and the amount
+  display shows the evaluated total with the expression on a line beneath rather than the
+  raw expression in place of the number.
+- **Pantau's waiting state counts instead of shrugging.** It was an hourglass and one
+  sentence; the States artboard specifies the day count, one segment per day, when the
+  budget proposal arrives, and the totals that are already true. All of that was already
+  in the data.
+- **The budget screen is a proposal to accept, saved as one action.** It previously
+  persisted field by field on submit; its footer now states the total being agreed to
+  (and, only when income for the period is actually recorded, what is left over), which
+  is what BudgetProposal.dc.html asks the user to accept. Amount fields group their
+  thousands as they are typed, like every other amount in the app.
+- **The period-close sheet is the one surface that deliberately looks different** — dark
+  ground, its own type scale, "a moment, not a tab". Two things in that artboard are not
+  built, and neither is faked: the envelope motif is still `[CONFIRM]` in DESIGN.md ("a
+  motif applied half-heartedly is worse than none"), and the surplus sweep has no savings
+  goal to sweep into because goals were cut from v1, so the offer is a real transfer into
+  a savings wallet and appears only when such a wallet exists.
+- **Saya exists because three built features had no home.** Backup, CSV import, recurring
+  items and the budget were reachable only from icons in another screen's app bar, and the
+  period start day — which every period boundary in the app is measured from — had no UI
+  at all. Every row on it leads somewhere real (R-24).
+- **`test/design_review.dart` renders each screen at phone size with the real typeface
+  loaded**, because the device was unplugged before this work could be checked on it and
+  the golden tests cannot be looked at (the default test font draws every glyph as a box).
+  It is not a test and asserts nothing; the goldens remain the regression guard. Its
+  output is gitignored. Reviewing those renders is what caught the tofu checkmark, the
+  duplicated credit card, the ungrouped budget fields, a forecast legend whose dashed
+  swatch had collapsed to zero height, and an unlabelled baseline line that read as a
+  second forecast.
+- **Not verified on a device.** The phone used earlier in this session was disconnected
+  by the time the rebuild was ready, so the on-device click-through R-35 asks for has not
+  happened. `flutter analyze` is clean and all 236 tests pass, and the review renders
+  above are the evidence in hand, but they are renders, not a device.

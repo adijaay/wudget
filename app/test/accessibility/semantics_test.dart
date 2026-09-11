@@ -52,11 +52,11 @@ void main() {
     // silence or a raw "0".
     expect(tester.getSemantics(amountFinder).label, 'Jumlah: ${_formatter.format(Money.fromMinor(0, 'IDR'))}');
 
-    await tester.tap(find.text('1'));
-    await tester.tap(find.text('5'));
-    await tester.tap(find.text('0'));
-    await tester.tap(find.text('0'));
-    await tester.tap(find.text('0'));
+    // By key, not by glyph: the amount display itself renders "0" when
+    // empty, so find.text('0') matches the display as well as the key.
+    await tester.tap(find.byKey(const Key('numpadKey_1')));
+    await tester.tap(find.byKey(const Key('numpadKey_5')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tester.pump();
 
     expect(tester.getSemantics(amountFinder).label, 'Jumlah: ${_formatter.format(Money.fromMinor(15000, 'IDR'))}');
@@ -90,11 +90,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The glyph-only controls (⌫, ±, ✓) must announce a real word, not the
-    // glyph itself — a screen reader user cannot act on "backspace symbol".
-    expect(tester.getSemantics(find.text('⌫')).label, 'Hapus');
-    expect(tester.getSemantics(find.text('±')).label, 'Kalkulator');
-    expect(tester.getSemantics(find.text('✓')).label, 'Simpan');
+    // The controls that carry only a glyph or an icon must announce a real
+    // word — a screen reader user cannot act on "backspace symbol".
+    expect(tester.getSemantics(find.byKey(const Key('numpadKey_backspace'))).label, 'Hapus');
+    expect(tester.getSemantics(find.byKey(const Key('numpadKey_calculator'))).label, 'Kalkulator');
+    expect(tester.getSemantics(find.byKey(const Key('numpadKey_save'))).label, 'Simpan');
     final dateSemantics = find.byWidgetPredicate(
       (w) => w is Semantics && (w.properties.label?.startsWith('Tanggal: ') ?? false),
     );
@@ -103,9 +103,19 @@ void main() {
     // Digit keys are real Semantics buttons (not just visible text a mouse
     // could hit), so Tab/switch-access and a screen reader can reach them.
     for (final digit in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']) {
-      final semantics = tester.getSemantics(find.text(digit));
+      final semantics = tester.getSemantics(find.byKey(Key('numpadKey_$digit')));
       expect(semantics.hasFlag(SemanticsFlag.isButton), isTrue, reason: 'digit "$digit" is not a Semantics button');
+      expect(semantics.label, digit, reason: 'digit "$digit" does not announce itself');
     }
+
+    // Calculator mode's operators are keys too, and each announces a word
+    // rather than the symbol.
+    await tester.tap(find.byKey(const Key('numpadKey_calculator')));
+    await tester.pump();
+    expect(tester.getSemantics(find.byKey(const Key('numpadOp_+'))).label, 'Tambah');
+    expect(tester.getSemantics(find.byKey(const Key('numpadOp_-'))).label, 'Kurang');
+    expect(tester.getSemantics(find.byKey(const Key('numpadOp_×'))).label, 'Kali');
+    expect(tester.getSemantics(find.byKey(const Key('numpadOp_÷'))).label, 'Bagi');
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

@@ -56,7 +56,7 @@ void main() {
 
     // Only the active-rule listing remains; the upcoming instance is gone.
     expect(find.text('Listrik'), findsOneWidget);
-    expect(find.text('Tidak ada yang akan datang.'), findsOneWidget);
+    expect(find.text('Tidak ada tagihan yang menunggu dikonfirmasi.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
@@ -121,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Listrik'), findsOneWidget);
-    expect(find.textContaining('Berikutnya:'), findsOneWidget);
+    expect(find.textContaining('Berikutnya '), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

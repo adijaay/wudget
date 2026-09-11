@@ -42,10 +42,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add));
+    // Capture lives on the shell's docked centre button now, so a Catat
+    // rendered on its own opens the sheet from its empty-state action.
+    await tester.tap(find.text('Catat pengeluaran pertama'));
     await tester.pumpAndSettle();
 
-    expect(find.text('✓'), findsOneWidget); // the capture sheet's save key, fully rendered
+    // The save key, fully rendered.
+    expect(find.byKey(const Key('numpadKey_save')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox());

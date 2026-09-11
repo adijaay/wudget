@@ -28,8 +28,8 @@ class WeekBarChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Pengeluaran per hari (7 hari terakhir)', style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: WudgetTokens.space2),
+        // No title of its own: the section label above the card says what
+        // this is, and repeating it inside would print the same fact twice.
         SizedBox(
           height: 120,
           child: Row(
@@ -51,6 +51,12 @@ class WeekBarChart extends StatelessWidget {
                           Text(
                             _formatter.formatCompact(Money.fromMinor(values[i], 'IDR')),
                             textAlign: TextAlign.center,
+                            // One line: a seventh of the width is narrower
+                            // than "Rp 252rb", and wrapping it mid-amount
+                            // reads as two numbers.
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
                         Expanded(

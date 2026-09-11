@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../../data/csv_import_repository.dart';
+import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/csv_import.dart';
 import '../../domain/csv_parser.dart';
@@ -118,50 +119,149 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Impor dari CSV')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(WudgetTokens.space4),
+        padding: const EdgeInsets.fromLTRB(
+          WudgetTokens.space4,
+          0,
+          WudgetTokens.space4,
+          WudgetTokens.space6,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            FilledButton.icon(
+            if (_headers == null)
+              // Before a file is picked, say what this screen wants and what
+              // it will do with it, rather than showing a bare button.
+              WudgetCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pindah dari aplikasi lain', style: text.titleLarge),
+                    const SizedBox(height: WudgetTokens.space2),
+                    Text(
+                      'Ekspor catatanmu dari aplikasi lama sebagai CSV, lalu pilih '
+                      'filenya di sini. Kolomnya kamu cocokkan sendiri, jadi tidak '
+                      'ada yang ditebak.',
+                      style: text.bodyMedium,
+                    ),
+                  ],
+                ),
+              )
+            else
+              WudgetCard(
+                padding: const EdgeInsets.all(WudgetTokens.space3),
+                child: Row(
+                  children: [
+                    IconChip(
+                      icon: Icons.description_outlined,
+                      background: tokens.surfaceMuted,
+                      foreground: tokens.ink2,
+                    ),
+                    const SizedBox(width: WudgetTokens.space3),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_fileName ?? 'File CSV', style: text.titleSmall),
+                          const SizedBox(height: 2),
+                          Text('${_dataRows!.length} baris ditemukan', style: text.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: WudgetTokens.space3),
+            OutlinedButton.icon(
               onPressed: _pickFile,
-              icon: const Icon(Icons.upload_file),
-              label: Text(_fileName ?? 'Pilih file CSV'),
+              icon: const Icon(Icons.upload_file, size: 18),
+              label: Text(_headers == null ? 'Pilih file CSV' : 'Pilih file lain'),
             ),
-            const SizedBox(height: WudgetTokens.space4),
             if (_headers != null) ...[
-              Text('${_dataRows!.length} baris ditemukan.', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: WudgetTokens.space3),
-              _ColumnPicker(label: 'Tanggal', headers: _headers!, value: _dateColumn,
-                  onChanged: (v) => setState(() => _dateColumn = v), required_: true),
-              _ColumnPicker(label: 'Jumlah', headers: _headers!, value: _amountColumn,
-                  onChanged: (v) => setState(() => _amountColumn = v), required_: true),
-              _ColumnPicker(label: 'Kategori', headers: _headers!, value: _categoryColumn,
-                  onChanged: (v) => setState(() => _categoryColumn = v)),
-              _ColumnPicker(label: 'Dompet', headers: _headers!, value: _accountColumn,
-                  onChanged: (v) => setState(() => _accountColumn = v)),
-              _ColumnPicker(label: 'Catatan', headers: _headers!, value: _noteColumn,
-                  onChanged: (v) => setState(() => _noteColumn = v)),
-              _ColumnPicker(label: 'Jenis (masuk/keluar)', headers: _headers!, value: _kindColumn,
-                  onChanged: (v) => setState(() => _kindColumn = v)),
+              const SizedBox(height: WudgetTokens.space5),
+              const SectionLabel('Cocokkan kolom'),
+              WudgetCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: WudgetTokens.space3,
+                  vertical: WudgetTokens.space2,
+                ),
+                child: Column(
+                  children: [
+                    _ColumnPicker(label: 'Tanggal', headers: _headers!, value: _dateColumn,
+                        onChanged: (v) => setState(() => _dateColumn = v), required_: true),
+                    _ColumnPicker(label: 'Jumlah', headers: _headers!, value: _amountColumn,
+                        onChanged: (v) => setState(() => _amountColumn = v), required_: true),
+                    _ColumnPicker(label: 'Kategori', headers: _headers!, value: _categoryColumn,
+                        onChanged: (v) => setState(() => _categoryColumn = v)),
+                    _ColumnPicker(label: 'Kantong', headers: _headers!, value: _accountColumn,
+                        onChanged: (v) => setState(() => _accountColumn = v)),
+                    _ColumnPicker(label: 'Catatan', headers: _headers!, value: _noteColumn,
+                        onChanged: (v) => setState(() => _noteColumn = v)),
+                    _ColumnPicker(label: 'Jenis (masuk/keluar)', headers: _headers!, value: _kindColumn,
+                        onChanged: (v) => setState(() => _kindColumn = v)),
+                  ],
+                ),
+              ),
               const SizedBox(height: WudgetTokens.space4),
               FilledButton(
                 onPressed: _dateColumn == null || _amountColumn == null || _importing ? null : _import,
-                child: _importing ? const CircularProgressIndicator() : const Text('Impor'),
+                child: _importing
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text('Impor ${_dataRows!.length} baris'),
               ),
             ],
             if (_writeResult != null) ...[
               const SizedBox(height: WudgetTokens.space5),
-              Text('${_writeResult!.importedCount} baris berhasil diimpor.',
-                  style: Theme.of(context).textTheme.titleMedium),
-              if (_parseFailures.isNotEmpty || _writeResult!.failures.isNotEmpty) ...[
-                const SizedBox(height: WudgetTokens.space2),
-                Text('Gagal:', style: Theme.of(context).textTheme.bodyMedium),
-                for (final f in [..._parseFailures, ..._writeResult!.failures])
-                  Text('Baris ${f.rowNumber}: ${f.reason}'),
-              ],
+              const SectionLabel('Hasil'),
+              WudgetCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 20, color: tokens.positive),
+                        const SizedBox(width: WudgetTokens.space2),
+                        Text(
+                          '${_writeResult!.importedCount} baris masuk',
+                          style: text.titleSmall,
+                        ),
+                      ],
+                    ),
+                    // Every row that did not make it is listed with its line
+                    // number and reason: a silent partial import is how a
+                    // user loses records without knowing (chart rule 8's
+                    // spirit, and R-27's error state).
+                    if (_parseFailures.isNotEmpty || _writeResult!.failures.isNotEmpty) ...[
+                      const SizedBox(height: WudgetTokens.space3),
+                      Row(
+                        children: [
+                          Icon(Icons.error_outline, size: 20, color: tokens.warning),
+                          const SizedBox(width: WudgetTokens.space2),
+                          Text(
+                            '${_parseFailures.length + _writeResult!.failures.length} baris dilewati',
+                            style: text.titleSmall?.copyWith(color: tokens.warning),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: WudgetTokens.space2),
+                      for (final f in [..._parseFailures, ..._writeResult!.failures])
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text('Baris ${f.rowNumber}: ${f.reason}', style: text.bodySmall),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/money.dart';
 import '../../core/money_formatter.dart';
@@ -7,13 +8,12 @@ import '../../core/providers.dart';
 import '../../data/category_rank_queries.dart';
 import '../../data/feature_flags_repository.dart';
 import '../../data/period_aggregate_queries.dart';
+import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/pace.dart';
 import '../../domain/period.dart';
 import '../../domain/period_close.dart';
-import '../budget/budget_screen.dart';
 import '../period/period_selector.dart';
-import '../recurring/recurring_screen.dart';
 import 'actual_forecast_chart.dart';
 import 'category_ranked_list.dart';
 import 'pace_ring.dart';
@@ -31,7 +31,7 @@ int _todayDayBucket() {
 /// Pantau: the review surface. Leads with pace against elapsed time and a
 /// forecast, not the remaining balance, unless the framing experiment's
 /// flag says otherwise — plan/01-features.md and plan/05-sprints.md
-/// Sprint 11.
+/// Sprint 11. Built to design/Pantau.dc.html.
 class PantauScreen extends ConsumerStatefulWidget {
   const PantauScreen({super.key});
 
@@ -83,13 +83,18 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
 
     final totals = await periodQueries.totalsFor(closing);
     final closingRanks = await rankQueries.rankedSpend(closing.startDay, closing.endDayExclusive);
-    final previousRanks = await rankQueries.rankedSpend(beforeClosing.startDay, beforeClosing.endDayExclusive);
+    final previousRanks =
+        await rankQueries.rankedSpend(beforeClosing.startDay, beforeClosing.endDayExclusive);
 
     final summary = buildPeriodCloseSummary(
       incomeMinor: totals.incomeMinor,
       expenseMinor: totals.expenseMinor,
-      closingRanks: [for (final r in closingRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)],
-      previousRanks: [for (final r in previousRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)],
+      closingRanks: [
+        for (final r in closingRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)
+      ],
+      previousRanks: [
+        for (final r in previousRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)
+      ],
     );
     if (summary == null) return; // no data for the closing period — skip the ritual entirely
 
@@ -97,7 +102,11 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => PeriodCloseSheet(summary: summary, onClose: () => Navigator.of(context).pop()),
+      builder: (_) => PeriodCloseSheet(
+        summary: summary,
+        periodLabel: periodCloseLabel(closing.startDate),
+        onClose: () => Navigator.of(context).pop(),
+      ),
     );
     await settings.setLastAcknowledgedPeriodClose(closing.startDay);
   }
@@ -111,11 +120,14 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     final totals = await queries.totalsFor(period);
     final daily = await queries.dailyExpenseMinor(period);
     final baseline = await queries.previousPeriodBaselineExpenseMinor(period);
-    final ranks = await ref.read(categoryRankQueriesProvider).rankedSpend(period.startDay, period.endDayExclusive);
+    final ranks =
+        await ref.read(categoryRankQueriesProvider).rankedSpend(period.startDay, period.endDayExclusive);
     final weekDays = List<int>.generate(7, (i) => today - 6 + i);
     final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
 
-    final paceFirst = await ref.read(featureFlagsRepositoryProvider).getBool(paceFirstFlagKey, defaultValue: true);
+    final paceFirst = await ref
+        .read(featureFlagsRepositoryProvider)
+        .getBool(paceFirstFlagKey, defaultValue: true);
     await ref.read(analyticsRepositoryProvider).logEvent(
       'pantau_viewed',
       props: {'variant': paceFirst ? 'pace_first' : 'remaining_first'},
@@ -141,35 +153,25 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     });
 
     if (!_loaded) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Pantau')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     final todayDay = _todayDayBucket();
     final daysSinceFirst = _firstDay == null ? 0 : todayDay - _firstDay! + 1;
+    final period = ref.watch(currentPeriodProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pantau'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.event_repeat),
-            tooltip: 'Berulang & Tagihan',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RecurringScreen()),
-            ),
-          ),
-          if (daysSinceFirst >= _waitingDays)
-            IconButton(
-              icon: const Icon(Icons.pie_chart_outline),
-              tooltip: 'Anggaran',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BudgetScreen()),
-              ),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Pantau')),
       body: daysSinceFirst < _waitingDays
-          ? _WaitingState(daysSoFar: daysSinceFirst)
+          ? _WaitingState(
+              daysSoFar: daysSinceFirst,
+              totals: _totals!,
+              daysElapsedInPeriod: (todayDay - period.startDay + 1)
+                  .clamp(1, period.endDayExclusive - period.startDay),
+            )
           : _ReviewBody(
               totals: _totals!,
               dailyExpense: _dailyExpense,
@@ -213,42 +215,32 @@ class _ReviewBody extends ConsumerWidget {
     );
   }
 
-  void _showPaceDetails(BuildContext context, Period period, PaceResult pace) {
-    final todayIndex = period.contains(todayDay) ? todayDay - period.startDay : null;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(WudgetTokens.space5),
-        child: SingleChildScrollView(
-          child: _PaceDetails(pace: pace, period: period, todayIndex: todayIndex, dailyExpense: dailyExpense),
-        ),
-      ),
-    );
-  }
-
   void _showRemainingBalance(BuildContext context) {
     final remaining = totals.incomeMinor - totals.expenseMinor;
     showModalBottomSheet(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(WudgetTokens.space5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Sisa periode ini', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: WudgetTokens.space2),
-            Text(
-              _formatter.format(Money.fromMinor(remaining, 'IDR')),
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: WudgetTokens.space2),
-            Text(
-              'Pemasukan dikurangi pengeluaran periode ini, bukan target.',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
+      builder: (context) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(WudgetTokens.space5),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Sisa periode ini', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: WudgetTokens.space2),
+              AmountText(
+                minor: remaining,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: WudgetTokens.space2),
+              Text(
+                'Pemasukan periode ini dikurangi pengeluarannya. Ini bukan '
+                'target, dan bukan saldo semua kantong.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -257,31 +249,42 @@ class _ReviewBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final period = ref.watch(currentPeriodProvider);
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
 
-    // An empty period (usually one the user paged back to, before they'd
-    // started tracking, or simply skipped) gets its own state rather than
-    // a pace ring and chart with nothing honest to draw — plan/04-ux-design.md,
-    // "Pantau, empty period: which period is empty, how to reach one that is not."
+    const padding = EdgeInsets.fromLTRB(
+      WudgetTokens.space4,
+      0,
+      WudgetTokens.space4,
+      WudgetTokens.space6,
+    );
+
+    // An empty period (usually one paged back to, from before the user
+    // started tracking) gets its own state rather than a pace ring and a
+    // chart with nothing honest to draw — plan/04-ux-design.md, "Pantau,
+    // empty period: which period is empty, how to reach one that is not."
     if (totals.expenseMinor == 0 && totals.incomeMinor == 0 && categoryRanks.isEmpty) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(WudgetTokens.space4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const PeriodSelector(),
-            const SizedBox(height: WudgetTokens.space6),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(WudgetTokens.space5),
-                child: Text(
-                  'Tidak ada catatan di periode ini. Geser ke periode lain untuk melihat riwayat.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
+      return ListView(
+        padding: padding,
+        children: [
+          const PeriodSelector(),
+          const SizedBox(height: WudgetTokens.space4),
+          WudgetCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.event_busy_outlined, size: 26, color: tokens.ink2),
+                const SizedBox(height: WudgetTokens.space3),
+                Text('Tidak ada catatan di periode ini', style: text.titleLarge),
+                const SizedBox(height: WudgetTokens.space2),
+                Text(
+                  'Geser ke periode lain pakai tanda panah di atas untuk melihat riwayat.',
+                  style: text.bodyMedium,
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
@@ -290,109 +293,355 @@ class _ReviewBody extends ConsumerWidget {
     final remaining = totals.incomeMinor - totals.expenseMinor;
     final todayIndex = period.contains(todayDay) ? todayDay - period.startDay : null;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(WudgetTokens.space4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const PeriodSelector(),
-          const SizedBox(height: WudgetTokens.space5),
-          if (paceFirst) ...[
-            _PaceDetails(pace: pace, period: period, todayIndex: todayIndex, dailyExpense: dailyExpense),
-            const SizedBox(height: WudgetTokens.space2),
-            Center(
-              child: TextButton(
-                onPressed: () => _showRemainingBalance(context),
-                child: const Text('Lihat sisa saldo periode ini'),
-              ),
+    return ListView(
+      padding: padding,
+      children: [
+        const PeriodSelector(),
+        const SizedBox(height: WudgetTokens.space4),
+        if (paceFirst) ...[
+          _PaceCard(pace: pace),
+          const SizedBox(height: WudgetTokens.space3),
+          _ForecastCard(
+            pace: pace,
+            period: period,
+            dailyExpense: dailyExpense,
+            todayIndex: todayIndex,
+          ),
+          const SizedBox(height: WudgetTokens.space3),
+          // Remaining balance lives behind a tap, not on the hero: the
+          // research found leading with it is what drives the "I have money
+          // left so I can spend" reading the pace framing exists to avoid.
+          _TapRow(
+            icon: Icons.account_balance_wallet_outlined,
+            label: 'Lihat sisa anggaran',
+            onTap: () => _showRemainingBalance(context),
+          ),
+        ] else ...[
+          // The other arm of the framing experiment: remaining first, pace
+          // behind the tap. Same data, opposite emphasis.
+          WudgetCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('SISA PERIODE INI', style: text.labelMedium),
+                const SizedBox(height: WudgetTokens.space1),
+                AmountText(minor: remaining, style: text.headlineMedium?.copyWith(fontSize: 30)),
+              ],
             ),
-          ] else ...[
-            Center(
-              child: Column(
-                children: [
-                  Text('Sisa periode ini', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: WudgetTokens.space2),
-                  Text(
-                    _formatter.format(Money.fromMinor(remaining, 'IDR')),
-                    style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: WudgetTokens.space3),
+          _TapRow(
+            icon: Icons.insights_outlined,
+            label: 'Lihat laju & perkiraan',
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (context) => SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(WudgetTokens.space4),
+                  child: Column(
+                    children: [
+                      _PaceCard(pace: pace),
+                      const SizedBox(height: WudgetTokens.space3),
+                      _ForecastCard(
+                        pace: pace,
+                        period: period,
+                        dailyExpense: dailyExpense,
+                        todayIndex: todayIndex,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: WudgetTokens.space2),
-            Center(
-              child: TextButton(
-                onPressed: () => _showPaceDetails(context, period, pace),
-                child: const Text('Lihat laju & perkiraan'),
+          ),
+        ],
+        const SizedBox(height: WudgetTokens.space5),
+        const SectionLabel('Tujuh hari terakhir'),
+        WudgetCard(
+          child: WeekBarChart(days: weekDays, dailyExpenseMinor: weekExpense),
+        ),
+        const SizedBox(height: WudgetTokens.space5),
+        CategoryRankedList(ranks: categoryRanks),
+      ],
+    );
+  }
+}
+
+/// The pace card: ring, the one sentence, the two numbers behind it, and a
+/// signed delta against elapsed time. The delta carries an arrow as well as
+/// a colour, so over-pace is legible without seeing hue (chart rule 7).
+class _PaceCard extends StatelessWidget {
+  const _PaceCard({required this.pace});
+  final PaceResult pace;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final sentence = pace.sentence((minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR')));
+    final fraction = pace.spendFractionOfBaseline;
+    final deltaPoints =
+        fraction == null ? null : ((fraction - pace.elapsedFraction) * 100).round();
+
+    return WudgetCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              PaceRing(pace: pace),
+              const SizedBox(width: WudgetTokens.space4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('LAJU BELANJA', style: text.labelMedium),
+                    const SizedBox(height: WudgetTokens.space1),
+                    Text(
+                      sentence ?? 'Belum ada periode sebelumnya untuk dibandingkan.',
+                      style: text.bodyLarge,
+                    ),
+                    if (pace.baselineTotalMinor != null) ...[
+                      const SizedBox(height: WudgetTokens.space2),
+                      Text(
+                        '${_formatter.format(Money.fromMinor(pace.spendMinor, 'IDR'))} '
+                        'dari ${_formatter.format(Money.fromMinor(pace.baselineTotalMinor!, 'IDR'))} biasanya',
+                        style: text.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
               ),
+            ],
+          ),
+          if (deltaPoints != null && deltaPoints.abs() >= 1) ...[
+            const SizedBox(height: WudgetTokens.space3),
+            InsetNotice(
+              icon: deltaPoints > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+              message: deltaPoints > 0
+                  ? '+$deltaPoints poin di atas waktu berjalan'
+                  : '$deltaPoints poin di bawah waktu berjalan',
+              tone: deltaPoints > 0 ? NoticeTone.warning : NoticeTone.positive,
             ),
           ],
-          const SizedBox(height: WudgetTokens.space5),
-          WeekBarChart(days: weekDays, dailyExpenseMinor: weekExpense),
-          const SizedBox(height: WudgetTokens.space5),
-          CategoryRankedList(ranks: categoryRanks),
         ],
       ),
     );
   }
 }
 
-class _PaceDetails extends StatelessWidget {
-  const _PaceDetails({required this.pace, required this.period, required this.todayIndex, required this.dailyExpense});
+/// Actual against forecast. The projection is dashed and labelled, and the
+/// heading states the figure in words, because a forecast drawn like a fact
+/// is a lie (chart rule 5).
+class _ForecastCard extends StatelessWidget {
+  const _ForecastCard({
+    required this.pace,
+    required this.period,
+    required this.dailyExpense,
+    required this.todayIndex,
+  });
   final PaceResult pace;
   final Period period;
-  final int? todayIndex;
   final Map<int, int> dailyExpense;
+  final int? todayIndex;
 
   @override
   Widget build(BuildContext context) {
-    final sentence = pace.sentence((minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR')));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Center(child: PaceRing(pace: pace)),
-        const SizedBox(height: WudgetTokens.space4),
-        Text(
-          sentence ?? 'Belum ada periode sebelumnya untuk dibandingkan.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: WudgetTokens.space5),
-        ActualForecastChart(
-          period: period,
-          dailyExpenseMinor: dailyExpense,
-          todayIndex: todayIndex,
-          forecastTotalMinor: pace.forecastTotalMinor,
-        ),
-      ],
+    final text = Theme.of(context).textTheme;
+    final baseline = pace.baselineTotalMinor;
+    final over = baseline == null ? null : pace.forecastTotalMinor - baseline;
+
+    return WudgetCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('Perkiraan akhir periode', style: text.titleLarge),
+              AmountText(minor: pace.forecastTotalMinor, style: text.titleLarge),
+            ],
+          ),
+          const SizedBox(height: WudgetTokens.space1),
+          Text(
+            switch (over) {
+              null => 'Belum ada periode sebelumnya untuk dibandingkan, jadi ini laju kamu sendiri.',
+              final o when o > 0 =>
+                'Kalau lajunya begini terus, lewat ${_formatter.format(Money.fromMinor(o, 'IDR'))} dari biasanya.',
+              final o when o < 0 =>
+                'Kalau lajunya begini terus, ${_formatter.format(Money.fromMinor(-o, 'IDR'))} lebih hemat dari biasanya.',
+              _ => 'Kalau lajunya begini terus, hasilnya mirip seperti biasanya.',
+            },
+            style: text.bodyMedium,
+          ),
+          const SizedBox(height: WudgetTokens.space3),
+          ActualForecastChart(
+            period: period,
+            dailyExpenseMinor: dailyExpense,
+            todayIndex: todayIndex,
+            forecastTotalMinor: pace.forecastTotalMinor,
+            baselineTotalMinor: baseline,
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _WaitingState extends StatelessWidget {
-  const _WaitingState({required this.daysSoFar});
-  final int daysSoFar;
+class _TapRow extends StatelessWidget {
+  const _TapRow({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final remaining = _waitingDays - daysSoFar;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(WudgetTokens.space5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.hourglass_top, size: 48),
-            const SizedBox(height: WudgetTokens.space4),
-            Text(
-              daysSoFar <= 0
-                  ? 'Catat dulu beberapa hari, Pantau butuh riwayat nyata untuk bicara jujur.'
-                  : '$remaining hari lagi sebelum Pantau punya cukup riwayat untuk bicara jujur.',
-              textAlign: TextAlign.center,
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Material(
+      color: tokens.surfaceMuted,
+      borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: WudgetTokens.minTapTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: WudgetTokens.space4,
+              vertical: WudgetTokens.space3,
             ),
-          ],
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: tokens.ink2),
+                const SizedBox(width: WudgetTokens.space3),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 13.5),
+                  ),
+                ),
+                Icon(Icons.chevron_right, size: 18, color: tokens.ink2),
+              ],
+            ),
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// The first fourteen days. Not a blank screen: it counts what is being
+/// collected, says when the budget proposal arrives, and shows the totals
+/// that are already true (design/States.dc.html, "menunggu").
+class _WaitingState extends StatelessWidget {
+  const _WaitingState({
+    required this.daysSoFar,
+    required this.totals,
+    required this.daysElapsedInPeriod,
+  });
+  final int daysSoFar;
+  final PeriodTotals totals;
+  final int daysElapsedInPeriod;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+    final done = daysSoFar.clamp(0, _waitingDays);
+    final remaining = _waitingDays - done;
+    final proposalDate = DateTime.now().add(Duration(days: remaining));
+    final perDay = daysElapsedInPeriod <= 0 ? 0 : totals.expenseMinor ~/ daysElapsedInPeriod;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        WudgetTokens.space4,
+        0,
+        WudgetTokens.space4,
+        WudgetTokens.space6,
+      ),
+      children: [
+        WudgetCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$done',
+                    style: text.headlineMedium?.copyWith(
+                      fontSize: 34,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: WudgetTokens.space2),
+                  Text('dari $_waitingDays hari', style: text.titleSmall),
+                ],
+              ),
+              const SizedBox(height: WudgetTokens.space3),
+              // One segment per day, so progress is countable rather than a
+              // percentage nobody can check.
+              Row(
+                children: [
+                  for (var i = 0; i < _waitingDays; i++) ...[
+                    if (i > 0) const SizedBox(width: 3),
+                    Expanded(
+                      child: Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: i < done ? tokens.accent : tokens.surfaceMuted,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: WudgetTokens.space4),
+              Text(
+                done <= 0 ? 'Belum ada yang bisa dibaca' : 'Masih ngumpulin kebiasaanmu',
+                style: text.titleLarge,
+              ),
+              const SizedBox(height: WudgetTokens.space2),
+              Text(
+                done <= 0
+                    ? 'Catat beberapa hari dulu. Anggaran yang bagus datang dari '
+                        'data, bukan tebakan, jadi Pantau menunggu sampai ada yang jujur dibaca.'
+                    : 'Anggaran yang bagus datang dari data, bukan tebakan. '
+                        '$remaining hari lagi wudget bisa mengusulkan angka dari belanjamu sendiri.',
+                style: text.bodyMedium,
+              ),
+              const SizedBox(height: WudgetTokens.space3),
+              InsetNotice(
+                icon: Icons.calendar_month_outlined,
+                message: 'Usulan anggaran: ${DateFormat('d MMM', 'id_ID').format(proposalDate)}',
+              ),
+            ],
+          ),
+        ),
+        if (totals.expenseMinor > 0) ...[
+          const SizedBox(height: WudgetTokens.space5),
+          const SectionLabel('Sementara ini'),
+          CardGroup(
+            dividerIndent: WudgetTokens.space3,
+            children: [
+              CardRow(
+                title: 'Keluar periode ini',
+                trailing: AmountText(minor: totals.expenseMinor),
+              ),
+              CardRow(
+                title: 'Rata-rata per hari',
+                subtitle: 'Dibagi $daysElapsedInPeriod hari yang sudah jalan',
+                trailing: AmountText(minor: perDay),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

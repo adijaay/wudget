@@ -50,16 +50,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Makan'), findsOneWidget);
-    expect(find.text('sarapan'), findsOneWidget);
+    expect(find.textContaining('sarapan'), findsOneWidget); // note sits in the detail line now
     expect(find.textContaining('1 Jun 2024'), findsOneWidget);
 
     // Swipe to delete, then undo.
     await tester.drag(find.text('Makan'), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Makan'), findsNothing);
-    expect(find.textContaining('Belum ada transaksi.'), findsOneWidget);
+    expect(find.text('Catat pengeluaran pertama'), findsOneWidget); // first-run state
 
-    await tester.tap(find.text('Undo'));
+    await tester.tap(find.text('Batalkan'));
     await tester.pumpAndSettle();
     expect(find.text('Makan'), findsOneWidget);
 
@@ -88,7 +88,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Belum ada transaksi.'), findsOneWidget);
+    expect(find.text('Catat pengeluaran pertama'), findsOneWidget); // first-run state
 
     await PostingsRepository(db).insertTransaction(
       transaction: TransactionsCompanion.insert(
@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Makan'), findsOneWidget);
-    expect(find.textContaining('Belum ada transaksi.'), findsNothing);
+    expect(find.text('Catat pengeluaran pertama'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

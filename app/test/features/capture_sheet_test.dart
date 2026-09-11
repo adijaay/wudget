@@ -53,9 +53,9 @@ void main() {
     await _openSheet(tester, db);
 
     // Type Rp 15.000.
-    await tester.tap(find.text('1'));
-    await tester.tap(find.text('5'));
-    await tester.tap(find.text('000'));
+    await tester.tap(find.byKey(const Key('numpadKey_1')));
+    await tester.tap(find.byKey(const Key('numpadKey_5')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tester.pump();
 
     expect(_amountText(tester), contains('15.000'));
@@ -63,7 +63,7 @@ void main() {
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final transactions = await db.select(db.transactions).get();
@@ -89,22 +89,24 @@ void main() {
 
     await _openSheet(tester, db);
 
-    await tester.tap(find.bySemanticsLabel('Kalkulator'));
+    await tester.tap(find.byKey(const Key('numpadKey_calculator')));
     await tester.pump();
 
     // 10000 + 5000
+    // Keys, not glyphs: the amount display renders digits too, so
+    // find.text('0') would match the display as well as the key.
     for (final d in ['1', '0', '0', '0', '0']) {
-      await tester.tap(find.text(d));
+      await tester.tap(find.byKey(Key('numpadKey_$d')));
     }
-    await tester.tap(find.text('+'));
+    await tester.tap(find.byKey(const Key('numpadOp_+')));
     for (final d in ['5', '0', '0', '0']) {
-      await tester.tap(find.text(d));
+      await tester.tap(find.byKey(Key('numpadKey_$d')));
     }
     await tester.pump();
 
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final postings = await db.select(db.postings).get();
@@ -118,12 +120,12 @@ void main() {
     addTearDown(db.close);
 
     await _openSheet(tester, db);
-    await tester.tap(find.text('2'));
-    await tester.tap(find.text('0'));
-    await tester.tap(find.text('000'));
+    await tester.tap(find.byKey(const Key('numpadKey_2')));
+    await tester.tap(find.byKey(const Key('numpadKey_0')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     // Reopen: the template row should now offer "Makan" as a one-tap chip.
@@ -137,7 +139,7 @@ void main() {
 
     expect(_amountText(tester), contains('20.000'));
 
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final transactions = await db.select(db.transactions).get();
@@ -156,12 +158,12 @@ void main() {
     await tester.tap(find.text('Transfer'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('1'));
-    await tester.tap(find.text('0'));
-    await tester.tap(find.text('000'));
+    await tester.tap(find.byKey(const Key('numpadKey_1')));
+    await tester.tap(find.byKey(const Key('numpadKey_0')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tester.pump();
 
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final transactions = await db.select(db.transactions).get();
@@ -216,7 +218,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('✓'));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final transactions = await db.select(db.transactions).get();

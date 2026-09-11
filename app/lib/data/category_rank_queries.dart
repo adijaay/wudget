@@ -10,11 +10,21 @@ const _millisPerDay = 86400000;
 /// a second pie" — carries amount, share and transaction count together,
 /// same as plan/04-ux-design.md specifies.
 class CategoryRank {
-  const CategoryRank({required this.key, required this.name, required this.amountMinor, required this.count});
+  const CategoryRank({
+    required this.key,
+    required this.name,
+    required this.amountMinor,
+    required this.count,
+    this.hueIndex = 0,
+  });
   final String key;
   final String name;
   final int amountMinor;
   final int count;
+
+  /// The category's own hue index, so the ranked list draws the same colour
+  /// this category carries everywhere else in the app.
+  final int hueIndex;
 }
 
 /// Expense spend ranked by category for one period, top-level categories
@@ -42,6 +52,7 @@ class CategoryRankQueries {
     final amountByKey = <String, int>{};
     final countByKey = <String, int>{};
     final nameByKey = <String, String>{};
+    final hueByKey = <String, int>{};
 
     for (final row in rows) {
       final tx = row.readTable(_db.transactions);
@@ -53,7 +64,10 @@ class CategoryRankQueries {
       final key = isTopLevel ? category.id : category.parentId!;
       amountByKey[key] = (amountByKey[key] ?? 0) + row.readTable(_db.postings).amountMinor.abs();
       countByKey[key] = (countByKey[key] ?? 0) + 1;
-      if (isTopLevel) nameByKey[key] = category.name;
+      if (isTopLevel) {
+        nameByKey[key] = category.name;
+        hueByKey[key] = category.hueIndex;
+      }
     }
 
     // A parent category might only ever be spent on through a subcategory,
@@ -67,11 +81,18 @@ class CategoryRankQueries {
       final parentRows = await (_db.select(_db.categories)..where((c) => c.id.isIn(missingNames))).get();
       for (final c in parentRows) {
         nameByKey[c.id] = c.name;
+        hueByKey[c.id] = c.hueIndex;
       }
     }
 
     final ranks = amountByKey.entries
-        .map((e) => CategoryRank(key: e.key, name: nameByKey[e.key] ?? e.key, amountMinor: e.value, count: countByKey[e.key]!))
+        .map((e) => CategoryRank(
+              key: e.key,
+              name: nameByKey[e.key] ?? e.key,
+              amountMinor: e.value,
+              count: countByKey[e.key]!,
+              hueIndex: hueByKey[e.key] ?? 0,
+            ))
         .toList()
       ..sort((a, b) => b.amountMinor.compareTo(a.amountMinor));
     return ranks;

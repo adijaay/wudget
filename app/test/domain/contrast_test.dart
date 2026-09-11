@@ -92,6 +92,71 @@ void main() {
     });
   });
 
+  // The rebuild to the mockups (design/*.dc.html) introduced four new
+  // grounds — the card, the muted inset, the dark emphasis block, and the
+  // accent fill — and text lands on all of them. Each pairing below is one
+  // the app actually draws, checked rather than assumed: the lightened
+  // accentOnInverse exists precisely because the plain accent measured
+  // 2.94:1 on surfaceInverse.
+  for (final (themeName, t) in [('light', WudgetTokens.light), ('dark', WudgetTokens.dark)]) {
+    group('$themeName theme, text on every ground it lands on', () {
+      test('ink1 and ink2 on the card surface', () {
+        assertTextPair('$themeName ink1/surfaceCard', t.ink1, t.surfaceCard);
+        assertTextPair('$themeName ink2/surfaceCard', t.ink2, t.surfaceCard);
+      });
+      test('ink1 and ink2 on the muted surface (chips, numpad keys, inset rows)', () {
+        assertTextPair('$themeName ink1/surfaceMuted', t.ink1, t.surfaceMuted);
+        assertTextPair('$themeName ink2/surfaceMuted', t.ink2, t.surfaceMuted);
+      });
+      test('amounts on the card surface', () {
+        assertTextPair('$themeName positive/surfaceCard', t.positive, t.surfaceCard);
+        assertTextPair('$themeName negative/surfaceCard', t.negative, t.surfaceCard);
+      });
+      test('the emphasis block: inkInverse and its secondary', () {
+        assertTextPair('$themeName inkInverse/surfaceInverse', t.inkInverse, t.surfaceInverse);
+        assertTextPair('$themeName inkInverse2/surfaceInverse', t.inkInverse2, t.surfaceInverse);
+      });
+      test('the undo action on the emphasis block (a snackbar)', () {
+        assertTextPair('$themeName accentOnInverse/surfaceInverse', t.accentOnInverse, t.surfaceInverse);
+      });
+      test('a label on an accent fill (primary button, save key, selected segment)', () {
+        assertTextPair('$themeName inkOnAccent/accent', t.inkOnAccent, t.accent);
+      });
+      test('the warning tone, on the ground it is actually drawn on', () {
+        // InsetNotice tints the ground with the warning colour itself, so
+        // the readable pairing is the warning ink against the card beneath.
+        assertTextPair('$themeName warning/surfaceCard', t.warning, t.surfaceCard);
+      });
+      test('an interactive outline clears the component bar', () {
+        // Input borders and the wallet picker's outline carry meaning, so
+        // the plain card border is not enough for them (antislop-human).
+        assertComponentPair('$themeName borderStrong/surfaceCard', t.borderStrong, t.surfaceCard);
+      });
+      test('every category hue as an icon chip: glyph on its own tint', () {
+        final failures = <String>[];
+        for (var i = 0; i < t.categoryHues.length; i++) {
+          final onTint = contrastRatio(t.categoryInks[i], t.categoryTints[i]);
+          if (onTint < contrastMinNormalText) {
+            failures.add('$themeName categoryInks[$i] on its tint: ${onTint.toStringAsFixed(2)}');
+          }
+          // The tint is a chip ground on the card, and the hue is also used
+          // as a bare 8px dot in the ranked list, so it needs the 3:1 bar.
+          final hueOnCard = contrastRatio(t.categoryHues[i], t.surfaceCard);
+          if (hueOnCard < contrastMinLargeTextOrComponent) {
+            failures.add('$themeName categoryHues[$i] on card: ${hueOnCard.toStringAsFixed(2)}');
+          }
+          // The hue itself is a border on a selected tile/chip, against the
+          // tint it encloses as well as the card it sits on.
+          final hueOnTint = contrastRatio(t.categoryHues[i], t.categoryTints[i]);
+          if (hueOnTint < contrastMinLargeTextOrComponent) {
+            failures.add('$themeName categoryHues[$i] on its tint: ${hueOnTint.toStringAsFixed(2)}');
+          }
+        }
+        expect(failures, isEmpty, reason: failures.join('; '));
+      });
+    });
+  }
+
   group('the delete-swipe background (a fixed color, not a theme token)', () {
     // ledger_screen.dart deliberately does not use tokens.negative here —
     // see DECISIONS.md, Sprint 18: that token is tuned as a *text* color

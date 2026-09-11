@@ -24,7 +24,12 @@ class MoneyFormatter {
   /// Full amount, e.g. "Rp 15.000" or "$12.50". Never abbreviated — use
   /// [formatCompact] for chart axes, and only when the full value also
   /// appears elsewhere on screen (DESIGN.md, "Abbreviation").
-  String format(Money money, {MoneySign sign = MoneySign.none}) {
+  ///
+  /// [showSymbol] false drops the currency symbol for rows inside a card
+  /// whose group header already carries it (design/Catat.dc.html prints
+  /// "Rp 63.000" on the day header and a bare "15.000" on each row). The
+  /// symbol is never dropped from a total or a standalone figure.
+  String format(Money money, {MoneySign sign = MoneySign.none, bool showSymbol = true}) {
     final info = money.currencyInfo;
     final major = money.minor.abs() / info.minorUnitsPerMajor;
     final digits = _groupThousands(
@@ -35,7 +40,7 @@ class MoneyFormatter {
       MoneySign.explicit => money.isNegative ? '-' : '+',
     };
     // Non-breaking space between symbol and digits, per DESIGN.md.
-    return '$signStr${info.symbol} $digits';
+    return showSymbol ? '$signStr${info.symbol} $digits' : '$signStr$digits';
   }
 
   /// Abbreviated form for chart axes only ("4,5jt", "250rb"). The full

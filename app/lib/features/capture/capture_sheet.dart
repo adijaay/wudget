@@ -11,6 +11,7 @@ import '../../core/money_formatter.dart';
 import '../../core/providers.dart';
 import '../../data/capture_queries.dart';
 import '../../data/database.dart';
+import '../../design/components.dart';
 import '../../design/tokens.dart';
 
 const _uuid = Uuid();
@@ -18,11 +19,9 @@ const _uuid = Uuid();
 enum CaptureKind { expense, income, transfer }
 
 /// The capture sheet: the one screen the product lives or dies on. See
-/// plan/04-ux-design.md "The capture sheet, specified" for the full spec.
-/// Sprint 3 built structure and a real save; this (Sprint 4) adds the
-/// three-tap path: frequency templates, per-category wallet default, the
-/// calculator toggle, an in-sheet date/time button, a collapsed note field
-/// and a receipt photo.
+/// plan/04-ux-design.md "The capture sheet, specified", and
+/// design/Main.dc.html for the layout. Three taps to a saved expense:
+/// pick the category, type the amount, save.
 class CaptureSheet extends ConsumerStatefulWidget {
   const CaptureSheet({
     super.key,
@@ -76,6 +75,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   static const _formatter = MoneyFormatter();
   static const _currency = 'IDR'; // only currency seeded so far; see Sprint 5
   static final _dateFormat = DateFormat('d MMM', 'id_ID');
+  static final _timeFormat = DateFormat('HH:mm');
 
   @override
   void initState() {
@@ -130,6 +130,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
   bool get _bufferEndsWithOperator =>
       _amountBuffer.isNotEmpty && '+-×÷'.contains(_amountBuffer[_amountBuffer.length - 1]);
+
+  bool get _bufferHasExpression => _amountBuffer.contains(RegExp(r'[+\-×÷]'));
 
   void _appendDigit(String d) => setState(() => _amountBuffer += d);
 
@@ -278,7 +280,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       SnackBar(
         content: Text('Tersimpan: ${_formatter.format(_amount)}'),
         action: SnackBarAction(
-          label: 'Undo',
+          label: 'Batalkan',
           onPressed: () => ref.read(postingsRepositoryProvider).undoInsert(txId),
         ),
       ),
@@ -292,247 +294,415 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: tokens.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(WudgetTokens.radiusSheet)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  WudgetTokens.space4,
-                  WudgetTokens.space3,
-                  WudgetTokens.space4,
-                  0,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _TypeSegments(
-                        kind: _kind,
-                        onChanged: (k) => setState(() {
-                          _kind = k;
-                          _categoryId = null;
-                          _subcategoryId = null;
-                          _loadTemplates();
-                        }),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Kamera struk',
-                      onPressed: _pickReceiptPhoto,
-                      icon: Icon(_photoPath == null ? Icons.camera_alt_outlined : Icons.camera_alt),
-                    ),
-                  ],
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: WudgetTokens.space2, bottom: WudgetTokens.space3),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: tokens.border,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              if (_kind == CaptureKind.transfer)
-                StreamBuilder<List<Account>>(
-                  stream: db.select(db.accounts).watch(),
-                  builder: (context, snapshot) {
-                    final accounts = snapshot.data ?? const [];
-                    if (accounts.length < 2) {
-                      return const Padding(
-                        padding: EdgeInsets.all(WudgetTokens.space4),
-                        child: Text('Butuh minimal dua dompet untuk transfer.'),
-                      );
-                    }
-                    _accountId ??= accounts.first.id;
-                    _toAccountId ??= accounts.firstWhere(
-                      (a) => a.id != _accountId,
-                      orElse: () => accounts.last,
-                    ).id;
-                    return Padding(
+            ),
+            // Everything above the numpad scrolls, so the amount and the
+            // save key stay reachable at any text scale or screen height
+            // (R-03, R-35).
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
                       padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
                       child: Row(
                         children: [
                           Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _accountId,
-                              decoration: const InputDecoration(labelText: 'Dari'),
-                              items: [
-                                for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
-                              ],
-                              onChanged: (id) => setState(() => _accountId = id),
+                            child: _TypeSegments(
+                              kind: _kind,
+                              onChanged: (k) => setState(() {
+                                _kind = k;
+                                _categoryId = null;
+                                _subcategoryId = null;
+                                _loadTemplates();
+                              }),
                             ),
                           ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: WudgetTokens.space2),
-                            child: Icon(Icons.arrow_forward),
-                          ),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _toAccountId,
-                              decoration: const InputDecoration(labelText: 'Ke'),
-                              items: [
-                                for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
-                              ],
-                              onChanged: (id) => setState(() => _toAccountId = id),
-                            ),
+                          const SizedBox(width: WudgetTokens.space2),
+                          _SquareIconButton(
+                            icon: _photoPath == null ? Icons.photo_camera_outlined : Icons.photo_camera,
+                            tooltip: 'Kamera struk',
+                            active: _photoPath != null,
+                            onPressed: _pickReceiptPhoto,
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
-              if (_kind != CaptureKind.transfer)
-                FutureBuilder<List<CaptureTemplate>>(
-                  future: _templatesFuture,
-                  builder: (context, snapshot) {
-                    final templates = snapshot.data ?? const [];
-                    if (templates.isEmpty) return const SizedBox.shrink();
-                    return StreamBuilder<List<Category>>(
-                      stream: db.select(db.categories).watch(),
-                      builder: (context, categorySnapshot) {
-                        final categoriesById = {
-                          for (final c in categorySnapshot.data ?? const <Category>[]) c.id: c,
-                        };
-                        return _TemplatesRow(
-                          templates: templates,
-                          categoriesById: categoriesById,
-                          formatter: _formatter,
-                          currency: _currency,
-                          onTap: _applyTemplate,
-                        );
-                      },
-                    );
-                  },
-                ),
-              if (_kind != CaptureKind.transfer)
-                StreamBuilder<List<Category>>(
-                  stream: (db.select(db.categories)
-                        ..where((c) => c.kind.equals(_kind == CaptureKind.expense ? 'expense' : 'income'))
-                        ..where((c) => c.parentId.isNull())
-                        ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
-                      .watch(),
-                  builder: (context, snapshot) {
-                    final categories = snapshot.data ?? const [];
-                    return _CategoryRow(
-                      categories: categories,
-                      tokens: tokens,
-                      selectedId: _categoryId,
-                      onSelected: (id) async {
-                        final lastAccount =
-                            await ref.read(captureQueriesProvider).lastAccountIdForCategory(id);
-                        setState(() {
-                          _categoryId = id;
-                          _subcategoryId = null;
-                          if (lastAccount != null) _accountId = lastAccount;
-                        });
-                      },
-                    );
-                  },
-                ),
-              if (_categoryId != null)
-                StreamBuilder<List<Category>>(
-                  stream: (db.select(db.categories)..where((c) => c.parentId.equals(_categoryId!)))
-                      .watch(),
-                  builder: (context, snapshot) {
-                    final subcategories = snapshot.data ?? const [];
-                    if (subcategories.isEmpty) return const SizedBox.shrink();
-                    return _SubcategoryChips(
-                      subcategories: subcategories,
-                      selectedId: _subcategoryId,
-                      onSelected: (id) => setState(() => _subcategoryId = id),
-                    );
-                  },
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space5),
-                child: Text(
-                  key: const Key('captureAmount'),
-                  // A live expression ("15.000+5.000") can't run through the
-                  // money formatter mid-entry, so it renders raw while typed.
-                  _bufferEndsWithOperator || _amountBuffer.contains(RegExp(r'[+\-×÷]'))
-                      ? '${CurrencyInfo.of(_currency).symbol} $_amountBuffer'
-                      : _formatter.format(_amount),
-                  semanticsLabel: 'Jumlah: ${_formatter.format(_amount)}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .displaySmall
-                      ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _noteExpanded
-                          ? TextField(
-                              controller: _noteController,
-                              autofocus: true,
-                              decoration: const InputDecoration(hintText: 'Catatan'),
-                            )
-                          : TextButton(
-                              onPressed: () => setState(() => _noteExpanded = true),
-                              child: const Text('+ Catatan'),
-                            ),
                     ),
-                    if (_kind != CaptureKind.transfer)
-                      StreamBuilder<List<Account>>(
-                        stream: db.select(db.accounts).watch(),
-                        builder: (context, snapshot) {
-                          final accounts = snapshot.data ?? const [];
-                          if (accounts.isEmpty) return const SizedBox.shrink();
-                          final selected = _accountId ?? accounts.first.id;
-                          return DropdownButton<String>(
-                            value: selected,
-                            items: [
-                              for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
-                            ],
-                            onChanged: (id) => setState(() => _accountId = id),
-                          );
-                        },
-                      ),
+                    if (_kind == CaptureKind.transfer) _transferAccounts(db),
+                    if (_kind != CaptureKind.transfer) _templates(db),
+                    if (_kind != CaptureKind.transfer) _categories(db, tokens),
+                    if (_categoryId != null) _subcategories(db, tokens),
+                    _amountDisplay(tokens),
+                    _noteAndWallet(db, tokens),
                   ],
                 ),
               ),
-              _Numpad(
-                showDecimal: CurrencyInfo.of(_currency).exponent > 0,
-                showZeros: CurrencyInfo.of(_currency).exponent == 0,
-                calculatorMode: _calculatorMode,
-                dateLabel: _dateFormat.format(_occurredAt),
-                onDigit: _appendDigit,
-                onZeros: _appendZeros,
-                onOperator: _appendOperator,
-                onBackspace: _backspace,
-                onSave: _save,
-                onToggleCalculator: () => setState(() => _calculatorMode = !_calculatorMode),
-                onPickDate: _pickDateTime,
+            ),
+            if (_calculatorMode) _OperatorRow(onOperator: _appendOperator),
+            _Numpad(
+              showDecimal: CurrencyInfo.of(_currency).exponent > 0,
+              showZeros: CurrencyInfo.of(_currency).exponent == 0,
+              calculatorMode: _calculatorMode,
+              dateLabel: _dateFormat.format(_occurredAt),
+              timeLabel: _timeFormat.format(_occurredAt),
+              onDigit: _appendDigit,
+              onZeros: _appendZeros,
+              onBackspace: _backspace,
+              onSave: _save,
+              onToggleCalculator: () => setState(() => _calculatorMode = !_calculatorMode),
+              onPickDate: _pickDateTime,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _transferAccounts(WudgetDatabase db) {
+    return StreamBuilder<List<Account>>(
+      stream: db.select(db.accounts).watch(),
+      builder: (context, snapshot) {
+        final accounts = snapshot.data ?? const [];
+        if (accounts.length < 2) {
+          return const Padding(
+            padding: EdgeInsets.all(WudgetTokens.space4),
+            child: Text('Butuh minimal dua kantong untuk transfer.'),
+          );
+        }
+        _accountId ??= accounts.first.id;
+        _toAccountId ??= accounts.firstWhere(
+          (a) => a.id != _accountId,
+          orElse: () => accounts.last,
+        ).id;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(
+            WudgetTokens.space4,
+            WudgetTokens.space3,
+            WudgetTokens.space4,
+            0,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _accountId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Dari'),
+                  items: [
+                    for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (id) => setState(() => _accountId = id),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: WudgetTokens.space2),
+                child: Icon(Icons.arrow_forward, size: 18),
+              ),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _toAccountId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Ke'),
+                  items: [
+                    for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (id) => setState(() => _toAccountId = id),
+                ),
               ),
             ],
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _templates(WudgetDatabase db) {
+    return FutureBuilder<List<CaptureTemplate>>(
+      future: _templatesFuture,
+      builder: (context, snapshot) {
+        final templates = snapshot.data ?? const [];
+        if (templates.isEmpty) return const SizedBox.shrink();
+        return StreamBuilder<List<Category>>(
+          stream: db.select(db.categories).watch(),
+          builder: (context, categorySnapshot) {
+            final categoriesById = {
+              for (final c in categorySnapshot.data ?? const <Category>[]) c.id: c,
+            };
+            return Padding(
+              padding: const EdgeInsets.only(top: WudgetTokens.space3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+                    child: SectionLabel('Sering'),
+                  ),
+                  _TemplatesRow(
+                    templates: templates,
+                    categoriesById: categoriesById,
+                    onTap: _applyTemplate,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _categories(WudgetDatabase db, WudgetTokens tokens) {
+    return StreamBuilder<List<Category>>(
+      stream: (db.select(db.categories)
+            ..where((c) => c.kind.equals(_kind == CaptureKind.expense ? 'expense' : 'income'))
+            ..where((c) => c.parentId.isNull())
+            ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
+          .watch(),
+      builder: (context, snapshot) {
+        final categories = snapshot.data ?? const [];
+        return _CategoryRow(
+          categories: categories,
+          tokens: tokens,
+          selectedId: _categoryId,
+          onSelected: (id) async {
+            // The wallet this category was last paid from, so the common
+            // case needs no wallet tap at all (Sprint 4).
+            final lastAccount = await ref.read(captureQueriesProvider).lastAccountIdForCategory(id);
+            setState(() {
+              _categoryId = id;
+              _subcategoryId = null;
+              if (lastAccount != null) _accountId = lastAccount;
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _subcategories(WudgetDatabase db, WudgetTokens tokens) {
+    return StreamBuilder<List<Category>>(
+      stream: (db.select(db.categories)..where((c) => c.parentId.equals(_categoryId!))).watch(),
+      builder: (context, snapshot) {
+        final subcategories = snapshot.data ?? const [];
+        if (subcategories.isEmpty) return const SizedBox.shrink();
+        return _SubcategoryChips(
+          subcategories: subcategories,
+          selectedId: _subcategoryId,
+          hueIndex: subcategories.first.hueIndex,
+          tokens: tokens,
+          onSelected: (id) => setState(() => _subcategoryId = _subcategoryId == id ? null : id),
+        );
+      },
+    );
+  }
+
+  Widget _amountDisplay(WudgetTokens tokens) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: WudgetTokens.space4, bottom: WudgetTokens.space2),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                CurrencyInfo.of(_currency).symbol,
+                style: text.titleLarge?.copyWith(fontSize: 20, color: tokens.ink2),
+              ),
+              const SizedBox(width: WudgetTokens.space2),
+              // Always the evaluated total, never the raw expression: the
+              // number shown is the number that will be saved. The
+              // expression itself goes on the line below.
+              Text(
+                key: const Key('captureAmount'),
+                _formatter.format(_amount, showSymbol: false),
+                semanticsLabel: 'Jumlah: ${_formatter.format(_amount)}',
+                style: text.headlineMedium?.copyWith(
+                  fontSize: 40,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: WudgetTokens.space1),
+              Container(width: 2, height: 34, color: tokens.accent),
+            ],
+          ),
+          if (_bufferHasExpression) ...[
+            const SizedBox(height: WudgetTokens.space1),
+            Text(
+              _amountBuffer.replaceAllMapped(RegExp(r'[+\-×÷]'), (m) => ' ${m[0]} '),
+              style: text.bodySmall?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _noteAndWallet(WudgetDatabase db, WudgetTokens tokens) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+      child: Row(
+        children: [
+          Expanded(
+            child: _noteExpanded
+                ? TextField(
+                    controller: _noteController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(hintText: 'Catatan'),
+                  )
+                : _NoteButton(onPressed: () => setState(() => _noteExpanded = true)),
+          ),
+          if (_kind != CaptureKind.transfer)
+            StreamBuilder<List<Account>>(
+              stream: db.select(db.accounts).watch(),
+              builder: (context, snapshot) {
+                final accounts = snapshot.data ?? const [];
+                if (accounts.isEmpty) return const SizedBox.shrink();
+                final selected = _accountId ?? accounts.first.id;
+                final account = accounts.firstWhere(
+                  (a) => a.id == selected,
+                  orElse: () => accounts.first,
+                );
+                return Padding(
+                  padding: const EdgeInsets.only(left: WudgetTokens.space2),
+                  child: _WalletPicker(
+                    account: account,
+                    accounts: accounts,
+                    onSelected: (id) => setState(() => _accountId = id),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
     );
   }
 }
 
+/// The type control: a tray with the selected segment filled, from
+/// design/Main.dc.html. Built rather than taken from Material's
+/// SegmentedButton, whose selected-state checkmark and minimum widths were
+/// what pushed "Pengeluaran" onto two lines on a real device.
 class _TypeSegments extends StatelessWidget {
   const _TypeSegments({required this.kind, required this.onChanged});
   final CaptureKind kind;
   final ValueChanged<CaptureKind> onChanged;
 
+  static const _labels = {
+    CaptureKind.expense: 'Pengeluaran',
+    CaptureKind.income: 'Pemasukan',
+    CaptureKind.transfer: 'Transfer',
+  };
+
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<CaptureKind>(
-      // The default selected-state checkmark pushes "Pengeluaran" (the
-      // longest label) onto two lines on a real device at default text
-      // scale — the segment's own fill and border already carry the
-      // selected state, so the icon is redundant, not the only signal.
-      showSelectedIcon: false,
-      segments: const [
-        ButtonSegment(value: CaptureKind.expense, label: Text('Pengeluaran')),
-        ButtonSegment(value: CaptureKind.income, label: Text('Pemasukan')),
-        ButtonSegment(value: CaptureKind.transfer, label: Text('Transfer')),
-      ],
-      selected: {kind},
-      onSelectionChanged: (s) => onChanged(s.first),
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: tokens.surfaceMuted,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+      ),
+      child: Row(
+        children: [
+          for (final entry in _labels.entries)
+            Expanded(
+              child: Semantics(
+                selected: kind == entry.key,
+                button: true,
+                label: entry.value,
+                excludeSemantics: true,
+                child: Material(
+                  color: kind == entry.key ? tokens.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    onTap: () => onChanged(entry.key),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space2),
+                      child: Text(
+                        entry.value,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: WudgetTokens.fontFamily,
+                          fontSize: 13,
+                          fontWeight: kind == entry.key ? FontWeight.w600 : FontWeight.w500,
+                          color: kind == entry.key ? tokens.inkOnAccent : tokens.ink2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SquareIconButton extends StatelessWidget {
+  const _SquareIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.active = false,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        excludeSemantics: true,
+        child: Material(
+          color: active ? tokens.accent : tokens.surfaceCard,
+          borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+            child: Container(
+              width: WudgetTokens.minTapTarget,
+              height: WudgetTokens.minTapTarget,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+                border: Border.all(color: active ? tokens.accent : tokens.borderStrong),
+              ),
+              child: Icon(icon, size: 20, color: active ? tokens.inkOnAccent : tokens.ink1),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -541,38 +711,38 @@ class _TemplatesRow extends StatelessWidget {
   const _TemplatesRow({
     required this.templates,
     required this.categoriesById,
-    required this.formatter,
-    required this.currency,
     required this.onTap,
   });
   final List<CaptureTemplate> templates;
   final Map<String, Category> categoriesById;
-  final MoneyFormatter formatter;
-  final String currency;
   final ValueChanged<CaptureTemplate> onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4, vertical: WudgetTokens.space1),
-        itemCount: templates.length,
-        separatorBuilder: (_, __) => const SizedBox(width: WudgetTokens.space2),
-        itemBuilder: (context, i) {
-          final t = templates[i];
-          final name = categoriesById[t.categoryId]?.name ?? t.categoryId;
-          return ActionChip(
-            label: Text(name),
-            onPressed: () => onTap(t),
-          );
-        },
+    // A scrolling Row, not a fixed-height ListView: the row then takes its
+    // height from the chips themselves, so a chip that grows at 200% text
+    // scale is not clipped by a hardcoded height (R-03, R-35).
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+      child: Row(
+        children: [
+          for (var i = 0; i < templates.length; i++) ...[
+            if (i > 0) const SizedBox(width: WudgetTokens.space2),
+            ActionChip(
+              label: Text(categoriesById[templates[i].categoryId]?.name ?? templates[i].categoryId),
+              onPressed: () => onTap(templates[i]),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
 
+/// Categories as tiles rather than chips: the icon is what makes the common
+/// four recognisable at a glance without reading, which is the difference
+/// between a three-tap capture and a five-tap one.
 class _CategoryRow extends StatelessWidget {
   const _CategoryRow({
     required this.categories,
@@ -587,28 +757,95 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
+    return Padding(
+      padding: const EdgeInsets.only(top: WudgetTokens.space3),
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4, vertical: WudgetTokens.space2),
-        itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: WudgetTokens.space2),
-        itemBuilder: (context, i) {
-          final c = categories[i];
-          final selected = c.id == selectedId;
-          return ChoiceChip(
-            label: Text(c.name),
-            selected: selected,
-            avatar: CircleAvatar(
-              radius: 8,
-              backgroundColor: tokens.categoryHues[c.hueIndex % tokens.categoryHues.length],
-            ),
-            onSelected: (_) => onSelected(c.id),
-          );
-        },
+        padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < categories.length; i++) ...[
+              if (i > 0) const SizedBox(width: WudgetTokens.space3),
+              _CategoryTile(
+                category: categories[i],
+                tokens: tokens,
+                selected: categories[i].id == selectedId,
+                onTap: () => onSelected(categories[i].id),
+              ),
+            ],
+          ],
+        ),
       ),
     );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({
+    required this.category,
+    required this.tokens,
+    required this.selected,
+    required this.onTap,
+  });
+  final Category category;
+  final WudgetTokens tokens;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+            final c = category;
+            final hue = tokens.hueFor(c.hueIndex);
+            return Semantics(
+              selected: selected,
+              button: true,
+              label: c.name,
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+                child: SizedBox(
+                  width: 58,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: WudgetTokens.categoryTile,
+                        height: WudgetTokens.categoryTile,
+                        decoration: BoxDecoration(
+                          color: selected ? tokens.tintFor(c.hueIndex) : tokens.surfaceMuted,
+                          borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+                          // The selected tile carries a border as well as a
+                          // fill, so selection survives not seeing hue.
+                          border: Border.all(
+                            color: selected ? hue : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          categoryIcon(c.iconKey),
+                          size: 22,
+                          color: selected ? tokens.inkFor(c.hueIndex) : tokens.ink2,
+                        ),
+                      ),
+                      const SizedBox(height: WudgetTokens.space1),
+                      Text(
+                        c.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: WudgetTokens.fontFamily,
+                          fontSize: 11,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? tokens.ink1 : tokens.ink2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
   }
 }
 
@@ -616,29 +853,178 @@ class _SubcategoryChips extends StatelessWidget {
   const _SubcategoryChips({
     required this.subcategories,
     required this.selectedId,
+    required this.hueIndex,
+    required this.tokens,
     required this.onSelected,
   });
   final List<Category> subcategories;
   final String? selectedId;
+  final int hueIndex;
+  final WudgetTokens tokens;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
+    return Padding(
+      padding: const EdgeInsets.only(top: WudgetTokens.space2),
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
-        itemCount: subcategories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: WudgetTokens.space2),
-        itemBuilder: (context, i) {
-          final s = subcategories[i];
-          return ChoiceChip(
-            label: Text(s.name),
-            selected: s.id == selectedId,
-            onSelected: (_) => onSelected(s.id),
-          );
-        },
+        child: Row(
+          children: [
+            for (var i = 0; i < subcategories.length; i++) ...[
+              if (i > 0) const SizedBox(width: WudgetTokens.space2),
+              _subcategoryChip(subcategories[i], subcategories[i].id == selectedId),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _subcategoryChip(Category s, bool selected) {
+            return ChoiceChip(
+              label: Text(s.name),
+              selected: selected,
+              // The same treatment as a selected category tile: the hue's
+              // tint as the ground and its darker ink as the label, plus a
+              // hue border. Filling with the hue itself and writing white on
+              // it measured 3.56:1 on the lightest hue, below the 4.5 a
+              // label needs (test/domain/contrast_test.dart).
+              selectedColor: tokens.tintFor(hueIndex),
+              side: BorderSide(color: selected ? tokens.hueFor(hueIndex) : tokens.border),
+              labelStyle: TextStyle(
+                fontFamily: WudgetTokens.fontFamily,
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? tokens.inkFor(hueIndex) : tokens.ink1,
+              ),
+              onSelected: (_) => onSelected(s.id),
+            );
+  }
+}
+
+class _NoteButton extends StatelessWidget {
+  const _NoteButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Material(
+      color: tokens.surfaceMuted,
+      borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+        child: Container(
+          height: WudgetTokens.minTapTarget,
+          padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space3),
+          alignment: Alignment.centerLeft,
+          child: Row(
+            children: [
+              Icon(Icons.add, size: 16, color: tokens.ink2),
+              const SizedBox(width: WudgetTokens.space2),
+              Text('Catatan', style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WalletPicker extends StatelessWidget {
+  const _WalletPicker({
+    required this.account,
+    required this.accounts,
+    required this.onSelected,
+  });
+  final Account account;
+  final List<Account> accounts;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return PopupMenuButton<String>(
+      tooltip: 'Pilih kantong',
+      onSelected: onSelected,
+      itemBuilder: (context) => [
+        for (final a in accounts)
+          PopupMenuItem(
+            value: a.id,
+            child: Row(
+              children: [
+                Icon(walletTypeIcon(a.type), size: 18, color: tokens.ink2),
+                const SizedBox(width: WudgetTokens.space3),
+                Text(a.name),
+              ],
+            ),
+          ),
+      ],
+      child: Container(
+        height: WudgetTokens.minTapTarget,
+        padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+          border: Border.all(color: tokens.borderStrong),
+        ),
+        child: Row(
+          children: [
+            Icon(walletTypeIcon(account.type), size: 16, color: tokens.ink2),
+            const SizedBox(width: WudgetTokens.space2),
+            Text(
+              account.name,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 13),
+            ),
+            Icon(Icons.expand_more, size: 16, color: tokens.ink2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Calculator mode's operators, as a row that appears above the numpad.
+/// They are not swapped into the right-hand column: doing that took the
+/// toggle key itself away, so there was no way back out of calculator mode,
+/// and it hid the date key while it was on.
+class _OperatorRow extends StatelessWidget {
+  const _OperatorRow({required this.onOperator});
+  final void Function(String) onOperator;
+
+  @override
+  Widget build(BuildContext context) {
+    const operators = [('+', '+'), ('−', '-'), ('×', '×'), ('÷', '÷')];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        WudgetTokens.space2,
+        WudgetTokens.space1,
+        WudgetTokens.space2,
+        0,
+      ),
+      child: Row(
+        children: [
+          for (final (label, op) in operators)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3.5),
+                child: _NumpadKey(
+                  key: Key('numpadOp_$op'),
+                  label: label,
+                  semanticLabel: switch (op) {
+                    '+' => 'Tambah',
+                    '-' => 'Kurang',
+                    '×' => 'Kali',
+                    _ => 'Bagi',
+                  },
+                  onTap: () => onOperator(op),
+                  tone: _KeyTone.action,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -650,9 +1036,9 @@ class _Numpad extends StatelessWidget {
     required this.showZeros,
     required this.calculatorMode,
     required this.dateLabel,
+    required this.timeLabel,
     required this.onDigit,
     required this.onZeros,
-    required this.onOperator,
     required this.onBackspace,
     required this.onSave,
     required this.onToggleCalculator,
@@ -662,9 +1048,9 @@ class _Numpad extends StatelessWidget {
   final bool showZeros;
   final bool calculatorMode;
   final String dateLabel;
+  final String timeLabel;
   final void Function(String) onDigit;
   final VoidCallback onZeros;
-  final void Function(String) onOperator;
   final VoidCallback onBackspace;
   final VoidCallback onSave;
   final VoidCallback onToggleCalculator;
@@ -674,54 +1060,175 @@ class _Numpad extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = <List<Widget>>[
       [
-        _key('1', () => onDigit('1')), _key('2', () => onDigit('2')), _key('3', () => onDigit('3')),
-        _key('⌫', onBackspace, semanticLabel: 'Hapus'),
+        _digit('1'), _digit('2'), _digit('3'),
+        _NumpadKey(
+          key: const Key('numpadKey_backspace'),
+          icon: Icons.backspace_outlined,
+          semanticLabel: 'Hapus',
+          onTap: onBackspace,
+          tone: _KeyTone.action,
+        ),
       ],
       [
-        _key('4', () => onDigit('4')), _key('5', () => onDigit('5')), _key('6', () => onDigit('6')),
-        calculatorMode ? _key('+', () => onOperator('+')) : _toggleKey(),
+        _digit('4'), _digit('5'), _digit('6'),
+        _NumpadKey(
+          key: const Key('numpadKey_calculator'),
+          icon: Icons.calculate_outlined,
+          semanticLabel: 'Kalkulator',
+          onTap: onToggleCalculator,
+          tone: calculatorMode ? _KeyTone.activeAction : _KeyTone.action,
+        ),
       ],
       [
-        _key('7', () => onDigit('7')), _key('8', () => onDigit('8')), _key('9', () => onDigit('9')),
-        calculatorMode ? _key('−', () => onOperator('-')) : _dateKey(),
+        _digit('7'), _digit('8'), _digit('9'),
+        _NumpadKey(
+          key: const Key('numpadKey_date'),
+          label: dateLabel,
+          caption: timeLabel,
+          semanticLabel: 'Tanggal: $dateLabel',
+          onTap: onPickDate,
+          tone: _KeyTone.action,
+        ),
       ],
       [
-        showDecimal ? _key('.', () => onDigit('.')) : const SizedBox.shrink(),
-        _key('0', () => onDigit('0')),
-        showZeros ? _key('000', onZeros) : const SizedBox.shrink(),
-        _key('✓', onSave, semanticLabel: 'Simpan'),
+        showDecimal ? _digit('.') : const SizedBox.shrink(),
+        _digit('0'),
+        showZeros
+            ? _NumpadKey(key: const Key('numpadKey_000'), label: '000', onTap: onZeros)
+            : const SizedBox.shrink(),
+        _NumpadKey(
+          key: const Key('numpadKey_save'),
+          icon: Icons.check,
+          semanticLabel: 'Simpan',
+          onTap: onSave,
+          tone: _KeyTone.save,
+        ),
       ],
     ];
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space2, vertical: WudgetTokens.space2),
+      padding: const EdgeInsets.fromLTRB(
+        WudgetTokens.space2,
+        WudgetTokens.space2,
+        WudgetTokens.space2,
+        WudgetTokens.space2,
+      ),
       child: Column(
-        children: [for (final row in rows) Row(children: [for (final k in row) Expanded(child: k)])],
+        children: [
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3.5),
+              child: Row(
+                children: [
+                  for (final key in row)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3.5),
+                        child: key,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _toggleKey() => _key(
-        '±',
-        onToggleCalculator,
-        semanticLabel: 'Kalkulator',
+  /// Keyed so a test can tap one key without colliding with the same glyph
+  /// rendered in the amount display above.
+  Widget _digit(String d) => _NumpadKey(
+        key: Key('numpadKey_$d'),
+        label: d,
+        onTap: () => onDigit(d),
       );
+}
 
-  Widget _dateKey() => _key(dateLabel, onPickDate, semanticLabel: 'Tanggal: $dateLabel');
+enum _KeyTone { digit, action, activeAction, save }
 
-  Widget _key(String label, VoidCallback onTap, {String? semanticLabel}) {
+class _NumpadKey extends StatelessWidget {
+  const _NumpadKey({
+    super.key,
+    this.label,
+    this.icon,
+    this.caption,
+    this.semanticLabel,
+    required this.onTap,
+    this.tone = _KeyTone.digit,
+  });
+  final String? label;
+  final IconData? icon;
+  final String? caption;
+  final String? semanticLabel;
+  final VoidCallback onTap;
+  final _KeyTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final (background, foreground) = switch (tone) {
+      _KeyTone.digit => (tokens.surfaceMuted, tokens.ink1),
+      _KeyTone.action => (tokens.surfaceCard, tokens.ink1),
+      _KeyTone.activeAction => (tokens.accent, tokens.inkOnAccent),
+      _KeyTone.save => (tokens.accent, tokens.inkOnAccent),
+    };
+
     return Semantics(
-      label: semanticLabel ?? label,
+      label: semanticLabel ?? label ?? '',
       button: true,
       // Without this, a screen reader merges the glyph's own default
       // reading ("chevron left equals sign" for "±", say) in with the
       // explicit label instead of replacing it — see DECISIONS.md,
       // Sprint 18.
       excludeSemantics: true,
-      child: SizedBox(
-        height: 56,
-        child: TextButton(
-          onPressed: onTap,
-          child: Text(label, style: const TextStyle(fontSize: 20)),
+      child: Material(
+        color: background,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
+          child: Container(
+            // A minimum, not a fixed height: at 200% text scale a 21px glyph
+            // is 42px and overflowed a hard 52px key (R-03, R-35).
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space1),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
+              border: tone == _KeyTone.action
+                  ? Border.all(color: tokens.border)
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: icon != null
+                ? Icon(icon, size: 22, color: foreground)
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label!,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: WudgetTokens.fontFamily,
+                          fontSize: caption != null ? 12.5 : (label!.length > 2 ? 16 : 21),
+                          fontWeight: FontWeight.w600,
+                          color: foreground,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      if (caption != null)
+                        Text(
+                          caption!,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: WudgetTokens.fontFamily,
+                            fontSize: 10,
+                            color: tokens.ink2,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

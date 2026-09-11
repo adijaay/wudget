@@ -56,3 +56,18 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Bundled rather than fetched at runtime: the app makes no network calls
+  # at all (see legal/privacy-policy.en.md), so a font that needs fetching
+  # would simply never arrive. OFL licence ships alongside the files.
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700

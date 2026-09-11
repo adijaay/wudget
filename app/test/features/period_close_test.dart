@@ -56,11 +56,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Periode selesai'), findsOneWidget);
+    expect(find.text('TUTUP PERIODE'), findsOneWidget);
 
-    await tester.tap(find.text('Tutup'));
+    await tester.tap(find.text('Lanjut ke periode berikutnya'));
     await tester.pumpAndSettle();
-    expect(find.text('Periode selesai'), findsNothing);
+    expect(find.text('TUTUP PERIODE'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
@@ -77,7 +77,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Periode selesai'), findsNothing);
+    expect(find.text('TUTUP PERIODE'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
@@ -98,7 +98,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Periode selesai'), findsNothing);
+    expect(find.text('TUTUP PERIODE'), findsNothing);
     expect(find.text('Sudah beberapa waktu'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());

@@ -33,8 +33,8 @@ void main() {
     await _pump(tester, db);
     await tester.pump();
 
-    expect(find.text('3 baris ditemukan.'), findsOneWidget);
-    expect(find.text('Impor'), findsOneWidget);
+    expect(find.text('3 baris ditemukan'), findsOneWidget);
+    expect(find.text('Impor 3 baris'), findsOneWidget); // the button states what it will do
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
@@ -48,10 +48,15 @@ void main() {
     await _pump(tester, db);
     await tester.pump();
 
-    await tester.tap(find.text('Impor'));
+    // The screen scrolls now (file card, mapping card, then the action), so
+    // reach the button the way a user would rather than tapping blind.
+    await tester.ensureVisible(find.text('Impor 3 baris'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Impor 3 baris'));
     await tester.pumpAndSettle();
 
-    expect(find.text('2 baris berhasil diimpor.'), findsOneWidget);
+    expect(find.text('2 baris masuk'), findsOneWidget);
+    expect(find.text('1 baris dilewati'), findsOneWidget);
     expect(find.textContaining('Baris 4'), findsOneWidget); // header + 2 good rows before it
     expect(find.textContaining('date'), findsOneWidget);
 

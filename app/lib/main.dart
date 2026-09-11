@@ -13,9 +13,12 @@ import 'data/recurrence_repository.dart';
 import 'data/reminder_orchestrator.dart';
 import 'design/tokens.dart';
 import 'domain/default_categories.dart';
+import 'features/capture/capture_sheet.dart';
 import 'features/ledger/ledger_screen.dart';
 import 'features/pantau/pantau_screen.dart';
 import 'features/settings/backup_screen.dart';
+import 'features/settings/saya_screen.dart';
+import 'features/shell/nav_bar.dart';
 import 'features/wallets/wallets_screen.dart';
 import 'features/widget/home_widget_service.dart';
 
@@ -99,7 +102,10 @@ class WudgetApp extends StatelessWidget {
   }
 }
 
-/// Kantong, Catat and Pantau (Sprint 8) are the three tabs through v1.0.
+/// Catat, Pantau, Kantong and Saya, with capture docked in the middle of
+/// the bar — the shell every mockup in `design/` is drawn inside. The tab
+/// order is the mockups' own: the two review surfaces left of the capture
+/// button, the two "where things are kept" surfaces right of it.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -108,22 +114,45 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  /// Kantong: what a returning user opens the app to check. Capture itself
+  /// is a button, not a tab, so the landing screen does not need to be the
+  /// one you type into.
+  int _index = 2;
 
-  static const _screens = [WalletsScreen(), LedgerScreen(), PantauScreen()];
+  static const _screens = [
+    LedgerScreen(),
+    PantauScreen(),
+    WalletsScreen(),
+    SayaScreen(),
+  ];
+
+  static const _destinations = [
+    NavDestination(label: 'Catat', icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long),
+    NavDestination(label: 'Pantau', icon: Icons.insights_outlined, selectedIcon: Icons.insights),
+    NavDestination(
+      label: 'Kantong',
+      icon: Icons.account_balance_wallet_outlined,
+      selectedIcon: Icons.account_balance_wallet,
+    ),
+    NavDestination(label: 'Saya', icon: Icons.person_outline, selectedIcon: Icons.person),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: 'Kantong'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Catat'),
-          NavigationDestination(icon: Icon(Icons.insights_outlined), label: 'Pantau'),
-        ],
+      floatingActionButton: CaptureButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const CaptureSheet(),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: WudgetNavBar(
+        currentIndex: _index,
+        destinations: _destinations,
+        onSelected: (i) => setState(() => _index = i),
       ),
     );
   }

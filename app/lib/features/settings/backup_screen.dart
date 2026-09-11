@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/providers.dart';
 import '../../data/backup_repository.dart';
+import '../../design/components.dart';
 import '../../design/tokens.dart';
 
 final _dateTimeFormat = DateFormat('d MMM yyyy, HH:mm', 'id_ID');
@@ -142,30 +143,95 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Data & Cadangan')),
-      body: Padding(
-        padding: const EdgeInsets.all(WudgetTokens.space4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _lastBackup == null ? 'Belum ada cadangan.' : 'Cadangan terakhir: ${_dateTimeFormat.format(_lastBackup!)}',
-            ),
-            const SizedBox(height: WudgetTokens.space4),
-            FilledButton(onPressed: _busy ? null : _createBackup, child: const Text('Buat cadangan sekarang')),
-            const SizedBox(height: WudgetTokens.space2),
-            OutlinedButton(onPressed: _busy ? null : _exportJson, child: const Text('Ekspor JSON (lengkap)')),
-            const SizedBox(height: WudgetTokens.space2),
-            OutlinedButton(onPressed: _busy ? null : _exportCsv, child: const Text('Ekspor CSV (spreadsheet)')),
-            const SizedBox(height: WudgetTokens.space5),
-            OutlinedButton(onPressed: _busy ? null : _restore, child: const Text('Pulihkan dari file JSON...')),
-            if (_busy) const Padding(
-              padding: EdgeInsets.only(top: WudgetTokens.space4),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          ],
+      appBar: AppBar(title: const Text('Cadangan & pulihkan')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          WudgetTokens.space4,
+          0,
+          WudgetTokens.space4,
+          WudgetTokens.space6,
         ),
+        children: [
+          // The state of the thing this screen is about, first: whether a
+          // copy exists at all is the only fact that matters here.
+          WudgetCard(
+            child: Row(
+              children: [
+                IconChip(
+                  icon: _lastBackup == null ? Icons.shield_outlined : Icons.verified_outlined,
+                  background: _lastBackup == null ? tokens.surfaceMuted : tokens.accent,
+                  foreground: _lastBackup == null ? tokens.ink2 : tokens.inkOnAccent,
+                ),
+                const SizedBox(width: WudgetTokens.space3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _lastBackup == null ? 'Belum ada cadangan' : 'Cadangan terakhir',
+                        style: text.titleSmall,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _lastBackup == null
+                            ? 'Catatanmu cuma ada di HP ini. Kalau HP-nya hilang, hilang juga.'
+                            : _dateTimeFormat.format(_lastBackup!),
+                        style: text.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: WudgetTokens.space4),
+          FilledButton(
+            onPressed: _busy ? null : _createBackup,
+            child: const Text('Buat cadangan sekarang'),
+          ),
+          if (_busy) ...[
+            const SizedBox(height: WudgetTokens.space4),
+            const Center(child: CircularProgressIndicator()),
+          ],
+          const SizedBox(height: WudgetTokens.space5),
+          const SectionLabel('Ekspor'),
+          CardGroup(
+            dividerIndent: WudgetTokens.space3,
+            children: [
+              CardRow(
+                title: 'Ekspor JSON',
+                subtitle: 'Lengkap, termasuk semua kantong dan kategori',
+                trailing: Icon(Icons.file_download_outlined, color: tokens.ink2),
+                onTap: _busy ? null : _exportJson,
+              ),
+              CardRow(
+                title: 'Ekspor CSV',
+                subtitle: 'Buat dibuka di spreadsheet',
+                trailing: Icon(Icons.file_download_outlined, color: tokens.ink2),
+                onTap: _busy ? null : _exportCsv,
+              ),
+            ],
+          ),
+          const SizedBox(height: WudgetTokens.space5),
+          const SectionLabel('Pulihkan'),
+          CardGroup(
+            dividerIndent: WudgetTokens.space3,
+            children: [
+              CardRow(
+                title: 'Pulihkan dari file JSON',
+                // Says what it will do before it is tapped, because the
+                // action itself cannot be undone.
+                subtitle: 'Mengganti seluruh data saat ini, tidak bisa dibatalkan',
+                trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                onTap: _busy ? null : _restore,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
