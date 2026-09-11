@@ -43,7 +43,9 @@ class CaptureQueries {
         acctLeg.transactionId.equalsExp(catLeg.transactionId) & acctLeg.accountId.isNotNull(),
       ),
     ])
-          ..where(catLeg.categoryId.isNotNull() & _db.transactions.kind.equals(kind))
+          ..where(catLeg.categoryId.isNotNull() &
+              _db.transactions.kind.equals(kind) &
+              _db.transactions.deletedAt.isNull())
           ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
           ..limit(scanLimit))
         .get();
@@ -82,7 +84,7 @@ class CaptureQueries {
         acctLeg.transactionId.equalsExp(catLeg.transactionId) & acctLeg.accountId.isNotNull(),
       ),
     ])
-          ..where(catLeg.categoryId.equals(categoryId))
+          ..where(catLeg.categoryId.equals(categoryId) & _db.transactions.deletedAt.isNull())
           ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
           ..limit(1))
         .getSingleOrNull();

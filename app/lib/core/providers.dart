@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/capture_queries.dart';
 import '../data/database.dart';
+import '../data/ledger_queries.dart';
 import '../data/postings_repository.dart';
 import '../data/wallets_repository.dart';
 
@@ -21,4 +22,8 @@ final captureQueriesProvider = Provider<CaptureQueries>((ref) {
 
 final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
   return WalletsRepository(ref.watch(databaseProvider));
+});
+
+final ledgerQueriesProvider = Provider<LedgerQueries>((ref) {
+  return LedgerQueries(ref.watch(databaseProvider));
 });

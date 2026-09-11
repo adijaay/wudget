@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import 'database.dart';
 
 /// Sum of every posting's category leg — i.e. actual spending/income,
@@ -5,8 +7,13 @@ import 'database.dart';
 /// leg by construction (plan/03-architecture.md, "How the four kinds map
 /// to postings"), so it is structurally excluded here rather than filtered
 /// by transaction kind — the same guarantee Pantau's aggregates will read
-/// from once that tab exists (Sprint 8+).
+/// from once that tab exists (Sprint 8+). Soft-deleted transactions
+/// (Sprint 6) are excluded too.
 Future<int> totalCategorySpendMinor(WudgetDatabase db) async {
-  final postings = await (db.select(db.postings)..where((p) => p.categoryId.isNotNull())).get();
-  return postings.fold<int>(0, (sum, p) => sum + p.amountMinor);
+  final rows = await (db.select(db.postings).join([
+    innerJoin(db.transactions, db.transactions.id.equalsExp(db.postings.transactionId)),
+  ])
+        ..where(db.postings.categoryId.isNotNull() & db.transactions.deletedAt.isNull()))
+      .get();
+  return rows.fold<int>(0, (sum, row) => sum + row.readTable(db.postings).amountMinor);
 }

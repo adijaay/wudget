@@ -254,10 +254,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         content: Text('Tersimpan: ${_formatter.format(_amount)}'),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () => db.transaction(() async {
-            await (db.delete(db.postings)..where((p) => p.transactionId.equals(txId))).go();
-            await (db.delete(db.transactions)..where((t) => t.id.equals(txId))).go();
-          }),
+          onPressed: () => ref.read(postingsRepositoryProvider).undoInsert(txId),
         ),
       ),
     );

@@ -8,7 +8,7 @@ import 'package:wudget/features/wallets/wallets_screen.dart';
 import 'package:wudget/main.dart';
 
 void main() {
-  testWidgets('app boots to the wallets screen', (WidgetTester tester) async {
+  testWidgets('app boots to Kantong, with Catat available in the tab bar', (WidgetTester tester) async {
     final db = WudgetDatabase(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -21,6 +21,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(WalletsScreen), findsOneWidget);
+
+    await tester.tap(find.text('Catat'));
+    await tester.pumpAndSettle();
+    expect(find.text('Belum ada transaksi.'), findsOneWidget);
 
     // Unmount explicitly, with a pump still under our control, so drift's
     // stream-query cleanup (which schedules its own Timer.run — see

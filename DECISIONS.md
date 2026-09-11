@@ -152,3 +152,54 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   actual guarantee "doesn't appear in spending statistics" cashes out to. `totalCategorySpendMinor`
   is a real function Pantau's aggregates (Sprint 8+) will read from, not a throwaway test
   helper.
+
+## Sprint 6
+
+- **Schema bumped to v3** (`daily_totals` table): one row per local calendar day, net of every
+  account-leg posting landing on it, kept current by `DailyTotalsRepository` from inside
+  `PostingsRepository`'s insert/delete/restore — so nothing else has to remember to update it.
+  It's a derived cache, not exported in the JSON backup; `recomputeAll()` rebuilds it after a
+  restore instead (see the Sprint 2 entry on migrations — this is the second schema bump, and
+  the forward-migration-test pattern from Sprint 4 was reused directly).
+- **Soft delete is real now, not just a schema column.** `deletedAt` existed on `transactions`
+  since Sprint 1 but nothing read or wrote it. Every query that sums postings for a balance or
+  a total (`WalletsRepository.watchWallets`, `totalCategorySpendMinor`, both `CaptureQueries`
+  lookups, `DailyTotalsRepository.recomputeDay`) now excludes soft-deleted transactions —
+  audited one call site at a time rather than introduced as a shared predicate, since there's
+  no single choke point they all already route through (unlike `PostingsRepository` for
+  writes). Revisit if a sixth call site appears — that's the signal to extract one.
+- **A transfer is one Catat row, not two.** Its two account-leg postings share one
+  transaction; `LedgerQueries` picks the negative ("from") leg as primary and names both
+  accounts ("Bank -> Tunai"), rather than showing a transfer as two separate list entries.
+- **Ledger pagination fetches transaction ids first, then assembles details for just that
+  page** (`LedgerQueries._matchingTransactionIds` then `_assembleEntries`), instead of one
+  join query with LIMIT/OFFSET directly — a transfer's two account-leg postings would
+  otherwise inflate a joined LIMIT to sometimes return fewer than `limit` transactions per
+  page. `groupBy(transactions.id)` on the id-selection query collapses that back to one row
+  per transaction before the LIMIT is applied.
+- **Editing an existing transaction is note-only this sprint.** Changing amount/category/
+  account on a saved transaction needs an update path that re-derives both postings and keeps
+  the sum-to-zero invariant and `daily_totals` correct — `PostingsRepository` has no
+  `updateTransaction` yet, only insert/delete/restore. Bolting a partial version on now risked
+  a subtly wrong balance; note editing needed no such path. Revisit: give
+  `PostingsRepository` a real `updateTransaction` before Catat's edit affordance grows past
+  the note.
+- **Filtering covers category, wallet, note text and amount range; period filtering is wired
+  in `LedgerFilter`/`LedgerQueries` but has no UI control yet** — Sprint 8 owns the period
+  selector as a first-class, app-wide concept ("every aggregate query takes a period," per
+  plan/03-architecture.md), and a throwaway date-range picker here would likely be thrown away
+  when that lands. The filtered-empty state names whichever filters are active
+  (`LedgerFilter.describe()`), never a bare "no results."
+- **Perf done-when verified as a query-shape guarantee, not an on-device measurement.**
+  `ledger_performance_test.dart` proves a page fetch stays fast with 10,000 transactions in
+  the table (bounded LIMIT/OFFSET, not a full scan) — real on-device timing is Sprint 7's
+  performance-gate ticket, on a release build, which this repo still can't produce locally
+  (missing Android SDK Build-Tools 33.0.1, logged in the Sprint 0 entry).
+- **A second widget-test-only "Timer still pending" case, same family as Sprint 5's**: a
+  `testWidgets` test that reads `tester.allWidgets` (or otherwise inspects the tree) without
+  ever unmounting before the test ends can take several real minutes to fail, because
+  `addTearDown(db.close)` sits waiting on in-flight drift queries from a screen that never
+  got torn down under a controlled pump. Confirmed by reproducing it deliberately in a
+  throwaway debug test. The house pattern from Sprint 5 (unmount via `pumpWidget(SizedBox())`
+  then one more `pump()` before the test ends) is now applied to every widget test that ends
+  with a drift-stream-backed screen still mounted.

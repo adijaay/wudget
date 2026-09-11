@@ -6,6 +6,7 @@ import 'core/providers.dart';
 import 'data/database.dart';
 import 'design/tokens.dart';
 import 'domain/default_categories.dart';
+import 'features/ledger/ledger_screen.dart';
 import 'features/wallets/wallets_screen.dart';
 
 Future<void> main() async {
@@ -31,10 +32,37 @@ class WudgetApp extends StatelessWidget {
       title: 'wudget',
       theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
       darkTheme: buildWudgetTheme(WudgetTokens.dark, Brightness.dark),
-      // Temporary home: Kantong is the first real tab, with its own FAB
-      // into the capture sheet. Real tab navigation (Catat/Kantong/Pantau)
-      // is Sprint 6+ — see DECISIONS.md.
-      home: const WalletsScreen(),
+      home: const HomeShell(),
+    );
+  }
+}
+
+/// Kantong and Catat are the two real tabs so far. Pantau (Sprint 8+) is
+/// the third; this bar grows to three items then, not before.
+class HomeShell extends StatefulWidget {
+  const HomeShell({super.key});
+
+  @override
+  State<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends State<HomeShell> {
+  int _index = 0;
+
+  static const _screens = [WalletsScreen(), LedgerScreen()];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _index, children: _screens),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: 'Kantong'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Catat'),
+        ],
+      ),
     );
   }
 }

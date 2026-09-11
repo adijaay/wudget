@@ -19,8 +19,12 @@ class WalletsRepository {
     final balanceSum = _db.postings.amountMinor.sum();
     final query = _db.select(_db.accounts).join([
       leftOuterJoin(_db.postings, _db.postings.accountId.equalsExp(_db.accounts.id)),
+      leftOuterJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
     ])
-      ..where(_db.accounts.archivedAt.isNull())
+      ..where(_db.accounts.archivedAt.isNull() &
+          // Keep accounts with no postings at all (left-joined nulls) as
+          // well as postings whose transaction isn't soft-deleted.
+          (_db.postings.id.isNull() | _db.transactions.deletedAt.isNull()))
       ..addColumns([balanceSum])
       ..groupBy([_db.accounts.id]);
 

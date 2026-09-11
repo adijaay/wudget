@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'daily_totals_repository.dart';
 import 'database.dart';
 
 /// Counts of what a JSON import will do, computed without writing anything —
@@ -80,6 +81,9 @@ class BackupRepository {
         await _db.into(_db.postings).insert(Posting.fromJson(row as Map<String, dynamic>));
       }
     });
+    // daily_totals is a derived cache, not part of the export — rebuild it
+    // from the restored transactions/postings instead.
+    await DailyTotalsRepository(_db).recomputeAll();
   }
 
   /// One row per posting, joined to its transaction — a spreadsheet-ready

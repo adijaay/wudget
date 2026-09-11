@@ -84,12 +84,25 @@ class Postings extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings])
+/// One row per local calendar day that has any account-leg posting. Kept
+/// current by DailyTotalsRepository.recomputeDay, called from
+/// PostingsRepository after every write or delete — the Catat list reads
+/// this instead of summing postings on every render (Sprint 6 done-when:
+/// 10,000 transactions render in under 300ms).
+class DailyTotals extends Table {
+  IntColumn get day => integer()(); // local calendar day, see dayBucketFor()
+  IntColumn get netMinor => integer()();
+
+  @override
+  Set<Column> get primaryKey => {day};
+}
+
+@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -97,6 +110,9 @@ class WudgetDatabase extends _$WudgetDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.addColumn(transactions, transactions.photoPath);
+          }
+          if (from < 3) {
+            await m.createTable(dailyTotals);
           }
         },
       );

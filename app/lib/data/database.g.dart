@@ -2473,6 +2473,183 @@ class PostingsCompanion extends UpdateCompanion<Posting> {
   }
 }
 
+class $DailyTotalsTable extends DailyTotals
+    with TableInfo<$DailyTotalsTable, DailyTotal> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DailyTotalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dayMeta = const VerificationMeta('day');
+  @override
+  late final GeneratedColumn<int> day = GeneratedColumn<int>(
+      'day', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _netMinorMeta =
+      const VerificationMeta('netMinor');
+  @override
+  late final GeneratedColumn<int> netMinor = GeneratedColumn<int>(
+      'net_minor', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [day, netMinor];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'daily_totals';
+  @override
+  VerificationContext validateIntegrity(Insertable<DailyTotal> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('day')) {
+      context.handle(
+          _dayMeta, day.isAcceptableOrUnknown(data['day']!, _dayMeta));
+    }
+    if (data.containsKey('net_minor')) {
+      context.handle(_netMinorMeta,
+          netMinor.isAcceptableOrUnknown(data['net_minor']!, _netMinorMeta));
+    } else if (isInserting) {
+      context.missing(_netMinorMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {day};
+  @override
+  DailyTotal map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DailyTotal(
+      day: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}day'])!,
+      netMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}net_minor'])!,
+    );
+  }
+
+  @override
+  $DailyTotalsTable createAlias(String alias) {
+    return $DailyTotalsTable(attachedDatabase, alias);
+  }
+}
+
+class DailyTotal extends DataClass implements Insertable<DailyTotal> {
+  final int day;
+  final int netMinor;
+  const DailyTotal({required this.day, required this.netMinor});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['day'] = Variable<int>(day);
+    map['net_minor'] = Variable<int>(netMinor);
+    return map;
+  }
+
+  DailyTotalsCompanion toCompanion(bool nullToAbsent) {
+    return DailyTotalsCompanion(
+      day: Value(day),
+      netMinor: Value(netMinor),
+    );
+  }
+
+  factory DailyTotal.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DailyTotal(
+      day: serializer.fromJson<int>(json['day']),
+      netMinor: serializer.fromJson<int>(json['netMinor']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'day': serializer.toJson<int>(day),
+      'netMinor': serializer.toJson<int>(netMinor),
+    };
+  }
+
+  DailyTotal copyWith({int? day, int? netMinor}) => DailyTotal(
+        day: day ?? this.day,
+        netMinor: netMinor ?? this.netMinor,
+      );
+  DailyTotal copyWithCompanion(DailyTotalsCompanion data) {
+    return DailyTotal(
+      day: data.day.present ? data.day.value : this.day,
+      netMinor: data.netMinor.present ? data.netMinor.value : this.netMinor,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyTotal(')
+          ..write('day: $day, ')
+          ..write('netMinor: $netMinor')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(day, netMinor);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DailyTotal &&
+          other.day == this.day &&
+          other.netMinor == this.netMinor);
+}
+
+class DailyTotalsCompanion extends UpdateCompanion<DailyTotal> {
+  final Value<int> day;
+  final Value<int> netMinor;
+  const DailyTotalsCompanion({
+    this.day = const Value.absent(),
+    this.netMinor = const Value.absent(),
+  });
+  DailyTotalsCompanion.insert({
+    this.day = const Value.absent(),
+    required int netMinor,
+  }) : netMinor = Value(netMinor);
+  static Insertable<DailyTotal> custom({
+    Expression<int>? day,
+    Expression<int>? netMinor,
+  }) {
+    return RawValuesInsertable({
+      if (day != null) 'day': day,
+      if (netMinor != null) 'net_minor': netMinor,
+    });
+  }
+
+  DailyTotalsCompanion copyWith({Value<int>? day, Value<int>? netMinor}) {
+    return DailyTotalsCompanion(
+      day: day ?? this.day,
+      netMinor: netMinor ?? this.netMinor,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (day.present) {
+      map['day'] = Variable<int>(day.value);
+    }
+    if (netMinor.present) {
+      map['net_minor'] = Variable<int>(netMinor.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyTotalsCompanion(')
+          ..write('day: $day, ')
+          ..write('netMinor: $netMinor')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WudgetDatabase extends GeneratedDatabase {
   _$WudgetDatabase(QueryExecutor e) : super(e);
   $WudgetDatabaseManager get managers => $WudgetDatabaseManager(this);
@@ -2480,12 +2657,13 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $PostingsTable postings = $PostingsTable(this);
+  late final $DailyTotalsTable dailyTotals = $DailyTotalsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [accounts, categories, transactions, postings];
+      [accounts, categories, transactions, postings, dailyTotals];
 }
 
 typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
@@ -4199,6 +4377,128 @@ typedef $$PostingsTableProcessedTableManager = ProcessedTableManager<
     Posting,
     PrefetchHooks Function(
         {bool transactionId, bool accountId, bool categoryId})>;
+typedef $$DailyTotalsTableCreateCompanionBuilder = DailyTotalsCompanion
+    Function({
+  Value<int> day,
+  required int netMinor,
+});
+typedef $$DailyTotalsTableUpdateCompanionBuilder = DailyTotalsCompanion
+    Function({
+  Value<int> day,
+  Value<int> netMinor,
+});
+
+class $$DailyTotalsTableFilterComposer
+    extends Composer<_$WudgetDatabase, $DailyTotalsTable> {
+  $$DailyTotalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get day => $composableBuilder(
+      column: $table.day, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get netMinor => $composableBuilder(
+      column: $table.netMinor, builder: (column) => ColumnFilters(column));
+}
+
+class $$DailyTotalsTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $DailyTotalsTable> {
+  $$DailyTotalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get day => $composableBuilder(
+      column: $table.day, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get netMinor => $composableBuilder(
+      column: $table.netMinor, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DailyTotalsTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $DailyTotalsTable> {
+  $$DailyTotalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get day =>
+      $composableBuilder(column: $table.day, builder: (column) => column);
+
+  GeneratedColumn<int> get netMinor =>
+      $composableBuilder(column: $table.netMinor, builder: (column) => column);
+}
+
+class $$DailyTotalsTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $DailyTotalsTable,
+    DailyTotal,
+    $$DailyTotalsTableFilterComposer,
+    $$DailyTotalsTableOrderingComposer,
+    $$DailyTotalsTableAnnotationComposer,
+    $$DailyTotalsTableCreateCompanionBuilder,
+    $$DailyTotalsTableUpdateCompanionBuilder,
+    (
+      DailyTotal,
+      BaseReferences<_$WudgetDatabase, $DailyTotalsTable, DailyTotal>
+    ),
+    DailyTotal,
+    PrefetchHooks Function()> {
+  $$DailyTotalsTableTableManager(_$WudgetDatabase db, $DailyTotalsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DailyTotalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DailyTotalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DailyTotalsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> day = const Value.absent(),
+            Value<int> netMinor = const Value.absent(),
+          }) =>
+              DailyTotalsCompanion(
+            day: day,
+            netMinor: netMinor,
+          ),
+          createCompanionCallback: ({
+            Value<int> day = const Value.absent(),
+            required int netMinor,
+          }) =>
+              DailyTotalsCompanion.insert(
+            day: day,
+            netMinor: netMinor,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DailyTotalsTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $DailyTotalsTable,
+    DailyTotal,
+    $$DailyTotalsTableFilterComposer,
+    $$DailyTotalsTableOrderingComposer,
+    $$DailyTotalsTableAnnotationComposer,
+    $$DailyTotalsTableCreateCompanionBuilder,
+    $$DailyTotalsTableUpdateCompanionBuilder,
+    (
+      DailyTotal,
+      BaseReferences<_$WudgetDatabase, $DailyTotalsTable, DailyTotal>
+    ),
+    DailyTotal,
+    PrefetchHooks Function()>;
 
 class $WudgetDatabaseManager {
   final _$WudgetDatabase _db;
@@ -4211,4 +4511,6 @@ class $WudgetDatabaseManager {
       $$TransactionsTableTableManager(_db, _db.transactions);
   $$PostingsTableTableManager get postings =>
       $$PostingsTableTableManager(_db, _db.postings);
+  $$DailyTotalsTableTableManager get dailyTotals =>
+      $$DailyTotalsTableTableManager(_db, _db.dailyTotals);
 }
