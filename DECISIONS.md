@@ -203,3 +203,27 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   throwaway debug test. The house pattern from Sprint 5 (unmount via `pumpWidget(SizedBox())`
   then one more `pump()` before the test ends) is now applied to every widget test that ends
   with a drift-stream-backed screen still mounted.
+
+## Sprint 7
+
+- **Android widget and app-shortcut both resolve through one path.** `home_widget`'s own
+  launch action (`es.antonborri.home_widget.action.LAUNCH`) is reused as the shortcut intent
+  action in `shortcuts.xml`, rather than inventing a second one, so `HomeWidget.widgetClicked`
+  / `initiallyLaunchedFromHomeWidget` in `HomeWidgetService` handles both without a second
+  listener. Both carry the same `wudget://capture?kind=expense` deep link, parsed by the pure
+  (and tested) `parseCaptureDeepLink`.
+- **iOS widget cut, per the cut list in plan/05-sprints.md** ("Android carries the market").
+  Not attempted this sprint; revisit only if dogfooding on Android alone stalls.
+- **Performance pass ticket not closed with a number.** The budget table in
+  plan/03-architecture.md needs measurement on a real mid-range device with a release build,
+  and this repo still can't produce a release build locally (missing Android SDK Build-Tools
+  33.0.1, first logged in the Sprint 0 entry). Writing a fabricated pass/fail here would
+  violate the Definition of Done's "no fabricated content" rule directly, so it stays open.
+  Unblock: install Build-Tools 33.0.1, or move the measurement to a machine that has them,
+  then run the cold-start/widget-tap/save/Catat/Pantau timings for real.
+- **`ledger_performance_test.dart`'s 300ms bound is flaky under full-suite load** (passes
+  isolated at ~1s, saw 415ms once running alongside the full suite on this machine) — CPU
+  contention from the rest of the suite, not a regression in the query itself. Noted rather
+  than loosened, since loosening a perf assertion to make CI green defeats its purpose;
+  revisit if it flakes routinely once CI is real (Sprint 0's CI ticket is still open).
+  with a drift-stream-backed screen still mounted.

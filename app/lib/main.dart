@@ -8,6 +8,9 @@ import 'design/tokens.dart';
 import 'domain/default_categories.dart';
 import 'features/ledger/ledger_screen.dart';
 import 'features/wallets/wallets_screen.dart';
+import 'features/widget/home_widget_service.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +24,8 @@ Future<void> main() async {
       child: const WudgetApp(),
     ),
   );
+
+  await HomeWidgetService(navigatorKey).init();
 }
 
 class WudgetApp extends StatelessWidget {
@@ -29,6 +34,7 @@ class WudgetApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'wudget',
       theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
       darkTheme: buildWudgetTheme(WudgetTokens.dark, Brightness.dark),
