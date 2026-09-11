@@ -97,12 +97,23 @@ class DailyTotals extends Table {
   Set<Column> get primaryKey => {day};
 }
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals])
+/// Single-row app settings, read by [SettingsRepository]. A missing row
+/// means every setting is at its default — see SettingsRepository, rather
+/// than seeding one on create.
+class AppSettings extends Table {
+  IntColumn get id => integer().withDefault(const Constant(0))();
+  IntColumn get periodStartDay => integer().withDefault(const Constant(1))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals, AppSettings])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +124,9 @@ class WudgetDatabase extends _$WudgetDatabase {
           }
           if (from < 3) {
             await m.createTable(dailyTotals);
+          }
+          if (from < 4) {
+            await m.createTable(appSettings);
           }
         },
       );

@@ -7,6 +7,7 @@ import 'data/database.dart';
 import 'design/tokens.dart';
 import 'domain/default_categories.dart';
 import 'features/ledger/ledger_screen.dart';
+import 'features/pantau/pantau_screen.dart';
 import 'features/wallets/wallets_screen.dart';
 import 'features/widget/home_widget_service.dart';
 
@@ -43,8 +44,7 @@ class WudgetApp extends StatelessWidget {
   }
 }
 
-/// Kantong and Catat are the two real tabs so far. Pantau (Sprint 8+) is
-/// the third; this bar grows to three items then, not before.
+/// Kantong, Catat and Pantau (Sprint 8) are the three tabs through v1.0.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -55,7 +55,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _screens = [WalletsScreen(), LedgerScreen()];
+  static const _screens = [WalletsScreen(), LedgerScreen(), PantauScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +67,7 @@ class _HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), label: 'Kantong'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Catat'),
+          NavigationDestination(icon: Icon(Icons.insights_outlined), label: 'Pantau'),
         ],
       ),
     );

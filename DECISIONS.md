@@ -226,4 +226,32 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   contention from the rest of the suite, not a regression in the query itself. Noted rather
   than loosened, since loosening a perf assertion to make CI green defeats its purpose;
   revisit if it flakes routinely once CI is real (Sprint 0's CI ticket is still open).
+
+## Sprint 8
+
+- **Period bounds live in the same day-bucket integer space as `dayBucketFor`/`daily_totals`**
+  (`domain/period.dart`), rather than as `DateTime`s — a `Period` composes directly with the
+  existing daily-aggregate machinery with no timezone conversion at the boundary. A day bucket
+  round-trips to a calendar date via `epoch + n days`, since `dayBucketFor` already produces
+  "days since epoch in local wall-clock time"; month arithmetic (for the payday-aligned case)
+  is done on that date, then converted back to a bucket.
+- **No new period-aggregate cache table.** `PeriodAggregateQueries.totalsFor` runs the same
+  padded-scan-then-refine-in-Dart query shape as `DailyTotalsRepository.recomputeDay`, bounded
+  to at most a month of rows — fast enough without a cache, and a real cache table can wait
+  until Sprint 9's Pantau render budget (500ms, all aggregates precomputed) says otherwise.
+- **`AppSettings` is a single row (id fixed to 0), created lazily on first write, not seeded on
+  create.** A missing row means every setting is at its documented default (`periodStartDay`
+  1) — `SettingsRepository.watchPeriodStartDay` reads that off `row?.periodStartDay ?? 1`
+  rather than requiring migration-time seed logic for a table that's really just one struct.
+  Schema bumped to v4 (`createTable(appSettings)`), same forward-migration pattern as Sprint 4
+  and Sprint 6's bumps.
+- **Month start day is clamped to 1-28 at the write path** (`clampPeriodStartDay`, called from
+  both `SettingsRepository.setPeriodStartDay` and `Period.containing`/`.next`/`.previous`), per
+  plan/05-sprints.md's "capped at 28" — so a period never has to decide what "the 30th" means
+  in February.
+- **Pantau's waiting state gates on days-since-first-transaction ever recorded, not on the
+  selected period having 14 days in it.** Matches the plan's Phase 2 intent ("only after the
+  user has two weeks of real data") — paging the period selector backward past the waiting
+  point would otherwise show real numbers for a period the user hasn't actually lived through
+  14 days of yet, which the honest-waiting-state ticket is there to prevent.
   with a drift-stream-backed screen still mounted.
