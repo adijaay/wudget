@@ -27,4 +27,25 @@ void main() {
     await repo.setPeriodStartDay(31);
     expect(await repo.watchPeriodStartDay().first, 28);
   });
+
+  group('period close acknowledgement', () {
+    test('null with nothing acknowledged yet', () async {
+      expect(await repo.getLastAcknowledgedPeriodClose(), isNull);
+    });
+
+    test('round-trips the acknowledged period\'s start day', () async {
+      await repo.setLastAcknowledgedPeriodClose(20123);
+      expect(await repo.getLastAcknowledgedPeriodClose(), 20123);
+    });
+
+    test('setting it does not disturb periodStartDay, and vice versa', () async {
+      await repo.setPeriodStartDay(15);
+      await repo.setLastAcknowledgedPeriodClose(20123);
+      expect(await repo.watchPeriodStartDay().first, 15);
+      expect(await repo.getLastAcknowledgedPeriodClose(), 20123);
+
+      await repo.setPeriodStartDay(20);
+      expect(await repo.getLastAcknowledgedPeriodClose(), 20123);
+    });
+  });
 }

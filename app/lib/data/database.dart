@@ -104,6 +104,12 @@ class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(0))();
   IntColumn get periodStartDay => integer().withDefault(const Constant(1))();
 
+  /// The start day (day bucket) of the most recent period the user has
+  /// dismissed the period-close ritual for — null means none yet. See
+  /// plan/05-sprints.md Sprint 14, "fires once per period boundary,
+  /// dismissible".
+  IntColumn get lastAcknowledgedPeriodClose => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -210,7 +216,7 @@ class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -235,6 +241,13 @@ class WudgetDatabase extends _$WudgetDatabase {
           if (from < 7) {
             await m.createTable(recurrences);
             await m.createTable(recurrenceOverrides);
+          }
+          // appSettings from < 4 is created fresh via createTable above,
+          // which builds from the *current* Dart table definition (every
+          // column, including this one) — so only a database that already
+          // had the table before this column existed needs it added.
+          if (from >= 4 && from < 8) {
+            await m.addColumn(appSettings, appSettings.lastAcknowledgedPeriodClose);
           }
         },
       );

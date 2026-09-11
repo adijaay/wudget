@@ -19,4 +19,19 @@ class SettingsRepository {
           AppSettingsCompanion.insert(id: const Value(0), periodStartDay: Value(clampPeriodStartDay(day))),
         );
   }
+
+  /// Null means no period close has ever been acknowledged.
+  Future<int?> getLastAcknowledgedPeriodClose() async {
+    final row = await (_db.select(_db.appSettings)..where((s) => s.id.equals(0))).getSingleOrNull();
+    return row?.lastAcknowledgedPeriodClose;
+  }
+
+  Future<void> setLastAcknowledgedPeriodClose(int periodStartDay) {
+    return _db.into(_db.appSettings).insertOnConflictUpdate(
+          AppSettingsCompanion.insert(
+            id: const Value(0),
+            lastAcknowledgedPeriodClose: Value(periodStartDay),
+          ),
+        );
+  }
 }

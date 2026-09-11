@@ -10,12 +10,14 @@ import '../../data/period_aggregate_queries.dart';
 import '../../design/tokens.dart';
 import '../../domain/pace.dart';
 import '../../domain/period.dart';
+import '../../domain/period_close.dart';
 import '../budget/budget_screen.dart';
 import '../period/period_selector.dart';
 import '../recurring/recurring_screen.dart';
 import 'actual_forecast_chart.dart';
 import 'category_ranked_list.dart';
 import 'pace_ring.dart';
+import 'period_close_sheet.dart';
 import 'week_bar_chart.dart';
 
 const _formatter = MoneyFormatter();
@@ -51,6 +53,53 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPeriodClose());
+  }
+
+  /// Fires once per period boundary and is dismissible — plan/02-flows.md
+  /// #7. Checked once on entering Pantau, not on every manual period-
+  /// selector navigation (that's browsing history, not a boundary event).
+  Future<void> _checkPeriodClose() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    final periodQueries = ref.read(periodAggregateQueriesProvider);
+    final rankQueries = ref.read(categoryRankQueriesProvider);
+
+    final closing = ref.read(currentPeriodProvider).previous;
+    final beforeClosing = closing.previous;
+
+    final lastAck = await settings.getLastAcknowledgedPeriodClose();
+    if (lastAck != null && lastAck >= closing.startDay) return;
+
+    if (!mounted) return;
+
+    if (lastAck != null && beforeClosing.startDay > lastAck) {
+      await showModalBottomSheet(
+        context: context,
+        builder: (_) => LapsedReturnSheet(onClose: () => Navigator.of(context).pop()),
+      );
+      await settings.setLastAcknowledgedPeriodClose(closing.startDay);
+      return;
+    }
+
+    final totals = await periodQueries.totalsFor(closing);
+    final closingRanks = await rankQueries.rankedSpend(closing.startDay, closing.endDayExclusive);
+    final previousRanks = await rankQueries.rankedSpend(beforeClosing.startDay, beforeClosing.endDayExclusive);
+
+    final summary = buildPeriodCloseSummary(
+      incomeMinor: totals.incomeMinor,
+      expenseMinor: totals.expenseMinor,
+      closingRanks: [for (final r in closingRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)],
+      previousRanks: [for (final r in previousRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)],
+    );
+    if (summary == null) return; // no data for the closing period — skip the ritual entirely
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => PeriodCloseSheet(summary: summary, onClose: () => Navigator.of(context).pop()),
+    );
+    await settings.setLastAcknowledgedPeriodClose(closing.startDay);
   }
 
   Future<void> _load() async {

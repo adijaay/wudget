@@ -58,6 +58,59 @@ Database _buildV1Fixture() {
   return db;
 }
 
+/// A v4-shaped fixture: `app_settings` already exists (added that
+/// version), but without `last_acknowledged_period_close` (added in v8).
+/// Regression fixture for the bug this exact shape hit: `createTable` in
+/// an earlier `onUpgrade` step builds from the *current* Dart table
+/// definition (every column, including ones added by later versions), so
+/// a database that never had the table at all sailed through — this is
+/// the one that needs the table to already exist, without the new column,
+/// for the later `addColumn` step to have anything to do.
+Database _buildV4Fixture() {
+  final db = sqlite3.openInMemory();
+  db.execute('''
+    CREATE TABLE accounts (
+      id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL,
+      provider_key TEXT, currency TEXT NOT NULL,
+      opening_minor INTEGER NOT NULL DEFAULT 0,
+      statement_day INTEGER, due_day INTEGER, credit_limit_minor INTEGER,
+      archived_at INTEGER, household_id TEXT,
+      visibility TEXT NOT NULL DEFAULT 'private',
+      updated_at INTEGER NOT NULL, deleted_at INTEGER, device_id TEXT
+    );
+    CREATE TABLE categories (
+      id TEXT NOT NULL PRIMARY KEY, parent_id TEXT REFERENCES categories(id),
+      name TEXT NOT NULL, kind TEXT NOT NULL, icon_key TEXT NOT NULL,
+      hue_index INTEGER NOT NULL, is_irregular INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL, updated_at INTEGER NOT NULL, deleted_at INTEGER
+    );
+    CREATE TABLE transactions (
+      id TEXT NOT NULL PRIMARY KEY, kind TEXT NOT NULL,
+      occurred_at INTEGER NOT NULL, tz_offset_minutes INTEGER NOT NULL,
+      title TEXT, note TEXT, photo_path TEXT, recurrence_id TEXT,
+      is_projected INTEGER NOT NULL DEFAULT 0, lat REAL, lon REAL,
+      household_id TEXT, visibility TEXT NOT NULL DEFAULT 'private',
+      updated_at INTEGER NOT NULL, deleted_at INTEGER, device_id TEXT
+    );
+    CREATE TABLE postings (
+      id TEXT NOT NULL PRIMARY KEY,
+      transaction_id TEXT NOT NULL REFERENCES transactions(id),
+      account_id TEXT REFERENCES accounts(id),
+      category_id TEXT REFERENCES categories(id),
+      amount_minor INTEGER NOT NULL, currency TEXT NOT NULL,
+      rate_to_base REAL NOT NULL DEFAULT 1.0, base_amount_minor INTEGER NOT NULL
+    );
+    CREATE TABLE daily_totals (day INTEGER NOT NULL PRIMARY KEY, net_minor INTEGER NOT NULL);
+    CREATE TABLE app_settings (
+      id INTEGER NOT NULL PRIMARY KEY DEFAULT 0,
+      period_start_day INTEGER NOT NULL DEFAULT 1
+    );
+    INSERT INTO app_settings (id, period_start_day) VALUES (0, 15);
+  ''');
+  db.userVersion = 4;
+  return db;
+}
+
 void main() {
   test('opening a v1 fixture upgrades to v2 and preserves every row', () async {
     final rawDb = _buildV1Fixture();
@@ -76,5 +129,16 @@ void main() {
 
     expect((await wudget.select(wudget.accounts).get()).single.name, 'Tunai');
     expect((await wudget.select(wudget.categories).get()).single.name, 'Makan');
+  });
+
+  test('opening a v4 fixture (app_settings pre-existing) upgrades cleanly to the latest version',
+      () async {
+    final rawDb = _buildV4Fixture();
+    final wudget = WudgetDatabase(NativeDatabase.opened(rawDb));
+    addTearDown(wudget.close);
+
+    final settings = await wudget.select(wudget.appSettings).getSingle();
+    expect(settings.periodStartDay, 15); // pre-existing data preserved
+    expect(settings.lastAcknowledgedPeriodClose, isNull); // new column, no data invented
   });
 }

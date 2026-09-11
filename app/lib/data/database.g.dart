@@ -2671,8 +2671,15 @@ class $AppSettingsTable extends AppSettings
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(1));
+  static const VerificationMeta _lastAcknowledgedPeriodCloseMeta =
+      const VerificationMeta('lastAcknowledgedPeriodClose');
   @override
-  List<GeneratedColumn> get $columns => [id, periodStartDay];
+  late final GeneratedColumn<int> lastAcknowledgedPeriodClose =
+      GeneratedColumn<int>('last_acknowledged_period_close', aliasedName, true,
+          type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, periodStartDay, lastAcknowledgedPeriodClose];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2692,6 +2699,13 @@ class $AppSettingsTable extends AppSettings
           periodStartDay.isAcceptableOrUnknown(
               data['period_start_day']!, _periodStartDayMeta));
     }
+    if (data.containsKey('last_acknowledged_period_close')) {
+      context.handle(
+          _lastAcknowledgedPeriodCloseMeta,
+          lastAcknowledgedPeriodClose.isAcceptableOrUnknown(
+              data['last_acknowledged_period_close']!,
+              _lastAcknowledgedPeriodCloseMeta));
+    }
     return context;
   }
 
@@ -2705,6 +2719,9 @@ class $AppSettingsTable extends AppSettings
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       periodStartDay: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}period_start_day'])!,
+      lastAcknowledgedPeriodClose: attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}last_acknowledged_period_close']),
     );
   }
 
@@ -2717,12 +2734,25 @@ class $AppSettingsTable extends AppSettings
 class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int id;
   final int periodStartDay;
-  const AppSetting({required this.id, required this.periodStartDay});
+
+  /// The start day (day bucket) of the most recent period the user has
+  /// dismissed the period-close ritual for — null means none yet. See
+  /// plan/05-sprints.md Sprint 14, "fires once per period boundary,
+  /// dismissible".
+  final int? lastAcknowledgedPeriodClose;
+  const AppSetting(
+      {required this.id,
+      required this.periodStartDay,
+      this.lastAcknowledgedPeriodClose});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['period_start_day'] = Variable<int>(periodStartDay);
+    if (!nullToAbsent || lastAcknowledgedPeriodClose != null) {
+      map['last_acknowledged_period_close'] =
+          Variable<int>(lastAcknowledgedPeriodClose);
+    }
     return map;
   }
 
@@ -2730,6 +2760,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return AppSettingsCompanion(
       id: Value(id),
       periodStartDay: Value(periodStartDay),
+      lastAcknowledgedPeriodClose:
+          lastAcknowledgedPeriodClose == null && nullToAbsent
+              ? const Value.absent()
+              : Value(lastAcknowledgedPeriodClose),
     );
   }
 
@@ -2739,6 +2773,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return AppSetting(
       id: serializer.fromJson<int>(json['id']),
       periodStartDay: serializer.fromJson<int>(json['periodStartDay']),
+      lastAcknowledgedPeriodClose:
+          serializer.fromJson<int?>(json['lastAcknowledgedPeriodClose']),
     );
   }
   @override
@@ -2747,12 +2783,21 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'periodStartDay': serializer.toJson<int>(periodStartDay),
+      'lastAcknowledgedPeriodClose':
+          serializer.toJson<int?>(lastAcknowledgedPeriodClose),
     };
   }
 
-  AppSetting copyWith({int? id, int? periodStartDay}) => AppSetting(
+  AppSetting copyWith(
+          {int? id,
+          int? periodStartDay,
+          Value<int?> lastAcknowledgedPeriodClose = const Value.absent()}) =>
+      AppSetting(
         id: id ?? this.id,
         periodStartDay: periodStartDay ?? this.periodStartDay,
+        lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose.present
+            ? lastAcknowledgedPeriodClose.value
+            : this.lastAcknowledgedPeriodClose,
       );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -2760,6 +2805,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       periodStartDay: data.periodStartDay.present
           ? data.periodStartDay.value
           : this.periodStartDay,
+      lastAcknowledgedPeriodClose: data.lastAcknowledgedPeriodClose.present
+          ? data.lastAcknowledgedPeriodClose.value
+          : this.lastAcknowledgedPeriodClose,
     );
   }
 
@@ -2767,46 +2815,61 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   String toString() {
     return (StringBuffer('AppSetting(')
           ..write('id: $id, ')
-          ..write('periodStartDay: $periodStartDay')
+          ..write('periodStartDay: $periodStartDay, ')
+          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, periodStartDay);
+  int get hashCode =>
+      Object.hash(id, periodStartDay, lastAcknowledgedPeriodClose);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AppSetting &&
           other.id == this.id &&
-          other.periodStartDay == this.periodStartDay);
+          other.periodStartDay == this.periodStartDay &&
+          other.lastAcknowledgedPeriodClose ==
+              this.lastAcknowledgedPeriodClose);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> id;
   final Value<int> periodStartDay;
+  final Value<int?> lastAcknowledgedPeriodClose;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.periodStartDay = const Value.absent(),
+    this.lastAcknowledgedPeriodClose = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
     this.periodStartDay = const Value.absent(),
+    this.lastAcknowledgedPeriodClose = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
     Expression<int>? periodStartDay,
+    Expression<int>? lastAcknowledgedPeriodClose,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (periodStartDay != null) 'period_start_day': periodStartDay,
+      if (lastAcknowledgedPeriodClose != null)
+        'last_acknowledged_period_close': lastAcknowledgedPeriodClose,
     });
   }
 
-  AppSettingsCompanion copyWith({Value<int>? id, Value<int>? periodStartDay}) {
+  AppSettingsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? periodStartDay,
+      Value<int?>? lastAcknowledgedPeriodClose}) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       periodStartDay: periodStartDay ?? this.periodStartDay,
+      lastAcknowledgedPeriodClose:
+          lastAcknowledgedPeriodClose ?? this.lastAcknowledgedPeriodClose,
     );
   }
 
@@ -2819,6 +2882,10 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (periodStartDay.present) {
       map['period_start_day'] = Variable<int>(periodStartDay.value);
     }
+    if (lastAcknowledgedPeriodClose.present) {
+      map['last_acknowledged_period_close'] =
+          Variable<int>(lastAcknowledgedPeriodClose.value);
+    }
     return map;
   }
 
@@ -2826,7 +2893,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   String toString() {
     return (StringBuffer('AppSettingsCompanion(')
           ..write('id: $id, ')
-          ..write('periodStartDay: $periodStartDay')
+          ..write('periodStartDay: $periodStartDay, ')
+          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose')
           ..write(')'))
         .toString();
   }
@@ -6467,11 +6535,13 @@ typedef $$AppSettingsTableCreateCompanionBuilder = AppSettingsCompanion
     Function({
   Value<int> id,
   Value<int> periodStartDay,
+  Value<int?> lastAcknowledgedPeriodClose,
 });
 typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
     Function({
   Value<int> id,
   Value<int> periodStartDay,
+  Value<int?> lastAcknowledgedPeriodClose,
 });
 
 class $$AppSettingsTableFilterComposer
@@ -6488,6 +6558,10 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get periodStartDay => $composableBuilder(
       column: $table.periodStartDay,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastAcknowledgedPeriodClose => $composableBuilder(
+      column: $table.lastAcknowledgedPeriodClose,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -6506,6 +6580,10 @@ class $$AppSettingsTableOrderingComposer
   ColumnOrderings<int> get periodStartDay => $composableBuilder(
       column: $table.periodStartDay,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastAcknowledgedPeriodClose => $composableBuilder(
+      column: $table.lastAcknowledgedPeriodClose,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -6522,6 +6600,9 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<int> get periodStartDay => $composableBuilder(
       column: $table.periodStartDay, builder: (column) => column);
+
+  GeneratedColumn<int> get lastAcknowledgedPeriodClose => $composableBuilder(
+      column: $table.lastAcknowledgedPeriodClose, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager extends RootTableManager<
@@ -6552,18 +6633,22 @@ class $$AppSettingsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> periodStartDay = const Value.absent(),
+            Value<int?> lastAcknowledgedPeriodClose = const Value.absent(),
           }) =>
               AppSettingsCompanion(
             id: id,
             periodStartDay: periodStartDay,
+            lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> periodStartDay = const Value.absent(),
+            Value<int?> lastAcknowledgedPeriodClose = const Value.absent(),
           }) =>
               AppSettingsCompanion.insert(
             id: id,
             periodStartDay: periodStartDay,
+            lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

@@ -468,3 +468,44 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED`; whether a
   reminder actually survives a reboot and fires at the exact configured minute needs a real
   device, not this repo's test suite.
+
+## Sprint 14
+
+- **"Surplus sweep into a goal" is not built.** Goals are Sprint 15, and Sprint 15 is entirely
+  cut per plan/05-sprints.md's own cut list ("Goals entirely, moved to 1.1... the most
+  self-contained feature in the plan, which makes it the cheapest to defer"). There is no goal
+  model to sweep into. The close summary still shows the surplus, with a plain "worth
+  considering saving it" line instead of a sweep action — the honest version of this ticket
+  given what Sprint 15 didn't build, not a silent drop of the requirement.
+- **"Next period prefilled from this one" needed no new code.** Sprint 10 already made
+  budgets per-category-key rather than per-period-instance (one saved amount, applied to
+  whichever period is current) specifically so there'd be nothing to carry forward — the
+  close screen just says so and links to Anggaran, rather than duplicating a "copy last
+  period's budget" action that would do the same thing a second way.
+  If Sprint 15's cut is ever revisited, remember this ticket's answer changes with it: a goal
+  sweep needs a real goal to write into.
+- **The largest-category and most-changed-category logic (`domain/period_close.dart`) is pure
+  and takes plain records (`CategorySpend`), not `data/category_rank_queries.dart`'s
+  `CategoryRank` class** — same domain/data separation already followed by
+  `domain/budget_proposal.dart` and `domain/pace.dart`. The screen adapts `CategoryRank` to
+  `CategorySpend` at the call site; the pure function itself has no dependency on data/.
+- **A category that had spend last period but none this period still counts as "the most
+  changed," via its previous amount treated as a full drop to zero** — not just categories
+  present in both periods. Missing this case would make "stopped spending on X entirely"
+  invisible to the summary, which is exactly the kind of change a person would actually
+  mention.
+- **A found-the-hard-way drift migration bug, distinct from anything in the Sprint 5/6/8
+  drift-stream family of gotchas: `Migrator.createTable(t)` builds from `t`'s *current* Dart
+  definition, not its shape at that schema version.** Adding `lastAcknowledgedPeriodClose` to
+  `AppSettings` (created via `createTable` at `from < 4`) and also `addColumn`-ing it at
+  `from < 8` meant a fixture upgrading from v1 hit "duplicate column name" — the `from < 4`
+  step already created the table with the new column, since `createTable` has no concept of
+  "what this table looked like in v4," only "what this table looks like now." Fixed by
+  guarding the `addColumn` step to `from >= 4 && from < 8`: only a database that already had
+  the table *before* this column existed needs it added.
+  `test/migration/schema_migration_test.dart` gained a v4-shaped fixture (table present,
+  column absent) as a permanent regression test for this exact shape — the v1 fixture alone
+  didn't catch it, because `from < 4` papered over the bug for that path. The rule going
+  forward: any schema change that adds a column to a table which is itself created inside
+  `onUpgrade` (not just at `onCreate`) needs the `addColumn` step's `from` range to start
+  just above the table's own creation version, not `0`.
