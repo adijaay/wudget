@@ -24,7 +24,7 @@ void main() {
 
     await tester.tap(find.text('Catat'));
     await tester.pumpAndSettle();
-    expect(find.text('Belum ada transaksi.'), findsOneWidget);
+    expect(find.textContaining('Belum ada transaksi.'), findsOneWidget);
 
     // Unmount explicitly, with a pump still under our control, so drift's
     // stream-query cleanup (which schedules its own Timer.run — see

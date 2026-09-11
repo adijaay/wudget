@@ -257,6 +257,34 @@ class _ReviewBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final period = ref.watch(currentPeriodProvider);
+
+    // An empty period (usually one the user paged back to, before they'd
+    // started tracking, or simply skipped) gets its own state rather than
+    // a pace ring and chart with nothing honest to draw — plan/04-ux-design.md,
+    // "Pantau, empty period: which period is empty, how to reach one that is not."
+    if (totals.expenseMinor == 0 && totals.incomeMinor == 0 && categoryRanks.isEmpty) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(WudgetTokens.space4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const PeriodSelector(),
+            const SizedBox(height: WudgetTokens.space6),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(WudgetTokens.space5),
+                child: Text(
+                  'Tidak ada catatan di periode ini. Geser ke periode lain untuk melihat riwayat.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final paceFirst = ref.watch(paceFirstFramingProvider).valueOrNull ?? true;
     final pace = _computePace(period);
     final remaining = totals.incomeMinor - totals.expenseMinor;

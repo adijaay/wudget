@@ -59,6 +59,25 @@ void main() {
             amountMinor: 12000, currency: 'IDR', baseAmountMinor: 12000),
       ],
     );
+    // A second entry today, so the *current* period (which 14 days ago
+    // may or may not still be in, depending on where the month boundary
+    // falls) has real data too — otherwise this test would flake around
+    // the turn of a month.
+    await postings.insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx2',
+        kind: 'expense',
+        occurredAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p2a', transactionId: 'tx2', accountId: const Value('acc'),
+            amountMinor: -5000, currency: 'IDR', baseAmountMinor: -5000),
+        PostingsCompanion.insert(id: 'p2c', transactionId: 'tx2', categoryId: const Value('cat'),
+            amountMinor: 5000, currency: 'IDR', baseAmountMinor: 5000),
+      ],
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -159,6 +178,21 @@ void main() {
             amountMinor: 12000, currency: 'IDR', baseAmountMinor: 12000),
       ],
     );
+    await postings.insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx2',
+        kind: 'expense',
+        occurredAt: DateTime.now().toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p2a', transactionId: 'tx2', accountId: const Value('acc'),
+            amountMinor: -5000, currency: 'IDR', baseAmountMinor: -5000),
+        PostingsCompanion.insert(id: 'p2c', transactionId: 'tx2', categoryId: const Value('cat'),
+            amountMinor: 5000, currency: 'IDR', baseAmountMinor: 5000),
+      ],
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -219,6 +253,47 @@ void main() {
     final events = await (db.select(db.analyticsEvents)..where((e) => e.name.equals('pantau_viewed'))).get();
     expect(events, hasLength(1));
     expect(events.single.propsJson, contains('pace_first'));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('an empty current period names itself and points at other periods', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final postings = PostingsRepository(db);
+
+    // The only history is long enough ago (well over 14 days) to clear the
+    // waiting gate, but far outside the current period — which is
+    // therefore genuinely empty.
+    await postings.insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx0',
+        kind: 'expense',
+        occurredAt: DateTime.now().subtract(const Duration(days: 400)).toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p0a', transactionId: 'tx0', accountId: const Value('acc'),
+            amountMinor: -5000, currency: 'IDR', baseAmountMinor: -5000),
+        PostingsCompanion.insert(id: 'p0c', transactionId: 'tx0', categoryId: const Value('cat'),
+            amountMinor: 5000, currency: 'IDR', baseAmountMinor: 5000),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Tidak ada catatan di periode ini'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

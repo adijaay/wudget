@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'core/providers.dart';
 import 'data/database.dart';
@@ -11,6 +15,7 @@ import 'design/tokens.dart';
 import 'domain/default_categories.dart';
 import 'features/ledger/ledger_screen.dart';
 import 'features/pantau/pantau_screen.dart';
+import 'features/settings/backup_screen.dart';
 import 'features/wallets/wallets_screen.dart';
 import 'features/widget/home_widget_service.dart';
 
@@ -24,8 +29,39 @@ const _materializeLookaheadDays = 60;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID');
-  final db = WudgetDatabase();
-  await seedDefaultsIfEmpty(db);
+
+  WudgetDatabase db;
+  try {
+    db = WudgetDatabase();
+    await seedDefaultsIfEmpty(db);
+  } catch (_) {
+    // A database that can't even open or seed is corrupt beyond this app's
+    // repair — plan/04-ux-design.md's states table: "Catat, new user
+    // error: corrupt database routes to restore." The old file is moved
+    // aside (never deleted outright — it may still hold recoverable rows
+    // a person could inspect by hand) and a fresh one takes its place, so
+    // the restore screen has somewhere real to write into.
+    final documents = await getApplicationDocumentsDirectory();
+    final dbFile = File(p.join(documents.path, 'wudget.sqlite'));
+    if (dbFile.existsSync()) {
+      await dbFile.rename('${dbFile.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+    }
+    db = WudgetDatabase();
+    await seedDefaultsIfEmpty(db);
+
+    runApp(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          title: 'wudget',
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          darkTheme: buildWudgetTheme(WudgetTokens.dark, Brightness.dark),
+          home: const BackupScreen(),
+        ),
+      ),
+    );
+    return;
+  }
 
   runApp(
     ProviderScope(

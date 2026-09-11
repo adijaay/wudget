@@ -10,6 +10,7 @@ import '../../data/daily_totals_repository.dart';
 import '../../data/database.dart';
 import '../../data/ledger_queries.dart';
 import '../../design/tokens.dart';
+import '../capture/capture_sheet.dart';
 
 const _formatter = MoneyFormatter();
 const _pageSize = 50;
@@ -176,15 +177,39 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const CaptureSheet(),
+        ).then((_) => _loadFirstPage()),
+        child: const Icon(Icons.add),
+      ),
       body: _entries.isEmpty && !_loading
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(WudgetTokens.space5),
-                child: Text(
-                  _filter.describe().isEmpty
-                      ? 'Belum ada transaksi.'
-                      : 'Tidak ada transaksi untuk ${_filter.describe()}.',
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _filter.describe().isEmpty
+                          ? 'Belum ada transaksi. Setiap catatan muncul di sini, dikelompokkan per hari.'
+                          : 'Tidak ada transaksi untuk ${_filter.describe()}.',
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_filter.describe().isEmpty) ...[
+                      const SizedBox(height: WudgetTokens.space3),
+                      FilledButton(
+                        onPressed: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (_) => const CaptureSheet(),
+                        ).then((_) => _loadFirstPage()),
+                        child: const Text('Catat transaksi pertama'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             )

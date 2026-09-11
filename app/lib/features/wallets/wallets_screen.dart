@@ -10,6 +10,7 @@ import '../../data/wallets_repository.dart';
 import '../../design/tokens.dart';
 import '../capture/capture_sheet.dart';
 import '../import/import_screen.dart';
+import '../settings/backup_screen.dart';
 
 const _uuid = Uuid();
 const _walletTypes = ['cash', 'bank', 'ewallet', 'card', 'savings', 'debt', 'other'];
@@ -31,6 +32,13 @@ class WalletsScreen extends ConsumerWidget {
         title: const Text('Kantong'),
         actions: [
           IconButton(
+            tooltip: 'Data & cadangan',
+            icon: const Icon(Icons.settings_backup_restore),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BackupScreen()),
+            ),
+          ),
+          IconButton(
             tooltip: 'Impor dari CSV',
             icon: const Icon(Icons.file_download_outlined),
             onPressed: () => Navigator.of(context).push(
@@ -47,9 +55,27 @@ class WalletsScreen extends ConsumerWidget {
       body: StreamBuilder<List<WalletWithBalance>>(
         stream: repo.watchWallets(),
         builder: (context, snapshot) {
-          final wallets = snapshot.data ?? const [];
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final wallets = snapshot.data!;
           if (wallets.isEmpty) {
-            return const Center(child: Text('Belum ada dompet. Tambah satu dengan tombol +.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(WudgetTokens.space5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Belum ada dompet. Tambah satu untuk mulai mencatat.', textAlign: TextAlign.center),
+                    const SizedBox(height: WudgetTokens.space3),
+                    FilledButton(
+                      onPressed: () => _showCreateWalletSheet(context, repo),
+                      child: const Text('Tambah dompet'),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final currencies = wallets.map((w) => w.account.currency).toSet();

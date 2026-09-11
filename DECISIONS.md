@@ -549,3 +549,68 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   `_applyCsv` (plain field assignment, callable from `initState` before a first build exists)
   and the `setState`-wrapped call site used after a user picks a file — calling `setState`
   from `initState` itself throws.
+
+## Sprint 17
+
+- **A backup/restore screen exists now, closing a gap left open since Sprint 2**: the JSON
+  export/import and local-backup engine (`BackupRepository`) had no UI at all until this
+  sprint's "Catat, new user error: corrupt database routes to restore" state needed somewhere
+  real to route to. `BackupScreen` (create backup, export JSON/CSV, restore from a JSON file
+  with a dry-run preview before confirming) is reachable from Kantong's app bar, and is also
+  what `main.dart` shows directly, in place of the normal tab shell, when the database fails
+  to open or seed at startup — the old file is renamed aside (`.corrupt-<timestamp>`, never
+  deleted outright, in case someone wants to inspect it by hand) and a fresh one takes its
+  place so the restore screen has somewhere to write into.
+- **`BackupScreen` takes an `@visibleForTesting` `debugDocumentsDir`**, the same seam pattern
+  as `ImportScreen`'s `debugInitialCsvContent` — `getApplicationDocumentsDirectory()` needs a
+  platform channel `flutter_test` doesn't provide.
+- **A real file write inside a `testWidgets` body reliably hung this environment's test
+  runner, with no error and no timeout — confirmed by bisecting with print statements down to
+  the exact `File.writeAsBytes` call, and confirmed it wasn't a stale-lock artifact from an
+  earlier killed run by cleaning up orphaned `flutter_tester.exe`/`dart.exe` processes and
+  retrying on a fully clean directory, which still hung.** The identical write, in a plain
+  (non-widget) `test()`, is what `test/backup_round_trip_test.dart`'s `createBackup` test
+  already does successfully — so the failure is specific to real disk I/O inside the
+  `flutter_tester` widget-test binding in this environment, not to the code under test.
+  `BackupScreen`'s widget test therefore only renders and reads state; every actual
+  read/write path (`createBackup`, `exportJson`/`importJson`) stays covered by
+  `backup_round_trip_test.dart`'s plain tests instead. Rule of thumb going forward, alongside
+  Sprint 10 and 11's drift-stream gotchas: a `testWidgets` test that needs to touch the real
+  filesystem is itself the risk, regardless of what the code does — inject a directory and
+  keep the disk-touching assertions in a plain `test()`.
+- **A recurring item's rule row now carries `lastGenerationError`** (schema v9; same
+  createTable-then-addColumn migration care as Sprint 14's `lastAcknowledgedPeriodClose` —
+  the `addColumn` step is guarded to `from >= 7`, since `recurrences` is itself created at
+  `from < 7`), set when `RecurrenceRepository.materializeAll` catches an exception for that
+  rule and cleared on its next successful run. One rule failing to materialise no longer
+  aborts the whole batch, and `RecurringScreen`'s active-item row shows the reason directly —
+  plan/04-ux-design.md: "Recurring... Failed generation flagged in the row with the reason."
+- **Creating a recurring item had no UI at all before this sprint** — Sprint 13 built
+  confirm/skip for instances the engine already knew about, but never a way to tell it about
+  a new one. The empty state's "one example, one action" (plan/04-ux-design.md) needed that
+  action to actually exist, so `_CreateRecurringSheet` ships now: a minimal monthly-bill form
+  (name, amount, day of month, category, wallet, weekend rule) rather than every frequency
+  and amount mode the domain model supports — the common case named throughout the plan
+  (a bill), not a general-purpose rule editor. Daily/weekly/yearly and varies-amount items
+  can still be created directly against `RecurrenceRepository`, just not from this sheet yet.
+- **Catat (the ledger list) had no way to open the capture sheet at all before this sprint** —
+  only Kantong's FAB could. Its own empty state's "one action to add it" needed a real action,
+  so Catat gained its own FAB (and its empty-state button) opening the same `CaptureSheet`.
+  Two tabs offering the same quick-add is deliberate, not an oversight: Catat is where a new
+  user with nothing recorded yet actually lands to look for "how do I add something."
+- **Pantau's empty-period state is a structural spend/income/category check** (`totals`
+  are all zero and `categoryRanks` is empty), not a date-range check against "today" —
+  a period a person deliberately pages back to that has real data (even a past, already-
+  ended one) still renders the normal pace/chart view; only a period with nothing recorded
+  in it gets the dedicated "which period is empty" text plus the period selector to page
+  elsewhere, per plan/04-ux-design.md's states table.
+- **Kantong's loading and empty states were conflated before this sprint** —
+  `snapshot.data ?? const []` treated "stream hasn't emitted yet" identically to "zero
+  wallets," so a fresh app open would flash "belum ada dompet" before the first real
+  `watchWallets()` emission. Split via `snapshot.hasData`, and the empty state gained a real
+  button (not just app-bar-icon-pointing text).
+- **Screenshotting every state into a reviewed gallery (this sprint's second ticket) isn't
+  attempted** — same category as Sprint 7's performance gate: it needs a running emulator or
+  device to capture from, which this environment doesn't have. Every state listed in
+  plan/04-ux-design.md's table has been implemented and has at least one test asserting its
+  text/structure; the visual review pass itself is a manual step for whoever has a device.

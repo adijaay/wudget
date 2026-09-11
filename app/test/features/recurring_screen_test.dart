@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wudget/core/providers.dart';
@@ -121,6 +122,109 @@ void main() {
 
     expect(find.text('Listrik'), findsOneWidget);
     expect(find.textContaining('Berikutnya:'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('the empty state names what a recurring item is, with an action to add one',
+      (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const RecurringScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Item berulang adalah'), findsOneWidget);
+    expect(find.text('Tambah item berulang'), findsWidgets); // the empty-state button and the app bar action
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('creating a recurring item from the sheet adds it to the active list', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const RecurringScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Nama (mis. Listrik)'), 'Internet');
+    await tester.enterText(find.widgetWithText(TextField, 'Jumlah (Rp)'), '300000');
+    await tester.enterText(find.widgetWithText(TextField, 'Tanggal tiap bulan (1-31)'), '10');
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String?>, 'Kategori'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tagihan').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(DropdownButtonFormField<String?>, 'Dompet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tunai').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Internet'), findsOneWidget);
+
+    final recurrences = await db.select(db.recurrences).get();
+    expect(recurrences, hasLength(1));
+    expect(recurrences.single.byMonthDay, 10);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('a rule with a recorded generation error shows the reason on its row', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+
+    final id = await RecurrenceRepository(db).create(
+      template: const RecurrenceTemplate(
+        kind: 'expense', accountId: 'acc_cash', categoryId: 'cat_tagihan', currency: 'IDR',
+        fixedAmountMinor: 150000, note: 'Air',
+      ),
+      rule: RecurrenceRule(freq: RecurrenceFreq.monthly, byMonthDay: 1, startsOn: _day(2026, 3, 1)),
+    );
+    await (db.update(db.recurrences)..where((r) => r.id.equals(id)))
+        .write(const RecurrencesCompanion(lastGenerationError: Value('contoh kesalahan')));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const RecurringScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Gagal membuat: contoh kesalahan'), findsOneWidget);
+    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

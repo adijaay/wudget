@@ -3697,6 +3697,12 @@ class $RecurrencesTable extends Recurrences
   late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
       'deleted_at', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _lastGenerationErrorMeta =
+      const VerificationMeta('lastGenerationError');
+  @override
+  late final GeneratedColumn<String> lastGenerationError =
+      GeneratedColumn<String>('last_generation_error', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -3713,7 +3719,8 @@ class $RecurrencesTable extends Recurrences
         endsOn,
         generatedUntil,
         updatedAt,
-        deletedAt
+        deletedAt,
+        lastGenerationError
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3810,6 +3817,12 @@ class $RecurrencesTable extends Recurrences
       context.handle(_deletedAtMeta,
           deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
     }
+    if (data.containsKey('last_generation_error')) {
+      context.handle(
+          _lastGenerationErrorMeta,
+          lastGenerationError.isAcceptableOrUnknown(
+              data['last_generation_error']!, _lastGenerationErrorMeta));
+    }
     return context;
   }
 
@@ -3849,6 +3862,8 @@ class $RecurrencesTable extends Recurrences
           .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
       deletedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
+      lastGenerationError: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}last_generation_error']),
     );
   }
 
@@ -3874,6 +3889,12 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
   final int generatedUntil;
   final int updatedAt;
   final int? deletedAt;
+
+  /// Set when the last materialisation attempt for this rule threw,
+  /// cleared on the next successful attempt — plan/04-ux-design.md's
+  /// states table: "Recurring... Failed generation flagged in the row
+  /// with the reason."
+  final String? lastGenerationError;
   const Recurrence(
       {required this.id,
       required this.templateJson,
@@ -3889,7 +3910,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       this.endsOn,
       required this.generatedUntil,
       required this.updatedAt,
-      this.deletedAt});
+      this.deletedAt,
+      this.lastGenerationError});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3919,6 +3941,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
     map['updated_at'] = Variable<int>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    if (!nullToAbsent || lastGenerationError != null) {
+      map['last_generation_error'] = Variable<String>(lastGenerationError);
     }
     return map;
   }
@@ -3951,6 +3976,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
+      lastGenerationError: lastGenerationError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastGenerationError),
     );
   }
 
@@ -3973,6 +4001,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       generatedUntil: serializer.fromJson<int>(json['generatedUntil']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       deletedAt: serializer.fromJson<int?>(json['deletedAt']),
+      lastGenerationError:
+          serializer.fromJson<String?>(json['lastGenerationError']),
     );
   }
   @override
@@ -3994,6 +4024,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       'generatedUntil': serializer.toJson<int>(generatedUntil),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'deletedAt': serializer.toJson<int?>(deletedAt),
+      'lastGenerationError': serializer.toJson<String?>(lastGenerationError),
     };
   }
 
@@ -4012,7 +4043,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           Value<int?> endsOn = const Value.absent(),
           int? generatedUntil,
           int? updatedAt,
-          Value<int?> deletedAt = const Value.absent()}) =>
+          Value<int?> deletedAt = const Value.absent(),
+          Value<String?> lastGenerationError = const Value.absent()}) =>
       Recurrence(
         id: id ?? this.id,
         templateJson: templateJson ?? this.templateJson,
@@ -4033,6 +4065,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
         generatedUntil: generatedUntil ?? this.generatedUntil,
         updatedAt: updatedAt ?? this.updatedAt,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        lastGenerationError: lastGenerationError.present
+            ? lastGenerationError.value
+            : this.lastGenerationError,
       );
   Recurrence copyWithCompanion(RecurrencesCompanion data) {
     return Recurrence(
@@ -4062,6 +4097,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           : this.generatedUntil,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      lastGenerationError: data.lastGenerationError.present
+          ? data.lastGenerationError.value
+          : this.lastGenerationError,
     );
   }
 
@@ -4082,7 +4120,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           ..write('endsOn: $endsOn, ')
           ..write('generatedUntil: $generatedUntil, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('lastGenerationError: $lastGenerationError')
           ..write(')'))
         .toString();
   }
@@ -4103,7 +4142,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       endsOn,
       generatedUntil,
       updatedAt,
-      deletedAt);
+      deletedAt,
+      lastGenerationError);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4122,7 +4162,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           other.endsOn == this.endsOn &&
           other.generatedUntil == this.generatedUntil &&
           other.updatedAt == this.updatedAt &&
-          other.deletedAt == this.deletedAt);
+          other.deletedAt == this.deletedAt &&
+          other.lastGenerationError == this.lastGenerationError);
 }
 
 class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
@@ -4141,6 +4182,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
   final Value<int> generatedUntil;
   final Value<int> updatedAt;
   final Value<int?> deletedAt;
+  final Value<String?> lastGenerationError;
   final Value<int> rowid;
   const RecurrencesCompanion({
     this.id = const Value.absent(),
@@ -4158,6 +4200,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     this.generatedUntil = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.lastGenerationError = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RecurrencesCompanion.insert({
@@ -4176,6 +4219,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     required int generatedUntil,
     required int updatedAt,
     this.deletedAt = const Value.absent(),
+    this.lastGenerationError = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         templateJson = Value(templateJson),
@@ -4199,6 +4243,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     Expression<int>? generatedUntil,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
+    Expression<String>? lastGenerationError,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4217,6 +4262,8 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       if (generatedUntil != null) 'generated_until': generatedUntil,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (lastGenerationError != null)
+        'last_generation_error': lastGenerationError,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4237,6 +4284,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       Value<int>? generatedUntil,
       Value<int>? updatedAt,
       Value<int?>? deletedAt,
+      Value<String?>? lastGenerationError,
       Value<int>? rowid}) {
     return RecurrencesCompanion(
       id: id ?? this.id,
@@ -4254,6 +4302,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       generatedUntil: generatedUntil ?? this.generatedUntil,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
+      lastGenerationError: lastGenerationError ?? this.lastGenerationError,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4306,6 +4355,10 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<int>(deletedAt.value);
     }
+    if (lastGenerationError.present) {
+      map['last_generation_error'] =
+          Variable<String>(lastGenerationError.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4330,6 +4383,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
           ..write('generatedUntil: $generatedUntil, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('lastGenerationError: $lastGenerationError, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7111,6 +7165,7 @@ typedef $$RecurrencesTableCreateCompanionBuilder = RecurrencesCompanion
   required int generatedUntil,
   required int updatedAt,
   Value<int?> deletedAt,
+  Value<String?> lastGenerationError,
   Value<int> rowid,
 });
 typedef $$RecurrencesTableUpdateCompanionBuilder = RecurrencesCompanion
@@ -7130,6 +7185,7 @@ typedef $$RecurrencesTableUpdateCompanionBuilder = RecurrencesCompanion
   Value<int> generatedUntil,
   Value<int> updatedAt,
   Value<int?> deletedAt,
+  Value<String?> lastGenerationError,
   Value<int> rowid,
 });
 
@@ -7189,6 +7245,10 @@ class $$RecurrencesTableFilterComposer
 
   ColumnFilters<int> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lastGenerationError => $composableBuilder(
+      column: $table.lastGenerationError,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$RecurrencesTableOrderingComposer
@@ -7248,6 +7308,10 @@ class $$RecurrencesTableOrderingComposer
 
   ColumnOrderings<int> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lastGenerationError => $composableBuilder(
+      column: $table.lastGenerationError,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$RecurrencesTableAnnotationComposer
@@ -7303,6 +7367,9 @@ class $$RecurrencesTableAnnotationComposer
 
   GeneratedColumn<int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get lastGenerationError => $composableBuilder(
+      column: $table.lastGenerationError, builder: (column) => column);
 }
 
 class $$RecurrencesTableTableManager extends RootTableManager<
@@ -7346,6 +7413,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             Value<int> generatedUntil = const Value.absent(),
             Value<int> updatedAt = const Value.absent(),
             Value<int?> deletedAt = const Value.absent(),
+            Value<String?> lastGenerationError = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               RecurrencesCompanion(
@@ -7364,6 +7432,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             generatedUntil: generatedUntil,
             updatedAt: updatedAt,
             deletedAt: deletedAt,
+            lastGenerationError: lastGenerationError,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -7382,6 +7451,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             required int generatedUntil,
             required int updatedAt,
             Value<int?> deletedAt = const Value.absent(),
+            Value<String?> lastGenerationError = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               RecurrencesCompanion.insert(
@@ -7400,6 +7470,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             generatedUntil: generatedUntil,
             updatedAt: updatedAt,
             deletedAt: deletedAt,
+            lastGenerationError: lastGenerationError,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

@@ -74,6 +74,15 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
     ).then((_) => _load());
   }
 
+  Future<void> _createRecurring() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _CreateRecurringSheet(),
+    );
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final upcoming = _upcoming;
@@ -85,7 +94,12 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
     final today = _todayDayBucket();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Berulang & Tagihan')),
+      appBar: AppBar(
+        title: const Text('Berulang & Tagihan'),
+        actions: [
+          IconButton(icon: const Icon(Icons.add), tooltip: 'Tambah item berulang', onPressed: _createRecurring),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(WudgetTokens.space4),
         children: [
@@ -107,13 +121,153 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
           Text('Aktif', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: WudgetTokens.space2),
           if (active.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: WudgetTokens.space3),
-              child: Text('Belum ada item berulang.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Item berulang adalah tagihan atau pemasukan yang datang lagi tiap periode, '
+                    'seperti "Listrik, Rp150.000, tiap tanggal 5".',
+                  ),
+                  const SizedBox(height: WudgetTokens.space3),
+                  FilledButton(onPressed: _createRecurring, child: const Text('Tambah item berulang')),
+                ],
+              ),
             )
           else
             for (final row in active) _ActiveTile(row: row, today: today),
         ],
+      ),
+    );
+  }
+}
+
+class _CreateRecurringSheet extends ConsumerStatefulWidget {
+  const _CreateRecurringSheet();
+
+  @override
+  ConsumerState<_CreateRecurringSheet> createState() => _CreateRecurringSheetState();
+}
+
+class _CreateRecurringSheetState extends ConsumerState<_CreateRecurringSheet> {
+  final _noteController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _dayController = TextEditingController(text: '${DateTime.now().day}');
+  String? _categoryId;
+  String? _accountId;
+  WeekendRule _weekendRule = WeekendRule.none;
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    _amountController.dispose();
+    _dayController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final amountMinor = int.tryParse(_amountController.text);
+    final dayOfMonth = int.tryParse(_dayController.text);
+    if (amountMinor == null || amountMinor <= 0 || dayOfMonth == null || _categoryId == null || _accountId == null) {
+      return;
+    }
+
+    final today = _todayDayBucket();
+    final rule = RecurrenceRule(
+      freq: RecurrenceFreq.monthly,
+      byMonthDay: dayOfMonth,
+      weekendRule: _weekendRule,
+      startsOn: today,
+    );
+    await RecurrenceRepository(ref.read(databaseProvider)).create(
+      template: RecurrenceTemplate(
+        kind: 'expense',
+        accountId: _accountId,
+        categoryId: _categoryId,
+        currency: 'IDR',
+        fixedAmountMinor: amountMinor,
+        note: _noteController.text.isEmpty ? null : _noteController.text,
+      ),
+      rule: rule,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final db = ref.watch(databaseProvider);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: WudgetTokens.space4,
+        right: WudgetTokens.space4,
+        top: WudgetTokens.space4,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Tambah item berulang', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Nama (mis. Listrik)')),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Jumlah (Rp)'),
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(
+              controller: _dayController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Tanggal tiap bulan (1-31)'),
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            StreamBuilder<List<Category>>(
+              stream: db.select(db.categories).watch(),
+              builder: (context, snapshot) {
+                final categories = snapshot.data ?? const [];
+                return DropdownButtonFormField<String?>(
+                  value: _categoryId,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [for (final c in categories) DropdownMenuItem(value: c.id, child: Text(c.name))],
+                  onChanged: (id) => setState(() => _categoryId = id),
+                );
+              },
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            StreamBuilder<List<Account>>(
+              stream: db.select(db.accounts).watch(),
+              builder: (context, snapshot) {
+                final accounts = snapshot.data ?? const [];
+                return DropdownButtonFormField<String?>(
+                  value: _accountId,
+                  decoration: const InputDecoration(labelText: 'Dompet'),
+                  items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))],
+                  onChanged: (id) => setState(() => _accountId = id),
+                );
+              },
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            DropdownButtonFormField<WeekendRule>(
+              value: _weekendRule,
+              decoration: const InputDecoration(labelText: 'Jika jatuh di akhir pekan'),
+              items: const [
+                DropdownMenuItem(value: WeekendRule.none, child: Text('Tetap di tanggal itu')),
+                DropdownMenuItem(value: WeekendRule.before, child: Text('Majukan ke Jumat')),
+                DropdownMenuItem(value: WeekendRule.after, child: Text('Undurkan ke Senin')),
+              ],
+              onChanged: (v) => setState(() => _weekendRule = v ?? WeekendRule.none),
+            ),
+            const SizedBox(height: WudgetTokens.space4),
+            FilledButton(onPressed: _save, child: const Text('Simpan')),
+            const SizedBox(height: WudgetTokens.space4),
+          ],
+        ),
       ),
     );
   }
@@ -168,11 +322,17 @@ class _ActiveTile extends StatelessWidget {
             '${_formatter.format(Money.fromMinor(row.expectedMaxMinor ?? 0, 'IDR'))}'
         : _formatter.format(Money.fromMinor(template.fixedAmountMinor ?? 0, 'IDR'));
 
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final error = row.lastGenerationError;
+
     return Card(
       margin: const EdgeInsets.only(bottom: WudgetTokens.space2),
       child: ListTile(
         title: Text(template.note?.isNotEmpty == true ? template.note! : 'Item berulang'),
-        subtitle: Text('Berikutnya: ${_dateFormat.format(_dateForDay(nextDue))}'),
+        subtitle: error != null
+            ? Text('Gagal membuat: $error', style: TextStyle(color: tokens.negative))
+            : Text('Berikutnya: ${_dateFormat.format(_dateForDay(nextDue))}'),
+        leading: error != null ? Icon(Icons.warning_amber_rounded, color: tokens.negative) : null,
         trailing: Text(amountLabel),
       ),
     );

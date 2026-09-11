@@ -179,6 +179,12 @@ class Recurrences extends Table {
   IntColumn get updatedAt => integer()();
   IntColumn get deletedAt => integer().nullable()();
 
+  /// Set when the last materialisation attempt for this rule threw,
+  /// cleared on the next successful attempt — plan/04-ux-design.md's
+  /// states table: "Recurring... Failed generation flagged in the row
+  /// with the reason."
+  TextColumn get lastGenerationError => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -216,7 +222,7 @@ class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -248,6 +254,12 @@ class WudgetDatabase extends _$WudgetDatabase {
           // had the table before this column existed needs it added.
           if (from >= 4 && from < 8) {
             await m.addColumn(appSettings, appSettings.lastAcknowledgedPeriodClose);
+          }
+          // Same createTable-uses-the-current-definition gotcha as above:
+          // recurrences is created at from < 7, so only from >= 7 needs
+          // this column added separately.
+          if (from >= 7 && from < 9) {
+            await m.addColumn(recurrences, recurrences.lastGenerationError);
           }
         },
       );

@@ -57,7 +57,7 @@ void main() {
     await tester.drag(find.text('Makan'), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Makan'), findsNothing);
-    expect(find.text('Belum ada transaksi.'), findsOneWidget);
+    expect(find.textContaining('Belum ada transaksi.'), findsOneWidget);
 
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();

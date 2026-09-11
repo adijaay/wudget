@@ -132,10 +132,23 @@ class RecurrenceRepository {
   /// generates nothing on this call, so a missed run followed by a catch-up
   /// run — or two overlapping runs — can never generate the same month of
   /// entries twice at once (plan/03-architecture.md's stated failure mode).
+  /// One rule failing to materialise (a malformed template, a database
+  /// error) never blocks another rule's — each is caught and recorded on
+  /// its own row's `lastGenerationError`, per plan/04-ux-design.md:
+  /// "Failed generation flagged in the row with the reason."
   Future<void> materializeAll({required int toDayInclusive}) async {
     final rows = await (_db.select(_db.recurrences)..where((r) => r.deletedAt.isNull())).get();
     for (final row in rows) {
-      await _materializeOne(row, toDayInclusive);
+      try {
+        await _materializeOne(row, toDayInclusive);
+        if (row.lastGenerationError != null) {
+          await (_db.update(_db.recurrences)..where((r) => r.id.equals(row.id)))
+              .write(const RecurrencesCompanion(lastGenerationError: Value(null)));
+        }
+      } catch (e) {
+        await (_db.update(_db.recurrences)..where((r) => r.id.equals(row.id)))
+            .write(RecurrencesCompanion(lastGenerationError: Value('$e')));
+      }
     }
   }
 
