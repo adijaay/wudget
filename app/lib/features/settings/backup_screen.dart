@@ -179,7 +179,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       Text(
                         _lastBackup == null
                             ? 'Catatanmu cuma ada di HP ini. Kalau HP-nya hilang, hilang juga.'
-                            : _dateTimeFormat.format(_lastBackup!),
+                            // toLocal: the repository returns the instant in
+                            // UTC, so formatting it raw printed 16:09 for a
+                            // backup the user made at 23:09.
+                            : _dateTimeFormat.format(_lastBackup!.toLocal()),
                         style: text.bodySmall,
                       ),
                     ],

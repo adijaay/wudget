@@ -9,6 +9,7 @@ import 'package:wudget/data/database.dart';
 import 'package:wudget/data/feature_flags_repository.dart';
 import 'package:wudget/data/postings_repository.dart';
 import 'package:wudget/design/tokens.dart';
+import 'package:wudget/domain/default_categories.dart';
 import 'package:wudget/features/pantau/pantau_screen.dart';
 
 void main() {
@@ -33,6 +34,53 @@ void main() {
 
     expect(find.textContaining('Catat beberapa hari dulu'), findsOneWidget);
     expect(find.text('Pengeluaran'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('picks up a transaction recorded while this screen stays mounted', (tester) async {
+    // HomeShell holds every tab in an IndexedStack, so this screen loads once
+    // per app session. Recording an expense from the shell's capture button
+    // left it showing "0 dari 14 hari" with the transaction already saved,
+    // until it learned to watch the table (same root cause as Catat's).
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('0'), findsOneWidget); // 0 of 14 days collected
+
+    final now = DateTime.now();
+    await PostingsRepository(db).insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx_live',
+        kind: 'expense',
+        occurredAt: now.toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: now.timeZoneOffset.inMinutes,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p_live_a', transactionId: 'tx_live', accountId: const Value('acc_cash'),
+            amountMinor: -24000, currency: 'IDR', baseAmountMinor: -24000),
+        PostingsCompanion.insert(id: 'p_live_c', transactionId: 'tx_live', categoryId: const Value('cat_makan'),
+            amountMinor: 24000, currency: 'IDR', baseAmountMinor: 24000),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    // Day one of fourteen, and the running total it can honestly show.
+    expect(find.text('1'), findsOneWidget);
+    expect(find.textContaining('Keluar periode ini'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

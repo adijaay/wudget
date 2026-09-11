@@ -903,7 +903,16 @@ button**. antislop was applied during the work, not as an audit after.
   duplicated credit card, the ungrouped budget fields, a forecast legend whose dashed
   swatch had collapsed to zero height, and an unlabelled baseline line that read as a
   second forecast.
-- **Not verified on a device.** The phone used earlier in this session was disconnected
-  by the time the rebuild was ready, so the on-device click-through R-35 asks for has not
-  happened. `flutter analyze` is clean and all 236 tests pass, and the review renders
-  above are the evidence in hand, but they are renders, not a device.
+- **Verified on a device afterwards**, once the phone was reconnected: a fresh install
+  with cleared data, then a click-through of every control. Two more real bugs came out
+  of it, both invisible to the tests and to the renders.
+- **Pantau had the same staleness bug Catat had.** It loads once in `initState`, and
+  `HomeShell` keeps every tab alive in an `IndexedStack`, so recording an expense from
+  the capture button left Pantau insisting "0 dari 14 hari" while the transaction was
+  already in Kantong's total and in Catat's list. Same fix as Catat's
+  (`tableUpdates` on the transactions table) and now the same regression test, which is
+  what that class of bug needed the first time: the earlier fix repaired one screen
+  instead of the pattern.
+- **The backup timestamp printed UTC.** `lastBackupTime()` correctly returns an instant
+  in UTC and the screen formatted it raw, so a backup taken at 23:09 displayed as 16:09.
+  The repository is right; the presentation needed `.toLocal()`.

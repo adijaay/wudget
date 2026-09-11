@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -49,11 +52,29 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   Map<int, int> _weekExpense = const {};
   bool _loaded = false;
 
+  StreamSubscription<void>? _txChangesSubscription;
+
   @override
   void initState() {
     super.initState();
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkPeriodClose());
+
+    // HomeShell keeps every tab alive in an IndexedStack, so this load runs
+    // once per app session and never again on a tab switch. Without this,
+    // recording an expense from the capture button left Pantau still saying
+    // "0 dari 14 hari" with the transaction already in the ledger. Same
+    // root cause as the Catat staleness fixed earlier.
+    final db = ref.read(databaseProvider);
+    _txChangesSubscription = db
+        .tableUpdates(TableUpdateQuery.onTable(db.transactions))
+        .listen((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _txChangesSubscription?.cancel();
+    super.dispose();
   }
 
   /// Fires once per period boundary and is dismissible — plan/02-flows.md
