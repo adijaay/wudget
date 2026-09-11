@@ -39,6 +39,9 @@ dependencies:
   timezone: ^0.9.4
   flutter_timezone: ^3.0.1
 
+  # CSV import from a competitor export (Sprint 16)
+  file_picker: ^8.1.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

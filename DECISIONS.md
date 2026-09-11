@@ -509,3 +509,43 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   forward: any schema change that adds a column to a table which is itself created inside
   `onUpgrade` (not just at `onCreate`) needs the `addColumn` step's `from` range to start
   just above the table's own creation version, not `0`.
+
+## Sprint 16
+
+- **The Money Manager column mapping is an unverified default, not a tested profile.** No
+  real Money Manager (or Ollo) export was available in this environment — the plan's own
+  done-when ("Money Manager profile, tested against a real export") can't be honestly claimed
+  without one. `moneyManagerProfile` is documented as a best-effort guess at commonly-cited
+  column names, and the column-mapping screen is always editable and never gated on the guess
+  being right, so an inaccurate default degrades to "map it by hand," not a broken import.
+  Revisit the moment a real export file turns up.
+- **Ollo's profile isn't built at all**, per the cut list in plan/05-sprints.md item 3 ("ship
+  the Money Manager one, since it has the larger installed base by a wide margin").
+- **A hand-written CSV parser (`domain/csv_parser.dart`), not the `csv` package.** RFC-4180
+  quoting (commas and doubled quotes inside a quoted field), CRLF/LF, a leading BOM, and a
+  missing trailing newline are the only real-world cases a competitor export is likely to
+  exercise, and covering them is under 50 lines — adding a dependency for that trades a
+  reviewable, tested function for an opaque one.
+- **Row numbers in `ImportRowFailure` count the header as row 1**, matching how a person
+  reads their own spreadsheet — `dataRows[0]` (the first row after the header) is reported as
+  row 2, not row 0 or row 1. Threaded through as `ParsedImportRow.rowNumber` so a DB-write
+  failure (`CsvImportRepository`) and a parse failure land in the same failure list with the
+  same numbering, shown together on one screen.
+  `test/domain/csv_import_test.dart` pins the exact row-counting behaviour directly, since an
+  off-by-one here would send someone hunting the wrong line in their spreadsheet.
+- **An account or category the CSV names but wudget doesn't yet have is created on the fly,
+  matched case-insensitively against what already exists.** An import is explicitly for a
+  user "rebuilding after a loss" (plan/01-features.md) — refusing rows because their category
+  doesn't exist yet would defeat the feature's entire purpose. A row with no category name at
+  all falls back to "Lainnya" rather than failing, since a competitor export not carrying a
+  category is a formatting fact, not an error to report.
+- **The importer never batches rows into one transaction.** Each row is its own
+  `PostingsRepository.insertTransaction` call, so one bad row's exception can't roll back
+  every row already written — a straightforward reading of "a partial import that keeps the
+  valid rows" from plan/03-architecture.md.
+- **`ImportScreen` takes an `@visibleForTesting` `debugInitialCsvContent` constructor param**
+  so a widget test can exercise the whole mapping-and-import flow without `FilePicker`'s
+  platform channel, which `flutter_test` can't provide. Loading logic was split into
+  `_applyCsv` (plain field assignment, callable from `initState` before a first build exists)
+  and the `setState`-wrapped call site used after a user picks a file — calling `setState`
+  from `initState` itself throws.

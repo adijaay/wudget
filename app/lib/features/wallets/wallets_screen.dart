@@ -9,6 +9,7 @@ import '../../data/database.dart';
 import '../../data/wallets_repository.dart';
 import '../../design/tokens.dart';
 import '../capture/capture_sheet.dart';
+import '../import/import_screen.dart';
 
 const _uuid = Uuid();
 const _walletTypes = ['cash', 'bank', 'ewallet', 'card', 'savings', 'debt', 'other'];
@@ -29,6 +30,13 @@ class WalletsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Kantong'),
         actions: [
+          IconButton(
+            tooltip: 'Impor dari CSV',
+            icon: const Icon(Icons.file_download_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ImportScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Tambah dompet',
             icon: const Icon(Icons.add_card_outlined),
