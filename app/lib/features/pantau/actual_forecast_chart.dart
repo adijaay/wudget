@@ -69,7 +69,7 @@ class ActualForecastChart extends StatelessWidget {
             const SizedBox(width: WudgetTokens.space1),
             const Text('Aktual'),
             const SizedBox(width: WudgetTokens.space4),
-            _LegendDash(color: tokens.ink3),
+            _LegendDash(color: tokens.ink2), // ink3 fails the 3:1 component bar — see DECISIONS.md, Sprint 18
             const SizedBox(width: WudgetTokens.space1),
             const Text('Perkiraan'),
           ],
@@ -135,7 +135,7 @@ class _ChartPainter extends CustomPainter {
     if (todayIndex != null && todayIndex! < cumulative.length - 1) {
       final start = _point(size, actualEnd, cumulative[actualEnd].toDouble());
       final end = _point(size, cumulative.length - 1, forecastTotalMinor.toDouble());
-      _drawDashedLine(canvas, start, end, tokens.ink3);
+      _drawDashedLine(canvas, start, end, tokens.ink2); // ink3 fails the 3:1 component bar
     }
   }
 

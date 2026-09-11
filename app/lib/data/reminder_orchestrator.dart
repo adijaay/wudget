@@ -29,7 +29,7 @@ Future<void> scheduleUpcomingReminders(WudgetDatabase db, ReminderScheduler sche
         : (categories[instance.categoryId] ?? 'Tagihan');
 
     final body = wallet == null
-        ? '$label jatuh tempo — ${_formatter.format(Money.fromMinor(instance.amountMinor, 'IDR'))}.'
+        ? '$label jatuh tempo: ${_formatter.format(Money.fromMinor(instance.amountMinor, 'IDR'))}.'
         : reminderBody(
             itemLabel: label,
             amountMinor: instance.amountMinor,

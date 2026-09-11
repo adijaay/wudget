@@ -39,19 +39,32 @@ class WeekBarChart extends StatelessWidget {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 2),
+                    // The value label sizes itself naturally (so it never
+                    // clips at a larger text scale); the bar then claims
+                    // whatever height is left via Expanded, rather than a
+                    // fixed pixel count that assumed a fixed label height —
+                    // see DECISIONS.md, Sprint 18.
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (values[i] > 0 && values[i] == maxValue)
                           Text(
                             _formatter.formatCompact(Money.fromMinor(values[i], 'IDR')),
+                            textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.labelSmall,
                           ),
-                        Container(
-                          height: maxValue == 0 ? 0 : 90 * values[i] / maxValue,
-                          decoration: BoxDecoration(
-                            color: tokens.accent,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: FractionallySizedBox(
+                              heightFactor: maxValue == 0 ? 0 : values[i] / maxValue,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: tokens.accent,
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],

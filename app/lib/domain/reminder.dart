@@ -14,7 +14,7 @@ String reminderBody({
   final amount = formatMoney(amountMinor);
   final shortfall = amountMinor - walletBalanceMinor;
   if (shortfall > 0) {
-    return '$itemLabel $amount jatuh tempo — saldo $walletName ${formatMoney(walletBalanceMinor)}, '
+    return '$itemLabel $amount jatuh tempo, saldo $walletName ${formatMoney(walletBalanceMinor)}, '
         'kurang ${formatMoney(shortfall)}.';
   }
   return '$itemLabel $amount jatuh tempo hari ini.';

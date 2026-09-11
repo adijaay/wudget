@@ -367,7 +367,13 @@ class _EntryTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey(entry.transactionId),
       direction: DismissDirection.endToStart,
-      background: Container(color: tokens.negative, alignment: Alignment.centerRight,
+      // A fixed strong red, not tokens.negative: that token is tuned as a
+      // *text* color against each theme's surface (light red on dark
+      // surface, dark red on light surface), so in dark theme it's too
+      // light to hold a white icon at AA contrast — see DECISIONS.md,
+      // Sprint 18. A delete-swipe backdrop needs its own guarantee, not a
+      // theme-adaptive text color repurposed as a background.
+      background: Container(color: Colors.red.shade700, alignment: Alignment.centerRight,
           padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
           child: const Icon(Icons.delete, color: Colors.white)),
       onDismissed: (_) => onDelete(),

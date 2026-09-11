@@ -614,3 +614,79 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   device to capture from, which this environment doesn't have. Every state listed in
   plan/04-ux-design.md's table has been implemented and has at least one test asserting its
   text/structure; the visual review pass itself is a manual step for whoever has a device.
+
+## Sprint 18
+
+- **Contrast was asserted, not eyeballed.** `lib/domain/contrast.dart` implements the WCAG
+  2.x relative-luminance and contrast-ratio formulas from scratch (no dependency needed for
+  two small pure functions), and `test/domain/contrast_test.dart` runs them against every
+  actual token/color pairing the app uses: body text over every theme surface, non-text
+  components (FAB, chart lines) over their backgrounds, and every category hue at the 3:1
+  component bar in both themes. Two light-theme category hues failed the 3:1 bar against
+  white (`0xFFF2A93C` at 2.00, `0xFFF2A93C`'s sibling `0xFF4FAE7C` at 2.74) and were
+  darkened in `lib/design/tokens.dart` until they cleared it. The ledger delete-swipe
+  background was a separate, worse bug: it used `tokens.negative`, a theme token, for a
+  fixed `Colors.red.shade700` Dismissible background, so its actual rendered contrast in
+  dark theme was never what the token pairing implied. Fixed by hardcoding the Dismissible
+  background to `Colors.red.shade700` directly, since it is deliberately theme-independent
+  (a swipe-to-delete red), and asserting that fixed pairing in the contrast test instead of
+  a token pairing that was never actually on screen.
+- **200% text scale surfaced two real overflow bugs**, not just theoretical risk (R-35):
+  `week_bar_chart.dart` computed bar heights as `90 * values[i] / maxValue`, a fixed pixel
+  height with no relation to the surrounding row's actual height once labels below it grew
+  at 200% scale; replaced with `Expanded` + `Align(bottomCenter)` +
+  `FractionallySizedBox(heightFactor: ...)` so the bar always fits whatever space is left.
+  `period_close_sheet.dart`'s body could exceed the sheet's height entirely at 200% scale
+  (a short screen or a long largest-category name), and its `_Row` label could push the
+  amount off the right edge; fixed with a `SingleChildScrollView` around the body and an
+  `Expanded` around the row's label. `test/accessibility/text_scale_test.dart` pins all
+  three at `TextScaler.linear(2.0)` so a regression here fails a test, not just a manual
+  check.
+- **`capture_sheet.dart`'s `_key()` numpad buttons were missing `excludeSemantics: true`**
+  on the wrapping `Semantics(label: ...)` for glyph keys (⌫, ±, ✓): without it, a screen
+  reader announces both the explicit label and the raw glyph underneath as a second node,
+  so "Hapus" was followed by an unlabeled "⌫" a user could also land on. Adding
+  `excludeSemantics: true` collapses it to one node with the real label, verified in
+  `test/accessibility/semantics_test.dart` by asserting `tester.getSemantics(...).label`
+  directly rather than `find.bySemanticsLabel`, which returned zero matches for an exact
+  string even when `getSemantics` proved that exact string was present on the tree — not
+  trusted as a finder for this kind of assertion going forward.
+- **`SemanticsHandle` must be disposed at the end of the test body, not via
+  `addTearDown`.** `WidgetTester`'s end-of-test check for an undisposed handle runs inside
+  `_runTestBody`, before `addTearDown` callbacks fire, so a handle registered for teardown
+  there still trips "A SemanticsHandle was active at the end of the test." Both semantics
+  tests call `handle.dispose()` explicitly as the last line of the test body, after the
+  drift-stream unmount sequence (`pumpWidget(SizedBox())` + `pump()`) from Sprint 5/6 — that
+  unmount sequence still has to run first, or drift's stream-query cleanup Timer trips the
+  pending-timer check instead.
+- **Reduce-motion needed an audit, not new code.** Grepping `lib/` found no
+  `AnimationController`, `AnimatedContainer`, `TweenAnimationBuilder`, or `Hero` anywhere in
+  the app: every transition is a stock Material default (the capture sheet's modal
+  bottom-sheet slide), and Flutter's own transition themes already read
+  `MediaQuery.disableAnimations` and cut to an instant transition when it's set.
+  `test/accessibility/reduce_motion_test.dart` is the audit's proof, not a new fallback:
+  it opens the capture sheet under `MediaQueryData(disableAnimations: true)` and asserts it
+  renders correctly, with nothing in the app itself changed.
+- **Golden tests are scoped to two low-decoration screens, each in both themes**
+  (`test/golden/key_screens_theme_test.dart`): Kantong's empty state and Pantau's waiting
+  state, not a chart-heavy screen most sensitive to font-hinting differences across
+  machines, and specifically the states data/06-implications.md flagged competitors getting
+  wrong. Every golden test needed the same trailing unmount sequence as every other
+  StreamBuilder-backed widget test in this app (Sprint 5/6's gotcha) — without it, the first
+  golden test in the file hung indefinitely rather than failing outright, since
+  `expectLater(..., matchesGoldenFile(...))` doesn't itself trigger the pending-timer check;
+  only the test's teardown does, once something is left to unmount uncleanly. Baselines were
+  generated with `flutter test --update-goldens test/golden/key_screens_theme_test.dart` and
+  the four PNGs are committed alongside the test.
+- **Em dashes (R-02) removed from four files' user-facing copy** this sprint touched
+  (`reminder_orchestrator.dart`, `pace.dart`, `reminder.dart`, `wallets_screen.dart`,
+  `period_close_sheet.dart`), replaced with commas, colons, or periods per the antislop
+  core rule; this file (`DECISIONS.md`) is project documentation, not app copy, so its
+  existing em-dash style is left as-is for consistency with every earlier entry.
+- **A non-breaking space inside `MoneyFormatter`'s output caught a hardcoded test
+  literal.** `'Jumlah: Rp 0'`, typed by hand, looked identical to the rendered string but
+  failed a byte-for-byte `expect` — `MoneyFormatter` emits a real U+00A0 between the
+  currency symbol and the digits (confirmed with `cat -A` on `money_formatter.dart`), not
+  an ordinary space. Fixed by building the expected string through the real formatter in
+  the test instead of a literal, which is also the more honest assertion: it tests that the
+  semantics label matches what the formatter actually produces, not a guess at its bytes.

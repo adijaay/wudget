@@ -71,7 +71,7 @@ class PaceResult {
     final baseline = formatCompact(baselineTotalMinor!);
     return switch (s) {
       PaceStatus.overBaseline =>
-        'Kalau lajunya seperti ini, perkiraan habis $forecast periode ini — lebih tinggi dari biasanya ($baseline).',
+        'Kalau lajunya seperti ini, perkiraan habis $forecast periode ini, lebih tinggi dari biasanya ($baseline).',
       PaceStatus.underBaseline =>
         'Lajumu lebih hemat dari biasanya: perkiraan $forecast periode ini, dibanding $baseline biasanya.',
       PaceStatus.onBaseline => 'Lajumu mirip seperti biasanya, sekitar $forecast di akhir periode.',

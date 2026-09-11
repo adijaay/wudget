@@ -707,6 +707,11 @@ class _Numpad extends StatelessWidget {
     return Semantics(
       label: semanticLabel ?? label,
       button: true,
+      // Without this, a screen reader merges the glyph's own default
+      // reading ("chevron left equals sign" for "±", say) in with the
+      // explicit label instead of replacing it — see DECISIONS.md,
+      // Sprint 18.
+      excludeSemantics: true,
       child: SizedBox(
         height: 56,
         child: TextButton(

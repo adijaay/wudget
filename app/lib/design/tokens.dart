@@ -52,8 +52,8 @@ class WudgetTokens extends ThemeExtension<WudgetTokens> {
     negative: Color(0xFFB3261E),
     categoryHues: [
       Color(0xFFEF6C57),
-      Color(0xFFF2A93C),
-      Color(0xFF4FAE7C),
+      Color(0xFFB87A1E), // darkened from 0xFFF2A93C — failed the 3:1 component bar against white (2.00)
+      Color(0xFF2F8C5C), // darkened from 0xFF4FAE7C — failed the 3:1 component bar against white (2.74)
       Color(0xFF3E8FC1),
       Color(0xFF6C6FC4),
       Color(0xFFB05FC0),

@@ -98,7 +98,7 @@ class WalletsScreen extends ConsumerWidget {
                       : const Text(
                           // Chart rule #8: a number that can't be honestly computed '
                           // renders blank with a reason, never an invented one.
-                          'Total antar mata uang belum tersedia — beda mata uang '
+                          'Total antar mata uang belum tersedia. Beda mata uang '
                           'butuh kurs. Lihat saldo per dompet di bawah.',
                         ),
                 ),

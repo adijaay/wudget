@@ -20,7 +20,11 @@ class PeriodCloseSheet extends StatelessWidget {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     return Padding(
       padding: const EdgeInsets.all(WudgetTokens.space5),
-      child: Column(
+      // At 200% text scale (or a short screen) the content can exceed the
+      // sheet's height; scrolling, not clipping, is how R-03/antislop keep
+      // it usable — see DECISIONS.md, Sprint 18.
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -50,12 +54,13 @@ class PeriodCloseSheet extends StatelessWidget {
             const SizedBox(height: WudgetTokens.space4),
           ],
           Text(
-            'Anggaran periode berikutnya tetap sama — ubah lewat Anggaran kapan saja.',
+            'Anggaran periode berikutnya tetap sama, ubah lewat Anggaran kapan saja.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: WudgetTokens.space4),
           FilledButton(onPressed: onClose, child: const Text('Tutup')),
         ],
+        ),
       ),
     );
   }
@@ -78,7 +83,7 @@ class LapsedReturnSheet extends StatelessWidget {
         children: [
           Text('Sudah beberapa waktu', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: WudgetTokens.space3),
-          const Text('Tidak apa — lanjutkan dari hari ini.'),
+          const Text('Tidak apa, lanjutkan dari hari ini.'),
           const SizedBox(height: WudgetTokens.space4),
           FilledButton(onPressed: onClose, child: const Text('Lanjut')),
         ],
@@ -97,9 +102,9 @@ class _Row extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space1),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
+          Expanded(child: Text(label)),
+          const SizedBox(width: WudgetTokens.space2),
           Text(_formatter.format(Money.fromMinor(value, 'IDR'))),
         ],
       ),
