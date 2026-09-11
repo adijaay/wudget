@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/analytics_repository.dart';
 import '../data/budget_history_queries.dart';
 import '../data/budgets_repository.dart';
+import '../data/categories_repository.dart';
 import '../data/capture_queries.dart';
 import '../data/category_rank_queries.dart';
 import '../data/database.dart';
@@ -26,6 +27,10 @@ final postingsRepositoryProvider = Provider<PostingsRepository>((ref) {
 
 final captureQueriesProvider = Provider<CaptureQueries>((ref) {
   return CaptureQueries(ref.watch(databaseProvider));
+});
+
+final categoriesRepositoryProvider = Provider<CategoriesRepository>((ref) {
+  return CategoriesRepository(ref.watch(databaseProvider));
 });
 
 final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {

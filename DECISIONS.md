@@ -916,3 +916,45 @@ button**. antislop was applied during the work, not as an audit after.
 - **The backup timestamp printed UTC.** `lastBackupTime()` correctly returns an instant
   in UTC and the screen formatted it raw, so a backup taken at 23:09 displayed as 16:09.
   The repository is right; the presentation needed `.toLocal()`.
+
+## Category management
+
+plan/01-features.md requires it ("Users can add and rename"), and it had never been built:
+`default_categories.dart` seeded eight expense categories, three Makan subcategories and
+two income ones, and after that the only way a category came into existence was a CSV
+import inventing one from a column value, or a backup restore. There was no UI at all.
+
+- **Two entry points, because they answer different moments.** A "Baru" tile at the end
+  of the capture sheet's category row, for when you are mid-capture and the category you
+  want is missing, and a list under Saya for renaming and restyling later. The capture
+  path selects the category it just created, so adding one does not cost the user the
+  entry they were part-way through writing.
+- **The tile sits last, not first.** The eight seeded categories cover most days, and
+  putting an action ahead of them would shift the one you actually reach for by a tile.
+- **Adding and renaming only; nothing deletes.** The table has a `deleted_at` column, but
+  nothing that lists categories filters on it, so honouring it would mean editing five
+  listing queries while deliberately not touching the five lookup queries that resolve a
+  name for postings already written. What happens to those transactions is a real
+  decision, not a trash icon, so it stays out of this change.
+- **Renaming keeps the id**, which is what makes it safe: postings reference the category
+  id, so a rename reaches every historical row without touching one of them. There is a
+  test that asserts exactly that, because the opposite (re-keying on rename) is the
+  obvious wrong implementation and would silently orphan history.
+- **The icon list is drawn from the research, not from an icon set.** The additions cover
+  what plan/01-features.md and the user reviews actually name: kos, pulsa dan data,
+  kondangan, arisan, motor, listrik, air. Twenty-seven keys, each mapping to a Material
+  glyph the app already ships (R-04: relevance, not a library look).
+- **New categories spread across the eight hues** (`count % 8`) rather than all landing on
+  the first, which would have made the ranked list in Pantau unreadable the moment someone
+  added a few.
+- **The colour picker marks its selection with a tick**, since the swatches are themselves
+  the colours and a coloured ring would be the one case where colour really is the only
+  signal (R-25).
+- **Subcategories are creatable from the capture sheet** when a category is already
+  selected ("Sub dari Makan"), which is the second of the two levels the plan allows and
+  the moment you notice you want one.
+- **Verified on the device**, not only in tests: created "Kos" with the home icon from the
+  capture sheet, recorded Rp 5.000 against it, saw it in Catat with its own chip and hue,
+  then renamed Transport to "Transport online" from Saya. Editing a category deliberately
+  does not autofocus the name field, so the keyboard does not cover the icon and colour
+  pickers when the thing you came to change is the colour.

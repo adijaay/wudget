@@ -5,6 +5,7 @@ import '../../core/providers.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../budget/budget_screen.dart';
+import '../categories/categories_screen.dart';
 import '../import/import_screen.dart';
 import '../recurring/recurring_screen.dart';
 import 'backup_screen.dart';
@@ -42,6 +43,14 @@ class SayaScreen extends ConsumerWidget {
                 trailing: Icon(Icons.chevron_right, color: tokens.ink2),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const BudgetScreen()),
+                ),
+              ),
+              CardRow(
+                title: 'Kategori',
+                subtitle: 'Tambah, ubah nama, ganti ikon dan warnanya',
+                trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CategoriesScreen()),
                 ),
               ),
               CardRow(

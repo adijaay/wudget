@@ -353,8 +353,61 @@ IconData categoryIcon(String iconKey) => switch (iconKey) {
       'school' => Icons.school_outlined,
       'work' => Icons.work_outline,
       'category' => Icons.category_outlined,
+      // The rest exist so a category someone adds themselves can look like
+      // what it is. The spending they name is from the research, not a
+      // generic icon-set sampler: kos, pulsa, kondangan, arisan.
+      'home' => Icons.home_outlined,
+      'smartphone' => Icons.smartphone_outlined,
+      'card_giftcard' => Icons.card_giftcard_outlined,
+      'local_cafe' => Icons.local_cafe_outlined,
+      'bolt' => Icons.bolt_outlined,
+      'water_drop' => Icons.water_drop_outlined,
+      'wifi' => Icons.wifi_outlined,
+      'two_wheeler' => Icons.two_wheeler_outlined,
+      'child_care' => Icons.child_care_outlined,
+      'pets' => Icons.pets_outlined,
+      'fitness_center' => Icons.fitness_center_outlined,
+      'flight' => Icons.flight_outlined,
+      'checkroom' => Icons.checkroom_outlined,
+      'cut' => Icons.content_cut_outlined,
+      'savings' => Icons.savings_outlined,
+      'volunteer_activism' => Icons.volunteer_activism_outlined,
+      'mosque' => Icons.mosque_outlined,
+      'sports_esports' => Icons.sports_esports_outlined,
       _ => Icons.label_outline,
     };
+
+/// What the icon picker offers, in the order it shows them. The seeded eight
+/// come first because they are the ones most people reach for.
+const pickableCategoryIcons = [
+  'restaurant',
+  'directions_car',
+  'shopping_bag',
+  'receipt_long',
+  'movie',
+  'local_hospital',
+  'school',
+  'work',
+  'home',
+  'smartphone',
+  'card_giftcard',
+  'local_cafe',
+  'bolt',
+  'water_drop',
+  'wifi',
+  'two_wheeler',
+  'child_care',
+  'pets',
+  'fitness_center',
+  'flight',
+  'checkroom',
+  'cut',
+  'savings',
+  'volunteer_activism',
+  'mosque',
+  'sports_esports',
+  'category',
+];
 
 /// Wallet types, in Indonesian. The raw column values are English enum
 /// strings ('cash', 'ewallet'), which is what a user was reading under

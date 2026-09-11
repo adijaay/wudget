@@ -13,6 +13,7 @@ import '../../data/capture_queries.dart';
 import '../../data/database.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../categories/category_edit_sheet.dart';
 
 const _uuid = Uuid();
 
@@ -480,6 +481,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           categories: categories,
           tokens: tokens,
           selectedId: _categoryId,
+          onCreate: () => _createCategory(categories),
           onSelected: (id) async {
             // The wallet this category was last paid from, so the common
             // case needs no wallet tap at all (Sprint 4).
@@ -493,6 +495,34 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         );
       },
     );
+  }
+
+  /// Opens the category editor and selects whatever comes back, so adding a
+  /// category mid-capture does not cost the user their place: they came here
+  /// to record something, not to do admin.
+  Future<void> _createCategory(List<Category> siblings) async {
+    final selected = _categoryId == null
+        ? null
+        : siblings.where((c) => c.id == _categoryId).firstOrNull;
+    final createdId = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CategoryEditSheet(
+        kind: _kind == CaptureKind.expense ? 'expense' : 'income',
+        parent: selected,
+      ),
+    );
+    if (createdId == null || !mounted) return;
+    setState(() {
+      // A new subcategory leaves its parent selected and selects itself
+      // underneath; a new top-level category becomes the selection.
+      if (selected != null && _categoryId == selected.id) {
+        _subcategoryId = createdId;
+      } else {
+        _categoryId = createdId;
+        _subcategoryId = null;
+      }
+    });
   }
 
   Widget _subcategories(WudgetDatabase db, WudgetTokens tokens) {
@@ -749,11 +779,13 @@ class _CategoryRow extends StatelessWidget {
     required this.tokens,
     required this.selectedId,
     required this.onSelected,
+    required this.onCreate,
   });
   final List<Category> categories;
   final WudgetTokens tokens;
   final String? selectedId;
   final ValueChanged<String> onSelected;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -774,6 +806,10 @@ class _CategoryRow extends StatelessWidget {
                 onTap: () => onSelected(categories[i].id),
               ),
             ],
+            // Last, not first: the eight seeded categories cover most days,
+            // and the one you reach for should not have moved along by one.
+            const SizedBox(width: WudgetTokens.space3),
+            _AddCategoryTile(onTap: onCreate),
           ],
         ),
       ),
@@ -846,6 +882,56 @@ class _CategoryTile extends StatelessWidget {
                 ),
               ),
             );
+  }
+}
+
+/// The same shape as a category tile, drawn as an outline so it reads as an
+/// action rather than a category you could pick by mistake.
+class _AddCategoryTile extends StatelessWidget {
+  const _AddCategoryTile({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Semantics(
+      button: true,
+      label: 'Kategori baru',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+        child: SizedBox(
+          width: 58,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: WudgetTokens.categoryTile,
+                height: WudgetTokens.categoryTile,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+                  border: Border.all(color: tokens.borderStrong),
+                ),
+                child: Icon(Icons.add, size: 22, color: tokens.ink2),
+              ),
+              const SizedBox(height: WudgetTokens.space1),
+              Text(
+                'Baru',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: WudgetTokens.fontFamily,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: tokens.ink2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
