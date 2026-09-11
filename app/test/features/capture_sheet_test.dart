@@ -141,4 +141,34 @@ void main() {
     final transactions = await db.select(db.transactions).get();
     expect(transactions.length, 2);
   });
+
+  testWidgets('a transfer moves money between two wallets with no category leg', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db); // seeds acc_cash
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+          id: 'acc_bank', name: 'Bank', type: 'bank', currency: 'IDR', updatedAt: 0,
+        ));
+    addTearDown(db.close);
+
+    await _openSheet(tester, db);
+    await tester.tap(find.text('Transfer'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('1'));
+    await tester.tap(find.text('0'));
+    await tester.tap(find.text('000'));
+    await tester.pump();
+
+    await tester.tap(find.text('✓'));
+    await tester.pumpAndSettle();
+
+    final transactions = await db.select(db.transactions).get();
+    expect(transactions.single.kind, 'transfer');
+
+    final postings = await db.select(db.postings).get();
+    expect(postings.length, 2);
+    expect(postings.every((p) => p.categoryId == null), isTrue); // no category leg
+    final sum = postings.fold<int>(0, (acc, p) => acc + p.baseAmountMinor);
+    expect(sum, 0);
+  });
 }

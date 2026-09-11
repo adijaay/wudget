@@ -4,10 +4,9 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/providers.dart';
 import 'data/database.dart';
-import 'design/token_demo_screen.dart';
 import 'design/tokens.dart';
 import 'domain/default_categories.dart';
-import 'features/capture/capture_sheet.dart';
+import 'features/wallets/wallets_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,28 +31,10 @@ class WudgetApp extends StatelessWidget {
       title: 'wudget',
       theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
       darkTheme: buildWudgetTheme(WudgetTokens.dark, Brightness.dark),
-      home: const HomeShell(),
-    );
-  }
-}
-
-/// Temporary home: the token demo plus a FAB into the capture sheet. Real
-/// tab navigation (Catat/Kantong/Pantau) is Sprint 5+.
-class HomeShell extends StatelessWidget {
-  const HomeShell({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: const TokenDemoScreen(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => const CaptureSheet(),
-        ),
-        child: const Icon(Icons.add),
-      ),
+      // Temporary home: Kantong is the first real tab, with its own FAB
+      // into the capture sheet. Real tab navigation (Catat/Kantong/Pantau)
+      // is Sprint 6+ — see DECISIONS.md.
+      home: const WalletsScreen(),
     );
   }
 }

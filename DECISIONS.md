@@ -112,3 +112,43 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   (battery) mid-session before this sprint's UI was ready to profile, and Sprint 7 owns the
   actual performance-gate ticket with a release build. Revisit: profile on the ASUS_AI2202
   once reconnected, ahead of Sprint 7 if possible so a regression isn't discovered late.
+
+## Sprint 5
+
+- **Wallet "logos" are a coloured circle with the wallet's first initial**, not real bank/
+  e-wallet artwork. Real GoPay/OVO/DANA/bank logos are trademarked assets this environment
+  can't source or license, and a placeholder set invented to look official would be worse
+  than an honest generic one. Revisit: swap in a real icon set (or user-uploadable logos)
+  once assets are sourced properly — the `providerKey` column already exists for this.
+- **Cross-currency wallet total renders a reason instead of a number** when wallets span more
+  than one currency, rather than inventing a conversion rate. Chart rule #8
+  (plan/04-ux-design.md) — "a number that cannot be computed renders blank with a reason,
+  never as zero" — applies just as much to a fabricated exchange rate as to a zero. No FX
+  rate source is designed for v1 balances (`rate_to_base` on postings is captured at
+  transaction-write time, not available for a live account balance). Revisit once a real FX
+  data source is chosen — probably alongside the multi-currency wallet creation flow.
+  Same reasoning blocked a placeholder rate table outright: fabricated-looking real data is
+  explicitly against the Definition of Done in plan/05-sprints.md.
+  A second bug caught by testing the same way as Sprint 4's: `WalletsRepository.watchWallets`
+  first read as `balanceSum ?? 0 + openingMinor`, which by operator precedence discarded
+  `openingMinor` entirely whenever there were any postings (`??` binds looser than `+`). Found
+  by writing the balance test before trusting the query, fixed to
+  `(balanceSum ?? 0) + openingMinor`.
+- **The "Bayar" (pay card) button prefills a transfer** (`CaptureSheet(initialKind: transfer,
+  initialToAccountId:, initialAmountMinor:)`) rather than being its own screen — one sheet,
+  one save path, matching "no screen the sheet doesn't already own" from plan/04-ux-design.md.
+  The prefilled amount is the card's current owed balance; the user can still edit it or pick
+  a different source account before saving.
+- **New widget-test pattern found the hard way**: a `testWidgets` test that ends while a
+  screen backed by a drift `.watch()` stream (e.g. `WalletsScreen`) is still mounted trips
+  flutter_test's "a Timer is still pending" invariant — drift's stream-query executor
+  schedules its fetch via `Timer.run`, and that fires during automatic teardown with no pump
+  left to flush it. Fix, now the house pattern for any test whose last visible screen holds a
+  drift stream: `await tester.pumpWidget(const SizedBox())` then one more `await
+  tester.pump(...)` before the test function returns, so the unmount (and drift's cleanup
+  timer) happen while a pump is still available to flush them.
+- **Done-when met without Pantau existing yet**: `spending_queries_test.dart` proves a card
+  payment (transfer, no category leg) doesn't move `totalCategorySpendMinor`, which is the
+  actual guarantee "doesn't appear in spending statistics" cashes out to. `totalCategorySpendMinor`
+  is a real function Pantau's aggregates (Sprint 8+) will read from, not a throwaway test
+  helper.

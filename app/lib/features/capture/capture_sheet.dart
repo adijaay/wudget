@@ -15,7 +15,7 @@ import '../../design/tokens.dart';
 
 const _uuid = Uuid();
 
-enum _Kind { expense, income, transfer }
+enum CaptureKind { expense, income, transfer }
 
 /// The capture sheet: the one screen the product lives or dies on. See
 /// plan/04-ux-design.md "The capture sheet, specified" for the full spec.
@@ -24,18 +24,31 @@ enum _Kind { expense, income, transfer }
 /// calculator toggle, an in-sheet date/time button, a collapsed note field
 /// and a receipt photo.
 class CaptureSheet extends ConsumerStatefulWidget {
-  const CaptureSheet({super.key});
+  const CaptureSheet({
+    super.key,
+    this.initialKind = CaptureKind.expense,
+    this.initialToAccountId,
+    this.initialAmountMinor,
+  });
+
+  /// Lets a caller (e.g. the card "Bayar" button in Kantong) open the sheet
+  /// pre-filled as a transfer, rather than every screen needing its own
+  /// mini transfer form.
+  final CaptureKind initialKind;
+  final String? initialToAccountId;
+  final int? initialAmountMinor;
 
   @override
   ConsumerState<CaptureSheet> createState() => _CaptureSheetState();
 }
 
 class _CaptureSheetState extends ConsumerState<CaptureSheet> {
-  _Kind _kind = _Kind.expense;
+  late CaptureKind _kind = widget.initialKind;
   String _amountBuffer = '';
   String? _categoryId;
   String? _subcategoryId;
   String? _accountId;
+  late String? _toAccountId = widget.initialToAccountId;
   bool _calculatorMode = false;
   bool _noteExpanded = false;
   final _noteController = TextEditingController();
@@ -50,6 +63,12 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialAmountMinor != null) {
+      final info = CurrencyInfo.of(_currency);
+      _amountBuffer = info.exponent == 0
+          ? widget.initialAmountMinor!.toString()
+          : (widget.initialAmountMinor! / info.minorUnitsPerMajor).toString();
+    }
     _loadTemplates();
   }
 
@@ -62,7 +81,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   void _loadTemplates() {
     _templatesFuture = ref
         .read(captureQueriesProvider)
-        .topTemplates(_kind == _Kind.expense ? 'expense' : 'income');
+        .topTemplates(_kind == CaptureKind.expense ? 'expense' : 'income');
   }
 
   /// The buffer may hold a calculator expression like "15000+5000". Left to
@@ -149,53 +168,84 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   }
 
   Future<void> _save() async {
-    if (_kind == _Kind.transfer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transfer belum tersedia — datang di Sprint 5')),
-      );
-      return;
-    }
-    if (_amount.isZero || _categoryId == null) return;
-
     final db = ref.read(databaseProvider);
-    final accountId = _accountId ?? (await db.select(db.accounts).getSingle()).id;
-    final categoryLeg = _subcategoryId ?? _categoryId!;
     final txId = _uuid.v4();
     final now = DateTime.now();
 
-    // Expense: account leg negative, category leg positive.
-    // Income: account leg positive, category leg negative.
-    final sign = _kind == _Kind.expense ? -1 : 1;
+    if (_kind == CaptureKind.transfer) {
+      if (_amount.isZero || _accountId == null || _toAccountId == null || _accountId == _toAccountId) {
+        return;
+      }
+      // Transfer: from-account negative, to-account positive, no category
+      // leg — that absence is what keeps a transfer (including a card
+      // payment) out of spending statistics. See spending_queries.dart.
+      await ref.read(postingsRepositoryProvider).insertTransaction(
+        transaction: TransactionsCompanion.insert(
+          id: txId,
+          kind: 'transfer',
+          occurredAt: _occurredAt.toUtc().millisecondsSinceEpoch,
+          tzOffsetMinutes: _occurredAt.timeZoneOffset.inMinutes,
+          note: _noteController.text.isEmpty ? const Value.absent() : Value(_noteController.text),
+          updatedAt: now.toUtc().millisecondsSinceEpoch,
+        ),
+        postings: [
+          PostingsCompanion.insert(
+            id: _uuid.v4(),
+            transactionId: txId,
+            accountId: Value(_accountId!),
+            amountMinor: -_amount.minor,
+            currency: _currency,
+            baseAmountMinor: -_amount.minor,
+          ),
+          PostingsCompanion.insert(
+            id: _uuid.v4(),
+            transactionId: txId,
+            accountId: Value(_toAccountId!),
+            amountMinor: _amount.minor,
+            currency: _currency,
+            baseAmountMinor: _amount.minor,
+          ),
+        ],
+      );
+    } else {
+      if (_amount.isZero || _categoryId == null) return;
+      final accountId = _accountId ?? (await db.select(db.accounts).getSingle()).id;
+      final categoryLeg = _subcategoryId ?? _categoryId!;
 
-    await ref.read(postingsRepositoryProvider).insertTransaction(
-      transaction: TransactionsCompanion.insert(
-        id: txId,
-        kind: _kind == _Kind.expense ? 'expense' : 'income',
-        occurredAt: _occurredAt.toUtc().millisecondsSinceEpoch,
-        tzOffsetMinutes: _occurredAt.timeZoneOffset.inMinutes,
-        note: _noteController.text.isEmpty ? const Value.absent() : Value(_noteController.text),
-        photoPath: _photoPath == null ? const Value.absent() : Value(_photoPath),
-        updatedAt: now.toUtc().millisecondsSinceEpoch,
-      ),
-      postings: [
-        PostingsCompanion.insert(
-          id: _uuid.v4(),
-          transactionId: txId,
-          accountId: Value(accountId),
-          amountMinor: sign * _amount.minor,
-          currency: _currency,
-          baseAmountMinor: sign * _amount.minor,
+      // Expense: account leg negative, category leg positive.
+      // Income: account leg positive, category leg negative.
+      final sign = _kind == CaptureKind.expense ? -1 : 1;
+
+      await ref.read(postingsRepositoryProvider).insertTransaction(
+        transaction: TransactionsCompanion.insert(
+          id: txId,
+          kind: _kind == CaptureKind.expense ? 'expense' : 'income',
+          occurredAt: _occurredAt.toUtc().millisecondsSinceEpoch,
+          tzOffsetMinutes: _occurredAt.timeZoneOffset.inMinutes,
+          note: _noteController.text.isEmpty ? const Value.absent() : Value(_noteController.text),
+          photoPath: _photoPath == null ? const Value.absent() : Value(_photoPath),
+          updatedAt: now.toUtc().millisecondsSinceEpoch,
         ),
-        PostingsCompanion.insert(
-          id: _uuid.v4(),
-          transactionId: txId,
-          categoryId: Value(categoryLeg),
-          amountMinor: -sign * _amount.minor,
-          currency: _currency,
-          baseAmountMinor: -sign * _amount.minor,
-        ),
-      ],
-    );
+        postings: [
+          PostingsCompanion.insert(
+            id: _uuid.v4(),
+            transactionId: txId,
+            accountId: Value(accountId),
+            amountMinor: sign * _amount.minor,
+            currency: _currency,
+            baseAmountMinor: sign * _amount.minor,
+          ),
+          PostingsCompanion.insert(
+            id: _uuid.v4(),
+            transactionId: txId,
+            categoryId: Value(categoryLeg),
+            amountMinor: -sign * _amount.minor,
+            currency: _currency,
+            baseAmountMinor: -sign * _amount.minor,
+          ),
+        ],
+      );
+    }
 
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -258,7 +308,56 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                   ],
                 ),
               ),
-              if (_kind != _Kind.transfer)
+              if (_kind == CaptureKind.transfer)
+                StreamBuilder<List<Account>>(
+                  stream: db.select(db.accounts).watch(),
+                  builder: (context, snapshot) {
+                    final accounts = snapshot.data ?? const [];
+                    if (accounts.length < 2) {
+                      return const Padding(
+                        padding: EdgeInsets.all(WudgetTokens.space4),
+                        child: Text('Butuh minimal dua dompet untuk transfer.'),
+                      );
+                    }
+                    _accountId ??= accounts.first.id;
+                    _toAccountId ??= accounts.firstWhere(
+                      (a) => a.id != _accountId,
+                      orElse: () => accounts.last,
+                    ).id;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _accountId,
+                              decoration: const InputDecoration(labelText: 'Dari'),
+                              items: [
+                                for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                              ],
+                              onChanged: (id) => setState(() => _accountId = id),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: WudgetTokens.space2),
+                            child: Icon(Icons.arrow_forward),
+                          ),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _toAccountId,
+                              decoration: const InputDecoration(labelText: 'Ke'),
+                              items: [
+                                for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                              ],
+                              onChanged: (id) => setState(() => _toAccountId = id),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              if (_kind != CaptureKind.transfer)
                 FutureBuilder<List<CaptureTemplate>>(
                   future: _templatesFuture,
                   builder: (context, snapshot) {
@@ -281,10 +380,10 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                     );
                   },
                 ),
-              if (_kind != _Kind.transfer)
+              if (_kind != CaptureKind.transfer)
                 StreamBuilder<List<Category>>(
                   stream: (db.select(db.categories)
-                        ..where((c) => c.kind.equals(_kind == _Kind.expense ? 'expense' : 'income'))
+                        ..where((c) => c.kind.equals(_kind == CaptureKind.expense ? 'expense' : 'income'))
                         ..where((c) => c.parentId.isNull())
                         ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
                       .watch(),
@@ -352,21 +451,22 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                               child: const Text('+ Catatan'),
                             ),
                     ),
-                    StreamBuilder<List<Account>>(
-                      stream: db.select(db.accounts).watch(),
-                      builder: (context, snapshot) {
-                        final accounts = snapshot.data ?? const [];
-                        if (accounts.isEmpty) return const SizedBox.shrink();
-                        final selected = _accountId ?? accounts.first.id;
-                        return DropdownButton<String>(
-                          value: selected,
-                          items: [
-                            for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
-                          ],
-                          onChanged: (id) => setState(() => _accountId = id),
-                        );
-                      },
-                    ),
+                    if (_kind != CaptureKind.transfer)
+                      StreamBuilder<List<Account>>(
+                        stream: db.select(db.accounts).watch(),
+                        builder: (context, snapshot) {
+                          final accounts = snapshot.data ?? const [];
+                          if (accounts.isEmpty) return const SizedBox.shrink();
+                          final selected = _accountId ?? accounts.first.id;
+                          return DropdownButton<String>(
+                            value: selected,
+                            items: [
+                              for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                            ],
+                            onChanged: (id) => setState(() => _accountId = id),
+                          );
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -393,16 +493,16 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
 class _TypeSegments extends StatelessWidget {
   const _TypeSegments({required this.kind, required this.onChanged});
-  final _Kind kind;
-  final ValueChanged<_Kind> onChanged;
+  final CaptureKind kind;
+  final ValueChanged<CaptureKind> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<_Kind>(
+    return SegmentedButton<CaptureKind>(
       segments: const [
-        ButtonSegment(value: _Kind.expense, label: Text('Pengeluaran')),
-        ButtonSegment(value: _Kind.income, label: Text('Pemasukan')),
-        ButtonSegment(value: _Kind.transfer, label: Text('Transfer')),
+        ButtonSegment(value: CaptureKind.expense, label: Text('Pengeluaran')),
+        ButtonSegment(value: CaptureKind.income, label: Text('Pemasukan')),
+        ButtonSegment(value: CaptureKind.transfer, label: Text('Transfer')),
       ],
       selected: {kind},
       onSelectionChanged: (s) => onChanged(s.first),
