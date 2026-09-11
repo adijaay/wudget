@@ -690,3 +690,55 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   an ordinary space. Fixed by building the expected string through the real formatter in
   the test instead of a literal, which is also the more honest assertion: it tests that the
   semantics label matches what the formatter actually produces, not a guess at its bytes.
+
+## Sprint 19
+
+- **A real name collision was found and put to the owner, not decided silently.**
+  Searching for "wudget" during the name-collision ticket turned up a live iOS app
+  titled exactly "Wudget: Simpler Budget Planner," same category, same name
+  (https://apps.apple.com/us/app/wudget-simpler-budget-planner/id6720702936). Google
+  Play has no exact "Wudget" listing. This is precisely the risk
+  research/01-app-teardowns.md flagged for Expensa/SyncSpend, so it was surfaced to the
+  owner rather than either ignored or worked around by picking a new name unasked. The
+  owner's call: keep "wudget" and proceed. Recorded in `store/submission-prep.md` along
+  with the fallback (an App Store-only display-name variant) if Apple's review rejects
+  for name confusion.
+- **Privacy policy and terms were drafted in `legal/`, Indonesian and English, but
+  deliberately not published anywhere.** Both stores require a live policy URL before
+  submission, so these are marked DRAFT at the top of each file with instructions to
+  publish them to a real hosted page first. The content itself required no invention:
+  grepping `lib/` for `http.`, `Dio(`, `firebase`, `Sentry`, and similar found zero
+  network calls anywhere in the app, and `plan/03-architecture.md` already states "No
+  account, no email, no phone number in v1" as a settled decision, so the policy could
+  state plainly that no data is collected or transmitted, rather than hedge with
+  boilerplate written for an app that might someday add tracking.
+- **Store listing and ASO copy (`store/listing.id.md`, `listing.en.md`,
+  `app-store-connect.md`) describes only features that exist as of Sprint 18** — pace
+  tracking, wallet types, budget proposals, recurring bill reminders, CSV import,
+  local backup/restore — checked against DESIGN.md's copy voice rules (no invented
+  user counts, no fabricated comparisons, no em dashes) and against the actual screens,
+  not the plan's aspirational feature list.
+- **Screenshots (this sprint's third ticket) are not captured**, the same constraint as
+  Sprint 17's states pass and Sprint 7's performance gate: no emulator or device is
+  attached to this environment. Documented in `store/submission-prep.md` with the
+  requirement plan/05-sprints.md states explicitly: real UI, no invented numbers,
+  seeded with realistic sample data before capturing.
+- **Android release signing is wired to a `key.properties` file that does not exist in
+  this repo** (`android/app/build.gradle`), with a fallback to the debug key when the
+  file is absent so `flutter build`/`flutter run` and CI keep working with no secrets
+  present. Generating the actual upload keystore was deliberately left undone: it is a
+  real, hard-to-reverse secret (Google has no clean way to recover a lost upload key),
+  and creating one inside this session with nowhere durable to store it would be worse
+  than not having one yet. Verified the config change itself doesn't break anything by
+  running `flutter build apk --debug`, which still succeeds (falls through to the debug
+  signing branch).
+- **iOS signing, archiving, and submission cannot be driven from this environment at
+  all** (Windows, no Xcode, no Mac). What's prepared instead:
+  `store/app-store-connect.md`'s fields, and the same privacy policy/terms drafts as
+  Android. `store/submission-prep.md` lists what still needs a Mac and an Apple
+  Developer account.
+- **Actual account setup, real key generation, and submission to either store are not
+  attempted this sprint**, per the stop-before-irreversible-external-actions boundary
+  stated at the start of this run: app-store submission and publishing legal documents
+  both stay with the owner to do deliberately. Everything buildable ahead of that line
+  (policy/terms text, listing copy, ASO, the signing-config scaffold) is done.
