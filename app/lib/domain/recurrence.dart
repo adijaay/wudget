@@ -106,6 +106,21 @@ class RecurrenceRule {
     };
   }
 
+  /// The first logical occurrence on or after [day] — for showing "next
+  /// due" on the recurring/bills screen, where materialisation hasn't
+  /// necessarily reached [day] yet. `endsOn` isn't checked here; a rule
+  /// past its end date is the caller's business to filter out, not this
+  /// method's job to encode. ponytail: linear scan from the start — fine
+  /// for a handful of active recurrences displayed on one screen, revisit
+  /// if a daily rule with a years-old `startsOn` ever makes this slow.
+  int nextOccurrenceOnOrAfter(int day) {
+    var n = 0;
+    while (logicalOccurrence(n) < day) {
+      n++;
+    }
+    return logicalOccurrence(n);
+  }
+
   /// Logical occurrence day buckets with `startsOn <= day <= toDayInclusive`
   /// (and `<= endsOn` if set) — the raw schedule, before weekend shifting
   /// or overrides. Used by the materialisation engine to know which

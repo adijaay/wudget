@@ -22,10 +22,18 @@ class HomeWidgetService {
   void _openCaptureSheet(Uri? uri) {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
+    final launch = parseCaptureDeepLink(uri);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => CaptureSheet(initialKind: parseCaptureDeepLink(uri)),
+      builder: (_) => CaptureSheet(
+        initialKind: launch.kind,
+        initialCategoryId: launch.categoryId,
+        initialAccountId: launch.accountId,
+        initialAmountMinor: launch.amountMinor,
+        initialNote: launch.note,
+        confirmingTransactionId: launch.confirmingTransactionId,
+      ),
     );
   }
 }

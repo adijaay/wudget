@@ -33,6 +33,12 @@ dependencies:
   # home screen widget and app-shortcut deep links (Sprint 7)
   home_widget: ^0.6.0
 
+  # bill reminders (Sprint 13); timezone gives zonedSchedule DST-correct delivery,
+  # flutter_timezone reads the device's IANA zone name (Flutter has no other way to)
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

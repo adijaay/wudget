@@ -12,6 +12,7 @@ import '../../domain/pace.dart';
 import '../../domain/period.dart';
 import '../budget/budget_screen.dart';
 import '../period/period_selector.dart';
+import '../recurring/recurring_screen.dart';
 import 'actual_forecast_chart.dart';
 import 'category_ranked_list.dart';
 import 'pace_ring.dart';
@@ -101,6 +102,13 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       appBar: AppBar(
         title: const Text('Pantau'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.event_repeat),
+            tooltip: 'Berulang & Tagihan',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RecurringScreen()),
+            ),
+          ),
           if (daysSinceFirst >= _waitingDays)
             IconButton(
               icon: const Icon(Icons.pie_chart_outline),

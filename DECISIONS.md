@@ -418,3 +418,53 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   something that already happened. Sprint 13 ("Recurring and bills UI, split into upcoming
   and active") owns giving projected instances their own surface; until then they're simply
   not shown, which is truer than showing them unlabelled.
+
+## Sprint 13
+
+- **Confirming a reminder reuses the existing capture sheet rather than a second save path.**
+  `CaptureSheet` gained `initialCategoryId`/`initialAccountId`/`initialNote` (alongside the
+  transfer prefill fields that already existed) and `confirmingTransactionId`: a successful
+  save calls the existing `PostingsRepository.undoInsert` on that id, hard-deleting the
+  recurrence engine's placeholder now that a proper confirmed transaction has replaced it.
+  The alternative — teaching the save path to update an existing transaction in place — is
+  the `updateTransaction` gap Sprint 6 deliberately deferred; reusing `undoInsert` (delete the
+  placeholder, insert fresh) sidesteps needing it here too, at the cost of a new transaction
+  id for the confirmed row rather than the placeholder's original id.
+- **`capture_deeplink.dart`'s `parseCaptureDeepLink` now returns a `CaptureLaunch`** (kind
+  plus category/account/amount/note/`confirmingTransactionId`) instead of a bare `CaptureKind`
+  — the home widget and app-shortcut (Sprint 7) only ever set `kind`, but a reminder
+  notification's action needs to carry the whole instance. One parser, one URI shape, for
+  both entry points, rather than a second deep-link format for notifications.
+- **A `ReminderScheduler` interface sits between `reminder_orchestrator.dart` and the real
+  `NotificationScheduler`**, so the "which reminder gets which copy" logic
+  (`scheduleUpcomingReminders`) is tested against a fake that records calls, without a
+  platform channel. This mirrors Sprint 7's approach to `HomeWidgetService`: the DST-correct
+  fire-time math (`domain/reminder_schedule.dart`) and the deep-link/copy logic are pure and
+  tested directly; only the plugin-touching shell is untested, because it cannot be
+  meaningfully tested without a real device.
+- **DST correctness is proven with `TZDateTime`, not with duration arithmetic.**
+  `reminderFireTime` builds the fire time from a `tz.Location` and a wall-clock hour/minute,
+  so `test/domain/reminder_schedule_test.dart` can assert a reminder still fires at 09:00
+  local on both sides of a spring-forward and a fall-back transition — and demonstrates the
+  bug this guards against directly: naively adding a `Duration` to an already-computed instant
+  drifts the local hour once the UTC offset changes underneath it.
+- **A varies-amount reminder isn't attempted this sprint** (`reminderBodyForRange` exists and
+  is tested, but `reminder_orchestrator.dart` doesn't call it) — wiring it needs the "expected
+  range" case threaded through `RecurringQueries`/`scheduleUpcomingReminders` too, and no
+  currently-seeded item exercises `amount_mode = 'varies'` end to end yet. Revisit once a real
+  variable-amount recurring item exists to test it against.
+- **Skipping an already-materialised upcoming instance is a direct hard delete
+  (`postingsRepository.undoInsert`), not a `recurrence_overrides` row.** Sprint 12 noted this
+  gap; it turns out to need no fix, because materialisation's idempotency is watermark-based,
+  not existence-based (Sprint 12) — the watermark already passed this logical day during the
+  run that created it, so deleting the row is sufficient and no later `materializeAll` call
+  will recreate it. `skipInstance` (an override) remains the mechanism for skipping an
+  occurrence that hasn't been materialised yet, e.g. from a future edit to the rule.
+- **Materialisation runs on every app open** (`main.dart`, watermark advanced to today plus a
+  60-day lookahead), unconditionally — safe specifically because Sprint 12 made it idempotent
+  by watermark, so there's no "did we already run today" state to track.
+- **Real on-device notification delivery isn't verifiable in this environment** — same
+  category as Sprint 7's performance-gate ticket. `AndroidManifest.xml` gained
+  `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED`; whether a
+  reminder actually survives a reboot and fires at the exact configured minute needs a real
+  device, not this repo's test suite.

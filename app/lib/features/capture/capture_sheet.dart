@@ -29,6 +29,10 @@ class CaptureSheet extends ConsumerStatefulWidget {
     this.initialKind = CaptureKind.expense,
     this.initialToAccountId,
     this.initialAmountMinor,
+    this.initialCategoryId,
+    this.initialAccountId,
+    this.initialNote,
+    this.confirmingTransactionId,
   });
 
   /// Lets a caller (e.g. the card "Bayar" button in Kantong) open the sheet
@@ -38,6 +42,19 @@ class CaptureSheet extends ConsumerStatefulWidget {
   final String? initialToAccountId;
   final int? initialAmountMinor;
 
+  /// Pre-fills the category/account/note — used by a bill reminder
+  /// notification's deep link (Sprint 13) to open the sheet already set up
+  /// the way the recurring item's template says, rather than empty.
+  final String? initialCategoryId;
+  final String? initialAccountId;
+  final String? initialNote;
+
+  /// When set, a successful save removes this transaction — the
+  /// recurrence engine's projected placeholder this save supersedes, so
+  /// confirming a reminder produces one real transaction, not two. See
+  /// `RecurrenceRepository` and DECISIONS.md, Sprint 13.
+  final String? confirmingTransactionId;
+
   @override
   ConsumerState<CaptureSheet> createState() => _CaptureSheetState();
 }
@@ -45,9 +62,9 @@ class CaptureSheet extends ConsumerStatefulWidget {
 class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   late CaptureKind _kind = widget.initialKind;
   String _amountBuffer = '';
-  String? _categoryId;
+  late String? _categoryId = widget.initialCategoryId;
   String? _subcategoryId;
-  String? _accountId;
+  late String? _accountId = widget.initialAccountId;
   late String? _toAccountId = widget.initialToAccountId;
   bool _calculatorMode = false;
   bool _noteExpanded = false;
@@ -68,6 +85,10 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       _amountBuffer = info.exponent == 0
           ? widget.initialAmountMinor!.toString()
           : (widget.initialAmountMinor! / info.minorUnitsPerMajor).toString();
+    }
+    if (widget.initialNote != null) {
+      _noteController.text = widget.initialNote!;
+      _noteExpanded = true;
     }
     _loadTemplates();
   }
@@ -245,6 +266,10 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           ),
         ],
       );
+    }
+
+    if (widget.confirmingTransactionId != null) {
+      await ref.read(postingsRepositoryProvider).undoInsert(widget.confirmingTransactionId!);
     }
 
     if (!mounted) return;

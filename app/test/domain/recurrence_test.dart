@@ -106,6 +106,23 @@ void main() {
     });
   });
 
+  group('nextOccurrenceOnOrAfter', () {
+    test('returns the rule\'s first occurrence when asked for a day before it starts', () {
+      final rule = RecurrenceRule(freq: RecurrenceFreq.monthly, byMonthDay: 1, startsOn: _day(2026, 3, 1));
+      expect(_dateOf(rule.nextOccurrenceOnOrAfter(_day(2026, 1, 1))), DateTime.utc(2026, 3, 1));
+    });
+
+    test('skips past occurrences to the next one on or after the given day', () {
+      final rule = RecurrenceRule(freq: RecurrenceFreq.monthly, byMonthDay: 1, startsOn: _day(2026, 1, 1));
+      expect(_dateOf(rule.nextOccurrenceOnOrAfter(_day(2026, 4, 15))), DateTime.utc(2026, 5, 1));
+    });
+
+    test('a day that is itself an occurrence returns that same day', () {
+      final rule = RecurrenceRule(freq: RecurrenceFreq.monthly, byMonthDay: 1, startsOn: _day(2026, 1, 1));
+      expect(_dateOf(rule.nextOccurrenceOnOrAfter(_day(2026, 4, 1))), DateTime.utc(2026, 4, 1));
+    });
+  });
+
   group('logicalOccurrencesThrough', () {
     test('stops at endsOn even if toDayInclusive is later', () {
       final rule = RecurrenceRule(
