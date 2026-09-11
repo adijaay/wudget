@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wudget/core/providers.dart';
 import 'package:wudget/data/database.dart';
+import 'package:wudget/data/feature_flags_repository.dart';
 import 'package:wudget/data/postings_repository.dart';
 import 'package:wudget/design/tokens.dart';
 import 'package:wudget/features/pantau/pantau_screen.dart';
@@ -74,6 +75,8 @@ void main() {
     // reason instead of fabricating a comparison (chart rule 8).
     expect(find.text('Belum ada periode sebelumnya untuk dibandingkan.'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Lihat sisa saldo periode ini'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lihat sisa saldo periode ini'));
     await tester.pumpAndSettle();
     expect(find.text('Sisa periode ini'), findsOneWidget);
@@ -129,6 +132,93 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Belum ada periode sebelumnya untuk dibandingkan.'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('the remaining-first flag leads with the remaining balance, pace one tap away',
+      (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await FeatureFlagsRepository(db).setBool(paceFirstFlagKey, false);
+
+    final postings = PostingsRepository(db);
+    await postings.insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx1',
+        kind: 'expense',
+        occurredAt: DateTime.now().subtract(const Duration(days: 14)).toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p1a', transactionId: 'tx1', accountId: const Value('acc'),
+            amountMinor: -12000, currency: 'IDR', baseAmountMinor: -12000),
+        PostingsCompanion.insert(id: 'p1c', transactionId: 'tx1', categoryId: const Value('cat'),
+            amountMinor: 12000, currency: 'IDR', baseAmountMinor: 12000),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sisa periode ini'), findsOneWidget);
+    expect(find.text('Lihat laju & perkiraan'), findsOneWidget);
+    expect(find.text('Lihat sisa saldo periode ini'), findsNothing);
+
+    await tester.ensureVisible(find.text('Lihat laju & perkiraan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lihat laju & perkiraan'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PantauScreen), findsOneWidget); // sheet is up, screen still behind it
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('logs a pantau_viewed analytics event with the active variant', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final postings = PostingsRepository(db);
+    await postings.insertTransaction(
+      transaction: TransactionsCompanion.insert(
+        id: 'tx1',
+        kind: 'expense',
+        occurredAt: DateTime.now().subtract(const Duration(days: 14)).toUtc().millisecondsSinceEpoch,
+        tzOffsetMinutes: 0,
+        updatedAt: 0,
+      ),
+      postings: [
+        PostingsCompanion.insert(id: 'p1a', transactionId: 'tx1', accountId: const Value('acc'),
+            amountMinor: -12000, currency: 'IDR', baseAmountMinor: -12000),
+        PostingsCompanion.insert(id: 'p1c', transactionId: 'tx1', categoryId: const Value('cat'),
+            amountMinor: 12000, currency: 'IDR', baseAmountMinor: 12000),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final events = await (db.select(db.analyticsEvents)..where((e) => e.name.equals('pantau_viewed'))).get();
+    expect(events, hasLength(1));
+    expect(events.single.propsJson, contains('pace_first'));
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

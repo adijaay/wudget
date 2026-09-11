@@ -3063,6 +3063,473 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   }
 }
 
+class $FeatureFlagsTable extends FeatureFlags
+    with TableInfo<$FeatureFlagsTable, FeatureFlag> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FeatureFlagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+      'key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<bool> value = GeneratedColumn<bool>(
+      'value', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("value" IN (0, 1))'));
+  @override
+  List<GeneratedColumn> get $columns => [key, value];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'feature_flags';
+  @override
+  VerificationContext validateIntegrity(Insertable<FeatureFlag> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(
+          _keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+          _valueMeta, value.isAcceptableOrUnknown(data['value']!, _valueMeta));
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  FeatureFlag map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FeatureFlag(
+      key: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      value: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}value'])!,
+    );
+  }
+
+  @override
+  $FeatureFlagsTable createAlias(String alias) {
+    return $FeatureFlagsTable(attachedDatabase, alias);
+  }
+}
+
+class FeatureFlag extends DataClass implements Insertable<FeatureFlag> {
+  final String key;
+  final bool value;
+  const FeatureFlag({required this.key, required this.value});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<bool>(value);
+    return map;
+  }
+
+  FeatureFlagsCompanion toCompanion(bool nullToAbsent) {
+    return FeatureFlagsCompanion(
+      key: Value(key),
+      value: Value(value),
+    );
+  }
+
+  factory FeatureFlag.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FeatureFlag(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<bool>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<bool>(value),
+    };
+  }
+
+  FeatureFlag copyWith({String? key, bool? value}) => FeatureFlag(
+        key: key ?? this.key,
+        value: value ?? this.value,
+      );
+  FeatureFlag copyWithCompanion(FeatureFlagsCompanion data) {
+    return FeatureFlag(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlag(')
+          ..write('key: $key, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FeatureFlag &&
+          other.key == this.key &&
+          other.value == this.value);
+}
+
+class FeatureFlagsCompanion extends UpdateCompanion<FeatureFlag> {
+  final Value<String> key;
+  final Value<bool> value;
+  final Value<int> rowid;
+  const FeatureFlagsCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FeatureFlagsCompanion.insert({
+    required String key,
+    required bool value,
+    this.rowid = const Value.absent(),
+  })  : key = Value(key),
+        value = Value(value);
+  static Insertable<FeatureFlag> custom({
+    Expression<String>? key,
+    Expression<bool>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FeatureFlagsCompanion copyWith(
+      {Value<String>? key, Value<bool>? value, Value<int>? rowid}) {
+    return FeatureFlagsCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<bool>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FeatureFlagsCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AnalyticsEventsTable extends AnalyticsEvents
+    with TableInfo<$AnalyticsEventsTable, AnalyticsEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AnalyticsEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _propsJsonMeta =
+      const VerificationMeta('propsJson');
+  @override
+  late final GeneratedColumn<String> propsJson = GeneratedColumn<String>(
+      'props_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _occurredAtMeta =
+      const VerificationMeta('occurredAt');
+  @override
+  late final GeneratedColumn<int> occurredAt = GeneratedColumn<int>(
+      'occurred_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, name, propsJson, occurredAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'analytics_events';
+  @override
+  VerificationContext validateIntegrity(Insertable<AnalyticsEvent> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('props_json')) {
+      context.handle(_propsJsonMeta,
+          propsJson.isAcceptableOrUnknown(data['props_json']!, _propsJsonMeta));
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+          _occurredAtMeta,
+          occurredAt.isAcceptableOrUnknown(
+              data['occurred_at']!, _occurredAtMeta));
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AnalyticsEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AnalyticsEvent(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      propsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}props_json']),
+      occurredAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}occurred_at'])!,
+    );
+  }
+
+  @override
+  $AnalyticsEventsTable createAlias(String alias) {
+    return $AnalyticsEventsTable(attachedDatabase, alias);
+  }
+}
+
+class AnalyticsEvent extends DataClass implements Insertable<AnalyticsEvent> {
+  final String id;
+  final String name;
+  final String? propsJson;
+  final int occurredAt;
+  const AnalyticsEvent(
+      {required this.id,
+      required this.name,
+      this.propsJson,
+      required this.occurredAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || propsJson != null) {
+      map['props_json'] = Variable<String>(propsJson);
+    }
+    map['occurred_at'] = Variable<int>(occurredAt);
+    return map;
+  }
+
+  AnalyticsEventsCompanion toCompanion(bool nullToAbsent) {
+    return AnalyticsEventsCompanion(
+      id: Value(id),
+      name: Value(name),
+      propsJson: propsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(propsJson),
+      occurredAt: Value(occurredAt),
+    );
+  }
+
+  factory AnalyticsEvent.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AnalyticsEvent(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      propsJson: serializer.fromJson<String?>(json['propsJson']),
+      occurredAt: serializer.fromJson<int>(json['occurredAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'propsJson': serializer.toJson<String?>(propsJson),
+      'occurredAt': serializer.toJson<int>(occurredAt),
+    };
+  }
+
+  AnalyticsEvent copyWith(
+          {String? id,
+          String? name,
+          Value<String?> propsJson = const Value.absent(),
+          int? occurredAt}) =>
+      AnalyticsEvent(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        propsJson: propsJson.present ? propsJson.value : this.propsJson,
+        occurredAt: occurredAt ?? this.occurredAt,
+      );
+  AnalyticsEvent copyWithCompanion(AnalyticsEventsCompanion data) {
+    return AnalyticsEvent(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      propsJson: data.propsJson.present ? data.propsJson.value : this.propsJson,
+      occurredAt:
+          data.occurredAt.present ? data.occurredAt.value : this.occurredAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalyticsEvent(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('propsJson: $propsJson, ')
+          ..write('occurredAt: $occurredAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, propsJson, occurredAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AnalyticsEvent &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.propsJson == this.propsJson &&
+          other.occurredAt == this.occurredAt);
+}
+
+class AnalyticsEventsCompanion extends UpdateCompanion<AnalyticsEvent> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> propsJson;
+  final Value<int> occurredAt;
+  final Value<int> rowid;
+  const AnalyticsEventsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.propsJson = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AnalyticsEventsCompanion.insert({
+    required String id,
+    required String name,
+    this.propsJson = const Value.absent(),
+    required int occurredAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name),
+        occurredAt = Value(occurredAt);
+  static Insertable<AnalyticsEvent> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? propsJson,
+    Expression<int>? occurredAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (propsJson != null) 'props_json': propsJson,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AnalyticsEventsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? name,
+      Value<String?>? propsJson,
+      Value<int>? occurredAt,
+      Value<int>? rowid}) {
+    return AnalyticsEventsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      propsJson: propsJson ?? this.propsJson,
+      occurredAt: occurredAt ?? this.occurredAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (propsJson.present) {
+      map['props_json'] = Variable<String>(propsJson.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<int>(occurredAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AnalyticsEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('propsJson: $propsJson, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WudgetDatabase extends GeneratedDatabase {
   _$WudgetDatabase(QueryExecutor e) : super(e);
   $WudgetDatabaseManager get managers => $WudgetDatabaseManager(this);
@@ -3073,6 +3540,9 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
   late final $DailyTotalsTable dailyTotals = $DailyTotalsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
+  late final $FeatureFlagsTable featureFlags = $FeatureFlagsTable(this);
+  late final $AnalyticsEventsTable analyticsEvents =
+      $AnalyticsEventsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3084,7 +3554,9 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
         postings,
         dailyTotals,
         appSettings,
-        budgets
+        budgets,
+        featureFlags,
+        analyticsEvents
       ];
 }
 
@@ -5180,6 +5652,293 @@ typedef $$BudgetsTableProcessedTableManager = ProcessedTableManager<
     (Budget, BaseReferences<_$WudgetDatabase, $BudgetsTable, Budget>),
     Budget,
     PrefetchHooks Function()>;
+typedef $$FeatureFlagsTableCreateCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  required String key,
+  required bool value,
+  Value<int> rowid,
+});
+typedef $$FeatureFlagsTableUpdateCompanionBuilder = FeatureFlagsCompanion
+    Function({
+  Value<String> key,
+  Value<bool> value,
+  Value<int> rowid,
+});
+
+class $$FeatureFlagsTableFilterComposer
+    extends Composer<_$WudgetDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(
+      column: $table.key, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get value => $composableBuilder(
+      column: $table.value, builder: (column) => ColumnFilters(column));
+}
+
+class $$FeatureFlagsTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key => $composableBuilder(
+      column: $table.key, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get value => $composableBuilder(
+      column: $table.value, builder: (column) => ColumnOrderings(column));
+}
+
+class $$FeatureFlagsTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $FeatureFlagsTable> {
+  $$FeatureFlagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
+
+  GeneratedColumn<bool> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$FeatureFlagsTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableAnnotationComposer,
+    $$FeatureFlagsTableCreateCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder,
+    (
+      FeatureFlag,
+      BaseReferences<_$WudgetDatabase, $FeatureFlagsTable, FeatureFlag>
+    ),
+    FeatureFlag,
+    PrefetchHooks Function()> {
+  $$FeatureFlagsTableTableManager(_$WudgetDatabase db, $FeatureFlagsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FeatureFlagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FeatureFlagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FeatureFlagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<bool> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String key,
+            required bool value,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FeatureFlagsCompanion.insert(
+            key: key,
+            value: value,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$FeatureFlagsTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $FeatureFlagsTable,
+    FeatureFlag,
+    $$FeatureFlagsTableFilterComposer,
+    $$FeatureFlagsTableOrderingComposer,
+    $$FeatureFlagsTableAnnotationComposer,
+    $$FeatureFlagsTableCreateCompanionBuilder,
+    $$FeatureFlagsTableUpdateCompanionBuilder,
+    (
+      FeatureFlag,
+      BaseReferences<_$WudgetDatabase, $FeatureFlagsTable, FeatureFlag>
+    ),
+    FeatureFlag,
+    PrefetchHooks Function()>;
+typedef $$AnalyticsEventsTableCreateCompanionBuilder = AnalyticsEventsCompanion
+    Function({
+  required String id,
+  required String name,
+  Value<String?> propsJson,
+  required int occurredAt,
+  Value<int> rowid,
+});
+typedef $$AnalyticsEventsTableUpdateCompanionBuilder = AnalyticsEventsCompanion
+    Function({
+  Value<String> id,
+  Value<String> name,
+  Value<String?> propsJson,
+  Value<int> occurredAt,
+  Value<int> rowid,
+});
+
+class $$AnalyticsEventsTableFilterComposer
+    extends Composer<_$WudgetDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get propsJson => $composableBuilder(
+      column: $table.propsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$AnalyticsEventsTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get propsJson => $composableBuilder(
+      column: $table.propsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$AnalyticsEventsTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $AnalyticsEventsTable> {
+  $$AnalyticsEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get propsJson =>
+      $composableBuilder(column: $table.propsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get occurredAt => $composableBuilder(
+      column: $table.occurredAt, builder: (column) => column);
+}
+
+class $$AnalyticsEventsTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $AnalyticsEventsTable,
+    AnalyticsEvent,
+    $$AnalyticsEventsTableFilterComposer,
+    $$AnalyticsEventsTableOrderingComposer,
+    $$AnalyticsEventsTableAnnotationComposer,
+    $$AnalyticsEventsTableCreateCompanionBuilder,
+    $$AnalyticsEventsTableUpdateCompanionBuilder,
+    (
+      AnalyticsEvent,
+      BaseReferences<_$WudgetDatabase, $AnalyticsEventsTable, AnalyticsEvent>
+    ),
+    AnalyticsEvent,
+    PrefetchHooks Function()> {
+  $$AnalyticsEventsTableTableManager(
+      _$WudgetDatabase db, $AnalyticsEventsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AnalyticsEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AnalyticsEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AnalyticsEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String?> propsJson = const Value.absent(),
+            Value<int> occurredAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AnalyticsEventsCompanion(
+            id: id,
+            name: name,
+            propsJson: propsJson,
+            occurredAt: occurredAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String name,
+            Value<String?> propsJson = const Value.absent(),
+            required int occurredAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              AnalyticsEventsCompanion.insert(
+            id: id,
+            name: name,
+            propsJson: propsJson,
+            occurredAt: occurredAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$AnalyticsEventsTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $AnalyticsEventsTable,
+    AnalyticsEvent,
+    $$AnalyticsEventsTableFilterComposer,
+    $$AnalyticsEventsTableOrderingComposer,
+    $$AnalyticsEventsTableAnnotationComposer,
+    $$AnalyticsEventsTableCreateCompanionBuilder,
+    $$AnalyticsEventsTableUpdateCompanionBuilder,
+    (
+      AnalyticsEvent,
+      BaseReferences<_$WudgetDatabase, $AnalyticsEventsTable, AnalyticsEvent>
+    ),
+    AnalyticsEvent,
+    PrefetchHooks Function()>;
 
 class $WudgetDatabaseManager {
   final _$WudgetDatabase _db;
@@ -5198,4 +5957,8 @@ class $WudgetDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$BudgetsTableTableManager get budgets =>
       $$BudgetsTableTableManager(_db, _db.budgets);
+  $$FeatureFlagsTableTableManager get featureFlags =>
+      $$FeatureFlagsTableTableManager(_db, _db.featureFlags);
+  $$AnalyticsEventsTableTableManager get analyticsEvents =>
+      $$AnalyticsEventsTableTableManager(_db, _db.analyticsEvents);
 }

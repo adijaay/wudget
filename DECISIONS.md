@@ -335,3 +335,32 @@ This file is the ADR: no separate template, one flat log, newest sprint at the b
   house pattern that's confirmed to work in a widget test. Rule of thumb going forward: a
   one-off read inside an imperative `async` method uses a one-shot query; `.watch()` is only
   for a subscription a widget keeps open for its own lifetime.
+
+## Sprint 11
+
+- **Calendar activity heatmap cut, per the cut list in plan/05-sprints.md item 2** — not
+  attempted this sprint. The other four tickets (feature flags, the framing variants,
+  category ranked list, week bar chart) are built in full.
+- **Feature flags are a key-value table, same shape as `Budgets`** (`FeatureFlags`: `key`,
+  boolean `value`), rather than a dedicated column per flag — the framing experiment is the
+  first flag, not the only one that will ever exist, and this shape needs no migration to add
+  a second.
+- **Analytics events are a local, append-only table, not a shipped-anywhere log.** There is no
+  backend in a local-first, no-account app (see PLAN.md's locked decisions), so
+  "measurement hooks" means a queryable local record read back during the weekly dogfooding
+  review (plan/05-sprints.md's "Thursday" rhythm) — `AnalyticsRepository.all()` exists for
+  exactly that, not for a future sync path.
+- **The variant swap is presentation-only — both variants compute the same `PaceResult` and
+  `PeriodTotals` from one `_load()`.** `_ReviewBody` branches on `paceFirstFramingProvider`
+  purely to decide which number is the hero and which is one tap away (`_PaceDetails` in a
+  bottom sheet for remaining-first, inline for pace-first) — there's no second data path to
+  keep in sync with the first, only a second layout.
+- **The `pantau_viewed` event's variant is read with `FeatureFlagsRepository.getBool` (a
+  one-shot read), not `watchBool(...).first`** — this sprint's own `.watch().first` deadlock
+  finding (the previous entry) applies here too, so the one-shot method added for
+  `BudgetsRepository` got a `FeatureFlagsRepository` twin immediately rather than waiting to
+  rediscover the same bug.
+- **The category ranked list and week bar chart appear in both framing variants, unchanged.**
+  The experiment is specifically about the hero number (plan/01-features.md: "pace-first
+  against remaining-first"), not about the rest of the review surface — narrowing the
+  variance to the one contested bet keeps the measurement honest.

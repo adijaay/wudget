@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/analytics_repository.dart';
 import '../data/budget_history_queries.dart';
 import '../data/budgets_repository.dart';
 import '../data/capture_queries.dart';
+import '../data/category_rank_queries.dart';
 import '../data/database.dart';
+import '../data/feature_flags_repository.dart';
 import '../data/ledger_queries.dart';
 import '../data/period_aggregate_queries.dart';
 import '../data/postings_repository.dart';
@@ -47,6 +50,24 @@ final budgetsRepositoryProvider = Provider<BudgetsRepository>((ref) {
 
 final budgetHistoryQueriesProvider = Provider<BudgetHistoryQueries>((ref) {
   return BudgetHistoryQueries(ref.watch(databaseProvider));
+});
+
+final categoryRankQueriesProvider = Provider<CategoryRankQueries>((ref) {
+  return CategoryRankQueries(ref.watch(databaseProvider));
+});
+
+final featureFlagsRepositoryProvider = Provider<FeatureFlagsRepository>((ref) {
+  return FeatureFlagsRepository(ref.watch(databaseProvider));
+});
+
+final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
+  return AnalyticsRepository(ref.watch(databaseProvider));
+});
+
+/// Pace-first (the plan's default) unless the user's device has the flag
+/// flipped for the framing experiment — plan/05-sprints.md Sprint 11.
+final paceFirstFramingProvider = StreamProvider<bool>((ref) {
+  return ref.watch(featureFlagsRepositoryProvider).watchBool(paceFirstFlagKey, defaultValue: true);
 });
 
 final periodStartDayProvider = StreamProvider<int>((ref) {

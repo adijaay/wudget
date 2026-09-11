@@ -69,9 +69,17 @@ class PeriodAggregateQueries {
   /// the actual-against-forecast chart. Days with no spend are absent
   /// rather than zero-filled — the chart cumulative-sums over the full
   /// day range itself, so a gap correctly contributes nothing.
-  Future<Map<int, int>> dailyExpenseMinor(Period period) async {
-    final scanStart = period.startDay * _millisPerDay - _millisPerDay;
-    final scanEnd = period.endDayExclusive * _millisPerDay + _millisPerDay;
+  Future<Map<int, int>> dailyExpenseMinor(Period period) {
+    return dailyExpenseMinorInRange(period.startDay, period.endDayExclusive);
+  }
+
+  /// Same as [dailyExpenseMinor], over a plain day range rather than a
+  /// [Period] — the week bar chart (Sprint 11) wants a trailing 7-day
+  /// window that isn't period-aligned, so this is the shared query both
+  /// call.
+  Future<Map<int, int>> dailyExpenseMinorInRange(int sinceDayInclusive, int untilDayExclusive) async {
+    final scanStart = sinceDayInclusive * _millisPerDay - _millisPerDay;
+    final scanEnd = untilDayExclusive * _millisPerDay + _millisPerDay;
 
     final rows = await (_db.select(_db.postings).join([
       innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
@@ -87,7 +95,7 @@ class PeriodAggregateQueries {
     for (final row in rows) {
       final tx = row.readTable(_db.transactions);
       final day = dayBucketFor(tx.occurredAt, tx.tzOffsetMinutes);
-      if (!period.contains(day)) continue;
+      if (day < sinceDayInclusive || day >= untilDayExclusive) continue;
       byDay[day] = (byDay[day] ?? 0) + row.readTable(_db.postings).amountMinor.abs();
     }
     return byDay;

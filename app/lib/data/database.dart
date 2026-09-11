@@ -122,12 +122,49 @@ class Budgets extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, Postings, DailyTotals, AppSettings, Budgets])
+/// A boolean feature flag, e.g. the pace-first/remaining-first framing
+/// experiment — plan/05-sprints.md Sprint 11. Same key-value shape as
+/// [Budgets], for the same reason: one small table beats a dedicated
+/// column per flag when more flags are only ever added, never restructured.
+class FeatureFlags extends Table {
+  TextColumn get key => text()();
+  BoolColumn get value => boolean()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+/// A local, append-only event log for the framing experiment's measurement
+/// hooks — plan/05-sprints.md Sprint 11: "with measurement hooks". There is
+/// no analytics backend in a local-first app with no account, so this is
+/// read directly (e.g. via a debug query) during the dogfooding weekly
+/// review in plan/05-sprints.md's "Thursday" rhythm, not shipped to a server.
+class AnalyticsEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get propsJson => text().nullable()();
+  IntColumn get occurredAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [
+  Accounts,
+  Categories,
+  Transactions,
+  Postings,
+  DailyTotals,
+  AppSettings,
+  Budgets,
+  FeatureFlags,
+  AnalyticsEvents,
+])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +181,10 @@ class WudgetDatabase extends _$WudgetDatabase {
           }
           if (from < 5) {
             await m.createTable(budgets);
+          }
+          if (from < 6) {
+            await m.createTable(featureFlags);
+            await m.createTable(analyticsEvents);
           }
         },
       );
