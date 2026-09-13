@@ -94,7 +94,11 @@ void main() {
     // word — a screen reader user cannot act on "backspace symbol".
     expect(tester.getSemantics(find.byKey(const Key('numpadKey_backspace'))).label, 'Hapus');
     expect(tester.getSemantics(find.byKey(const Key('numpadKey_calculator'))).label, 'Kalkulator');
-    expect(tester.getSemantics(find.byKey(const Key('numpadKey_save'))).label, 'Simpan');
+    // The save key also announces whether it can act yet, so a screen reader
+    // user gets what the dimmed key shows: this sheet is still missing
+    // something. Empty sheet here, so it is the not-ready wording.
+    expect(tester.getSemantics(find.byKey(const Key('numpadKey_save'))).label,
+        'Simpan, belum bisa');
     final dateSemantics = find.byWidgetPredicate(
       (w) => w is Semantics && (w.properties.label?.startsWith('Tanggal: ') ?? false),
     );

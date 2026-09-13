@@ -68,6 +68,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   late String? _accountId = widget.initialAccountId;
   late String? _toAccountId = widget.initialToAccountId;
   bool _calculatorMode = false;
+  bool _saveBlocked = false;
   bool _noteExpanded = false;
   final _noteController = TextEditingController();
   DateTime _occurredAt = DateTime.now();
@@ -235,16 +236,38 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     }
   }
 
+  /// Why the save key cannot act yet, in the order a person fills the sheet
+  /// in. Null means it can. Recomputed on every build rather than latched, so
+  /// the reason disappears the moment the missing piece is supplied.
+  String? get _blockingSave {
+    if (_amount.isZero) return 'Isi jumlahnya dulu.';
+    if (_kind == CaptureKind.transfer) {
+      if (_accountId == null || _toAccountId == null) {
+        return 'Pilih kantong asal dan tujuannya.';
+      }
+      if (_accountId == _toAccountId) {
+        return 'Kantong asal dan tujuan tidak boleh sama.';
+      }
+      return null;
+    }
+    if (_categoryId == null) return 'Pilih kategorinya dulu.';
+    return null;
+  }
+
   Future<void> _save() async {
+    // Every bail-out below used to be a bare `return`, so the save key looked
+    // lit, did nothing, and said nothing. The sheet covers the snackbar, so
+    // the reason has to be drawn inside it.
+    if (_blockingSave != null) {
+      setState(() => _saveBlocked = true);
+      return;
+    }
     final saveToDismissed = Stopwatch()..start();
     final db = ref.read(databaseProvider);
     final txId = _uuid.v4();
     final now = DateTime.now();
 
     if (_kind == CaptureKind.transfer) {
-      if (_amount.isZero || _accountId == null || _toAccountId == null || _accountId == _toAccountId) {
-        return;
-      }
       // Transfer: from-account negative, to-account positive, no category
       // leg — that absence is what keeps a transfer (including a card
       // payment) out of spending statistics. See spending_queries.dart.
@@ -277,7 +300,6 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         ],
       );
     } else {
-      if (_amount.isZero || _categoryId == null) return;
       final accountId = _accountId ?? (await db.select(db.accounts).getSingle()).id;
       final categoryLeg = _subcategoryId ?? _categoryId!;
 
@@ -412,6 +434,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
               onZeros: _appendZeros,
               onBackspace: _backspace,
               onSave: _save,
+              canSave: _blockingSave == null,
               onToggleCalculator: () => setState(() {
                 _calculatorMode = !_calculatorMode;
                 if (!_calculatorMode) _settleBuffer();
@@ -624,6 +647,13 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
               Container(width: 2, height: 34, color: tokens.accent),
             ],
           ),
+          if (_saveBlocked && _blockingSave != null) ...[
+            const SizedBox(height: WudgetTokens.space1),
+            Text(
+              _blockingSave!,
+              style: text.bodySmall?.copyWith(color: tokens.warning),
+            ),
+          ],
           if (_pendingExpression.isNotEmpty) ...[
             const SizedBox(height: WudgetTokens.space1),
             Text(
@@ -1179,10 +1209,12 @@ class _Numpad extends StatelessWidget {
     required this.onSave,
     required this.onToggleCalculator,
     required this.onPickDate,
+    required this.canSave,
   });
   final bool showDecimal;
   final bool showZeros;
   final bool calculatorMode;
+  final bool canSave;
   final String dateLabel;
   final String timeLabel;
   final void Function(String) onDigit;
@@ -1235,9 +1267,9 @@ class _Numpad extends StatelessWidget {
         _NumpadKey(
           key: const Key('numpadKey_save'),
           icon: Icons.check,
-          semanticLabel: 'Simpan',
+          semanticLabel: canSave ? 'Simpan' : 'Simpan, belum bisa',
           onTap: onSave,
-          tone: _KeyTone.save,
+          tone: canSave ? _KeyTone.save : _KeyTone.saveWaiting,
         ),
       ],
     ];
@@ -1280,7 +1312,7 @@ class _Numpad extends StatelessWidget {
       );
 }
 
-enum _KeyTone { digit, action, activeAction, save }
+enum _KeyTone { digit, action, activeAction, save, saveWaiting }
 
 class _NumpadKey extends StatelessWidget {
   const _NumpadKey({
@@ -1307,6 +1339,11 @@ class _NumpadKey extends StatelessWidget {
       _KeyTone.action => (tokens.surfaceCard, tokens.ink1),
       _KeyTone.activeAction => (tokens.accent, tokens.inkOnAccent),
       _KeyTone.save => (tokens.accent, tokens.inkOnAccent),
+      // Recessed rather than removed: the key still takes the tap, and
+      // answers it by naming what the sheet is waiting for. ink2 on
+      // surfaceMuted is a pairing test/domain/contrast_test.dart already
+      // holds to AA in both themes.
+      _KeyTone.saveWaiting => (tokens.surfaceMuted, tokens.ink2),
     };
 
     return Semantics(

@@ -1074,4 +1074,23 @@ succeeds.
   always the figure that would be saved, because saving mid-expression still
   writes the total. The undo snackbar already names the saved amount
   ("Tersimpan: Rp 20.000"), which is what makes that safe to accept rather
-  than blocking save until the expression settles.
+  than blocking save until the expression settles.
+- **"I can't submit the result of the calculator" turned out not to be the
+  calculator.** `_save` had three bare `return`s for an incomplete sheet: zero
+  amount, no category, and a transfer missing or repeating a wallet. The save
+  key stayed fully lit through all of them, so tapping it did nothing and said
+  nothing, which is exactly what you hit while experimenting with the
+  calculator before picking a category. The sheet now names what is missing
+  ("Pilih kategorinya dulu.") under the amount, and stops saying it the moment
+  that piece is supplied. It is drawn inside the sheet rather than in a
+  snackbar because the modal sheet covers the snackbar, which is probably why
+  the original guards said nothing at all.
+- **The save key is dimmed while it cannot act**, so the state shows before
+  the tap rather than after it. Recessed, not removed: the key still takes the
+  tap and answers it by naming what is missing, because a disabled control
+  that swallows the tap would leave the same question unanswered. The tone is
+  ink2 on surfaceMuted, a pairing test/domain/contrast_test.dart already holds
+  to AA in both themes, so the dimmed key is still legible rather than merely
+  faint. Its screen reader label changes with it ("Simpan, belum bisa"), which
+  is what the existing numpad semantics test caught the moment the label
+  stopped being a constant.
