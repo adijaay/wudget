@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +18,9 @@ import 'package:wudget/data/wallets_repository.dart';
 import 'package:wudget/design/tokens.dart';
 import 'package:wudget/domain/default_categories.dart';
 import 'package:wudget/features/budget/budget_screen.dart';
+import 'package:wudget/features/import/import_screen.dart';
+import 'package:wudget/features/recurring/recurring_screen.dart';
+import 'package:wudget/features/settings/backup_screen.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
 import 'package:wudget/features/ledger/ledger_screen.dart';
 import 'package:wudget/features/pantau/pantau_screen.dart';
@@ -44,6 +49,16 @@ void main() {
               .readAsBytes()
               .then((bytes) => ByteData.view(Uint8List.fromList(bytes).buffer)),
         );
+      await loader.load();
+    }
+    // Without this every Icon in the gallery draws as a hollow box, which is
+    // what made an earlier review miss a wrong glyph. The file ships with the
+    // Flutter SDK; skipped rather than failed if the path moves.
+    final icons = File('${Platform.environment['FLUTTER_ROOT'] ?? p.dirname(p.dirname(Platform.resolvedExecutable))}'
+        '/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');
+    if (icons.existsSync()) {
+      final loader = FontLoader('MaterialIcons')
+        ..addFont(icons.readAsBytes().then((b) => ByteData.view(Uint8List.fromList(b).buffer)));
       await loader.load();
     }
   });
@@ -167,6 +182,8 @@ void main() {
     Widget home, {
     Brightness brightness = Brightness.light,
     WudgetDatabase? db,
+    List<Override> overrides = const [],
+    Future<void> Function(WidgetTester)? drive,
   }) async {
     final database = db ?? await seeded();
     addTearDown(database.close);
@@ -175,7 +192,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(database)],
+        overrides: [databaseProvider.overrideWithValue(database), ...overrides],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
@@ -186,6 +203,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (drive != null) {
+      await drive(tester);
+      await tester.pumpAndSettle();
+    }
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('design_review/$name.png'));
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
@@ -205,4 +226,104 @@ void main() {
   testWidgets('capture', (t) => shoot(t, 'capture', const Scaffold(body: CaptureSheet())));
   testWidgets('capture dark',
       (t) => shoot(t, 'capture_dark', const Scaffold(body: CaptureSheet()), brightness: Brightness.dark));
+
+  /// A database with nothing in it but the seeded categories, which is what
+  /// every first-run empty state actually renders against.
+  Future<WudgetDatabase> empty() async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db);
+    return db;
+  }
+
+  // The states table in plan/04-ux-design.md, one shot per row that exists.
+  // Sprint 17 implemented these; this is its second ticket, the gallery.
+  testWidgets('catat empty', (t) async => shoot(t, 'catat_empty', const LedgerScreen(), db: await empty()));
+
+  testWidgets('catat filtered empty', (t) => shoot(
+        t,
+        'catat_filtered_empty',
+        const LedgerScreen(),
+        drive: (tester) async {
+          await tester.tap(find.byTooltip('Cari catatan'));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(TextField).first, 'kondangan');
+          await tester.testTextInput.receiveAction(TextInputAction.search);
+        },
+      ));
+
+  // main.dart routes a database that cannot be opened here, so this is the
+  // "corrupt database routes to restore" cell, not a settings screen shot.
+  testWidgets('catat error, routed to restore', (t) async => shoot(
+        t,
+        'catat_error_restore',
+        BackupScreen(debugDocumentsDir: Directory.systemTemp.createTempSync('wudget_review')),
+        db: await empty(),
+      ));
+
+  testWidgets('pantau waiting', (t) async {
+    final db = await empty();
+    final postings = PostingsRepository(db);
+    final now = DateTime.now();
+    await WalletsRepository(db).create(
+        id: 'acc_gopay', name: 'GoPay', type: 'ewallet', currency: 'IDR', openingMinor: 185000);
+    for (var day = 0; day < 3; day++) {
+      final at = now.subtract(Duration(days: day));
+      final id = 'tx$day';
+      await postings.insertTransaction(
+        transaction: TransactionsCompanion.insert(
+          id: id, kind: 'expense', occurredAt: at.toUtc().millisecondsSinceEpoch,
+          tzOffsetMinutes: at.timeZoneOffset.inMinutes, updatedAt: 0,
+        ),
+        postings: [
+          PostingsCompanion.insert(id: '${id}a', transactionId: id, accountId: const Value('acc_gopay'),
+              amountMinor: -35000, currency: 'IDR', baseAmountMinor: -35000),
+          PostingsCompanion.insert(id: '${id}c', transactionId: id, categoryId: const Value('cat_makan'),
+              amountMinor: 35000, currency: 'IDR', baseAmountMinor: 35000),
+        ],
+      );
+    }
+    await shoot(t, 'pantau_waiting', const PantauScreen(), db: db);
+  });
+
+  // Six periods back, which the seeded three months of history do not reach.
+  testWidgets('pantau empty period', (t) => shoot(
+        t,
+        'pantau_empty_period',
+        const PantauScreen(),
+        overrides: [periodOffsetProvider.overrideWith((ref) => -6)],
+      ));
+
+  testWidgets('kantong empty', (t) async => shoot(t, 'kantong_empty', const WalletsScreen(), db: await empty()));
+
+  testWidgets('recurring empty', (t) async => shoot(t, 'recurring_empty', const RecurringScreen(), db: await empty()));
+
+  const goodCsv = 'Date,Amount,Category,Account,Note\n'
+      '2026-09-01,-35000,Makan,GoPay,Sarapan\n'
+      '2026-09-02,-23000,Transport,GoPay,Ojek\n'
+      '2026-09-03,-120000,Belanja,BCA,Belanja bulanan\n';
+
+  // Rows 3 and 5 fail, on a bad amount and a bad date: the cell asks for the
+  // row number and the reason, with the two valid rows still imported.
+  const mixedCsv = 'Date,Amount,Category,Account,Note\n'
+      '2026-09-01,-35000,Makan,GoPay,Sarapan\n'
+      '2026-09-02,tigapuluh ribu,Transport,GoPay,Ojek\n'
+      '2026-09-03,-120000,Belanja,BCA,Belanja bulanan\n'
+      'kemarin,-15000,Makan,GoPay,Kopi\n';
+
+  testWidgets('import mapping', (t) async => shoot(
+        t,
+        'import_mapping',
+        const ImportScreen(debugInitialCsvContent: goodCsv, debugInitialFileName: 'moneymanager.csv'),
+        db: await empty(),
+      ));
+
+  testWidgets('import failures', (t) async => shoot(
+        t,
+        'import_failures',
+        const ImportScreen(debugInitialCsvContent: mixedCsv, debugInitialFileName: 'moneymanager.csv'),
+        db: await empty(),
+        drive: (tester) async {
+          await tester.tap(find.byType(FilledButton));
+        },
+      ));
 }

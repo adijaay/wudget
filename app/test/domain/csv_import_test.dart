@@ -53,7 +53,7 @@ void main() {
     expect(result.rows, hasLength(1));
     expect(result.failures, hasLength(1));
     expect(result.failures.single.rowNumber, 2); // header is row 1
-    expect(result.failures.single.reason, contains('date'));
+    expect(result.failures.single.reason, contains('Tanggal'));
   });
 
   test('an unparseable date fails with the row number and the bad value quoted', () {

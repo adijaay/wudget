@@ -42,7 +42,7 @@ class CsvImportRepository {
         final accountId = await _resolveAccount(row.accountName, currency, accountIdByName, now);
         final categoryId = await _resolveCategory(row.categoryName, row.kind, categoryIdByName, now);
         if (categoryId == null) {
-          failures.add(ImportRowFailure(rowNumber: row.rowNumber, reason: 'no category to import into'));
+          failures.add(ImportRowFailure(rowNumber: row.rowNumber, reason: 'Tidak ada kategori tujuan'));
           continue;
         }
 

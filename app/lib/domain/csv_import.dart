@@ -106,25 +106,25 @@ ImportParseResult parseImportRows({
 
     final dateText = valueOf(row, mapping.dateColumn);
     if (dateText == null) {
-      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'missing date'));
+      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'Tanggal kosong'));
       continue;
     }
     DateTime date;
     try {
       date = dateFormat.parseStrict(dateText);
     } catch (_) {
-      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'unparseable date "$dateText"'));
+      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'Tanggal tidak terbaca "$dateText"'));
       continue;
     }
 
     final amountText = valueOf(row, mapping.amountColumn);
     if (amountText == null) {
-      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'missing amount'));
+      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'Jumlah kosong'));
       continue;
     }
     final amountValue = num.tryParse(amountText.replaceAll(',', ''));
     if (amountValue == null) {
-      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'unparseable amount "$amountText"'));
+      failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'Jumlah tidak terbaca "$amountText"'));
       continue;
     }
 
@@ -139,7 +139,7 @@ ImportParseResult parseImportRows({
         kind = 'income';
         amountMinor = amountValue.abs().round();
       } else {
-        failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'unrecognised kind "$kindText"'));
+        failures.add(ImportRowFailure(rowNumber: rowNumber, reason: 'Jenis tidak dikenal "$kindText"'));
         continue;
       }
     } else {

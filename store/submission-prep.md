@@ -43,11 +43,15 @@ anggaran") while keeping the Play listing and in-app branding as "wudget".
    to a real hosted page first, see that file's top comment).
 8. Content rating questionnaire: no violence, no user-generated content, no
    gambling, no unrestricted web access, should land in the lowest tier.
-9. Screenshots: **not captured yet**, this environment has no emulator/device
-   attached (same constraint as Sprint 17's states pass). Capture from a real
-   device or emulator once available, real UI only, per plan/05-sprints.md's
-   "no invented numbers" requirement, seed a device with realistic sample data
-   first, don't screenshot an empty or synthetic-looking state.
+9. Screenshots: **in `store/screenshots/`**, five 1170x2532 PNGs (Pantau,
+   capture sheet, Catat, Kantong, Anggaran). Both stores accept these sizes.
+   They are rendered by `app/test/design_review.dart`, which builds the real
+   widget tree with the bundled typeface and a month of seeded Indonesian
+   history, so every figure on them is one the app computed. Regenerate with
+   `flutter test --update-goldens test/design_review.dart` after a UI change.
+   Deliberately not captured from the physical device: that device now holds
+   10,000 synthetic rows from the performance gate, which is exactly the
+   "synthetic-looking state" plan/05-sprints.md says not to ship.
 
 ## iOS (App Store)
 
@@ -67,8 +71,7 @@ archiving, and TestFlight/App Store upload. What's prepared here:
 
 ## Not done in this sprint, and why
 
-- **Real screenshots**: no device/emulator in this environment (recurring
-  constraint, see DECISIONS.md Sprint 17 and 18).
+- **A store video/feature graphic**: neither store requires one to submit.
 - **iOS build/archive/signing**: needs Xcode on a Mac; nothing to automate here
   from this environment.
 - **Actual store account setup, key generation, and submission**: these are

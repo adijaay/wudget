@@ -1014,3 +1014,40 @@ succeeds.
     could not be computed, that the records themselves are intact, and shows
     the first line of the error (the whole generated SELECT followed it, and
     filled the screen).
+- **Sprint 17's second ticket, the state gallery, is done and was reviewed in
+  one sitting** — nine more shots in `test/design_review.dart` covering every
+  row of plan/04-ux-design.md's states table that exists: Catat first-run,
+  Catat filtered to nothing, the corrupt-database route to restore, Pantau
+  waiting, Pantau on an empty period, Kantong empty, Recurring empty, and the
+  CSV import's mapping and per-row failure states. Goals is absent because
+  goals were cut; sync is v2.
+- **Two things that review caught, both invisible to the golden tests.** The
+  harness had never loaded the Material icon font, so every icon in every
+  review render was a hollow box, which is how an earlier sitting missed a
+  wrong glyph. And the CSV importer's failure reasons were English
+  ("unparseable amount") inside an Indonesian UI; they are Indonesian now.
+- **Sprint 19's screenshots are in `store/screenshots/`**, rendered by that
+  same harness at 1170x2532: the real widget tree, the real typeface, and a
+  month of seeded history, so no figure on them is invented. Not taken from
+  the physical device on purpose — that device now holds the gate's 10,000
+  synthetic rows.
+- **Still genuinely blocked, and not worked around.** The Money Manager
+  profile is still an unverified guess, because no real Money Manager export
+  exists to test against. The upload keystore, the hosted privacy policy URL,
+  the store accounts, and submission itself remain the owner's to do: they are
+  irreversible or externally visible, and that boundary has not moved.
+- **One thing noticed but deliberately not changed.** On Pantau's waiting
+  state, "Rata-rata per hari" divides by days elapsed in the period while the
+  card above counts days since the first transaction, so a three-day-old user
+  sees an average diluted by ten days they were not using the app. The divisor
+  is stated on screen, so it is disclosed rather than wrong, but which number
+  a new user should see is a product call, not a bug fix.
+- **The antislop pass ran over this session's changes and caught two things
+  worth naming.** Kantong's new error state told the user to send the message
+  somewhere, and this app has no support channel and makes no network calls at
+  all, so that was an instruction with no destination (R-26 in spirit); it now
+  says to make a backup first and write the message down. The state also
+  centred itself vertically while every other state in the app sits under the
+  app bar. The other three findings were comment hygiene: a dashed banner in
+  `design_review.dart`, a comment naming the wrong CSV row numbers, and
+  `perf.dart` explaining its post-frame stopwatch twice.
