@@ -130,10 +130,24 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
   Money get _amount => Money.fromMajor(_evaluateBuffer(), _currency);
 
+  Money get _operandAmount =>
+      Money.fromMajor(num.tryParse(_currentOperand) ?? 0, _currency);
+
   bool get _bufferEndsWithOperator =>
       _amountBuffer.isNotEmpty && '+-×÷'.contains(_amountBuffer[_amountBuffer.length - 1]);
 
   bool get _bufferHasExpression => _amountBuffer.contains(RegExp(r'[+\-×÷]'));
+
+  /// The number the numpad is typing into: everything after the last
+  /// operator. The big slot shows this rather than the running total, so
+  /// tapping an operator hands you an empty number to type instead of
+  /// appearing to edit the one before it (15.000 becoming 15.005, then
+  /// 15.050, as the second operand arrives digit by digit).
+  String get _currentOperand => _amountBuffer.split(RegExp(r'[+\-×÷]')).last;
+
+  /// Everything before that, trailing operator included: "15000 +".
+  String get _pendingExpression =>
+      _amountBuffer.substring(0, _amountBuffer.length - _currentOperand.length);
 
   /// Rp 999.999.999.999 and change. Without a ceiling the numpad will keep
   /// taking digits, `num.tryParse` stops being exact past 2^53, and the
@@ -593,13 +607,14 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                 style: text.titleLarge?.copyWith(fontSize: 20, color: tokens.ink2),
               ),
               const SizedBox(width: WudgetTokens.space2),
-              // Always the evaluated total, never the raw expression: the
-              // number shown is the number that will be saved. The
-              // expression itself goes on the line below.
+              // The operand being typed, with what is waiting for it on the
+              // line below. Saving mid-expression still writes the total,
+              // which the undo snackbar names, and leaving calculator mode
+              // brings the total up here.
               Text(
                 key: const Key('captureAmount'),
-                _formatter.format(_amount, showSymbol: false),
-                semanticsLabel: 'Jumlah: ${_formatter.format(_amount)}',
+                _formatter.format(_operandAmount, showSymbol: false),
+                semanticsLabel: 'Jumlah: ${_formatter.format(_operandAmount)}',
                 style: text.headlineMedium?.copyWith(
                   fontSize: 40,
                   fontFeatures: const [FontFeature.tabularFigures()],
@@ -609,10 +624,10 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
               Container(width: 2, height: 34, color: tokens.accent),
             ],
           ),
-          if (_bufferHasExpression) ...[
+          if (_pendingExpression.isNotEmpty) ...[
             const SizedBox(height: WudgetTokens.space1),
             Text(
-              _amountBuffer.replaceAllMapped(RegExp(r'[+\-×÷]'), (m) => ' ${m[0]} '),
+              _pendingExpression.replaceAllMapped(RegExp(r'[+\-×÷]'), (m) => ' ${m[0]} '),
               style: text.bodySmall?.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),

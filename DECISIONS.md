@@ -1061,4 +1061,17 @@ succeeds.
   toggle the "=" this numpad has no key for, rather than adding a key and
   losing a slot. `test/calculator_settle_test.dart` reproduces the 65.001 and
   fails without the fix. Verified on the device: 15000 + 5000, leave the mode,
-  Rp 20.000 with no expression line, then 1 gives Rp 200.001.
+  Rp 20.000 with no expression line, then 1 gives Rp 200.001.
+- **The big slot now shows the number being typed, not the running total.**
+  Settling the buffer fixed the arithmetic but not what the screen said: after
+  tapping `+`, the total kept updating as the second operand arrived, so
+  15.000 became 15.005, then 15.050, then 15.500, which reads as the first
+  number being edited rather than a second one being entered. The big slot
+  holds the current operand (Rp 0 the moment an operator is tapped), and the
+  line beneath holds what is waiting for it ("15000 +"). Owner's call, taken
+  over the alternative of holding the first number steady.
+- **That gives up an invariant worth naming**: the big number is no longer
+  always the figure that would be saved, because saving mid-expression still
+  writes the total. The undo snackbar already names the saved amount
+  ("Tersimpan: Rp 20.000"), which is what makes that safe to accept rather
+  than blocking save until the expression settles.

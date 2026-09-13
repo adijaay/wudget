@@ -44,14 +44,19 @@ void main() {
     }
     await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tap('+');
+    expect(amount(), '0', reason: 'an operator hands you an empty number');
     await tap('5');
     await tester.tap(find.byKey(const Key('numpadKey_000')));
     await tester.pumpAndSettle();
-    expect(amount(), '20.000');
+    // The big slot is the operand being typed, not the running total, so
+    // tapping + does not appear to edit the number before it.
+    expect(amount(), '5.000');
+    expect(find.text('15000 + '), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('numpadKey_calculator')));
     await tester.pumpAndSettle();
-    expect(amount(), '20.000', reason: 'the result survives leaving the mode');
+    expect(amount(), '20.000', reason: 'leaving the mode is the "=" that totals it');
+    expect(find.text('15000 + '), findsNothing);
 
     await tap('1');
     await tester.pumpAndSettle();
