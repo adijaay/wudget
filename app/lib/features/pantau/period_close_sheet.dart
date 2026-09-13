@@ -232,12 +232,14 @@ class _SurplusCard extends ConsumerWidget {
             'Kalau didiamkan, biasanya kepakai.',
             style: text.bodyMedium,
           ),
-          StreamBuilder<List<WalletWithBalance>>(
-            stream: ref.watch(walletsRepositoryProvider).watchWallets(),
-            builder: (context, snapshot) {
-              final savings = (snapshot.data ?? const <WalletWithBalance>[])
-                  .where((w) => w.account.type == 'savings')
-                  .toList();
+          Builder(
+            builder: (context) {
+              final savings = ref
+                  .watch(walletBalancesProvider)
+                  .value
+                  ?.where((w) => w.account.type == 'savings')
+                  .toList() ??
+                  const <WalletWithBalance>[];
               if (savings.isEmpty) {
                 // No savings wallet, so no honest offer to make. Say what
                 // would make one possible instead of a dead button (R-26).

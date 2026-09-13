@@ -135,10 +135,25 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
   bool get _bufferHasExpression => _amountBuffer.contains(RegExp(r'[+\-×÷]'));
 
-  void _appendDigit(String d) => setState(() => _amountBuffer += d);
+  /// Rp 999.999.999.999 and change. Without a ceiling the numpad will keep
+  /// taking digits, `num.tryParse` stops being exact past 2^53, and the
+  /// rounded minor units reach the database as a number no arithmetic can
+  /// survive: one such row made SQLite's SUM over an account's postings
+  /// fail with "integer overflow", which took the whole Kantong tab down.
+  static const _maxAmountDigits = 12;
+
+  bool _atDigitLimit() {
+    final current = _amountBuffer.split(RegExp(r'[+\-×÷]')).last;
+    return current.replaceAll('.', '').length >= _maxAmountDigits;
+  }
+
+  void _appendDigit(String d) {
+    if (_atDigitLimit()) return;
+    setState(() => _amountBuffer += d);
+  }
 
   void _appendZeros() {
-    if (_amountBuffer.isEmpty || _bufferEndsWithOperator) return;
+    if (_amountBuffer.isEmpty || _bufferEndsWithOperator || _atDigitLimit()) return;
     setState(() => _amountBuffer += '000');
   }
 

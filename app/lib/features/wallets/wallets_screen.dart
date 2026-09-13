@@ -38,19 +38,13 @@ class WalletsScreen extends ConsumerWidget {
           const SizedBox(width: WudgetTokens.space1),
         ],
       ),
-      body: StreamBuilder<List<WalletWithBalance>>(
-        stream: repo.watchWallets(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final wallets = snapshot.data!;
-          if (wallets.isEmpty) {
-            return _EmptyKantong(onCreate: () => _showCreateWalletSheet(context, repo));
-          }
-          return _WalletList(wallets: wallets, repo: repo);
-        },
-      ),
+      body: ref.watch(walletBalancesProvider).when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, _) => _BalancesUnavailable(error: error),
+            data: (wallets) => wallets.isEmpty
+                ? _EmptyKantong(onCreate: () => _showCreateWalletSheet(context, repo))
+                : _WalletList(wallets: wallets, repo: repo),
+          ),
     );
   }
 
@@ -625,6 +619,43 @@ class _DayField extends StatelessWidget {
         final day = int.tryParse(v);
         onChanged(day != null && day >= 1 && day <= 28 ? day : null);
       },
+    );
+  }
+}
+
+/// The balances could not be computed at all. The states table
+/// (plan/04-ux-design.md) covers a conversion that cannot be done; this is
+/// the harder case where the query itself failed, and the rule is the same:
+/// say the cause, and do not pretend to still be loading.
+final _lineBreak = RegExp('\r?\n');
+
+class _BalancesUnavailable extends StatelessWidget {
+  const _BalancesUnavailable({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.all(WudgetTokens.space4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Saldo kantong tidak bisa dihitung.', style: text.titleMedium),
+          const SizedBox(height: WudgetTokens.space2),
+          Text(
+            'Catatanmu aman, yang gagal cuma penjumlahannya. Buat cadangan '
+            'lewat Saya dulu, lalu catat pesan ini:',
+            style: text.bodyMedium,
+          ),
+          const SizedBox(height: WudgetTokens.space3),
+          // First line only: a drift exception carries the entire generated
+          // SELECT after it, which filled the screen and buried the cause.
+          SelectableText('$error'.split(_lineBreak).first, style: text.bodySmall),
+        ],
+      ),
     );
   }
 }

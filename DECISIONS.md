@@ -991,3 +991,26 @@ succeeds.
   of release. It is deliberately not a timeline trace — `PERF <path> <n>ms` in
   `adb logcat -s flutter` answers "did this path regress" without anyone
   opening DevTools, and a trace is still there for the day the answer is yes.
+- **The gate caught a real defect immediately, which is the argument for
+  having run it.** With 10,000 transactions on the device, Kantong sat on a
+  spinner that never resolved. The cause was not slowness: the balance query
+  was failing with `SqliteException(1): integer overflow` on
+  `SUM(postings.amount_minor)`, and `StreamBuilder` renders a failed stream
+  and a pending one identically. Three separate things had to be wrong for a
+  tab to die silently, and all three are fixed:
+  - **The capture numpad had no ceiling on the amount.** Digits and `000`
+    appended without limit, `num.tryParse` stops being exact past 2^53, and
+    the rounded minor units reach the database as a number SQLite cannot add
+    up. Some earlier click-through on this device left exactly such a row.
+    Capped at 12 digits, just under Rp 1 trillion. `test/amount_limit_test.dart`
+    hammers the numpad and fails without the cap.
+  - **Kantong's balance stream was built inside `build`.** A new stream per
+    rebuild is a StreamBuilder that drops back to "no data yet" each time; it
+    now lives in `walletBalancesProvider`, next to the two StreamProviders
+    already in providers.dart. Only this one stream was hoisted: the other ten
+    `StreamBuilder(stream: ...)` call sites read categories and accounts, tens
+    of rows that resolve inside one frame.
+  - **A failed query rendered as a spinner.** Kantong now says the balances
+    could not be computed, that the records themselves are intact, and shows
+    the first line of the error (the whole generated SELECT followed it, and
+    filled the screen).

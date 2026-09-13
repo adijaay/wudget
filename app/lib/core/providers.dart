@@ -37,6 +37,20 @@ final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
   return WalletsRepository(ref.watch(databaseProvider));
 });
 
+/// Kantong's balances joined across every posting in the ledger. It lives
+/// here, not in a `StreamBuilder(stream: repo.watchWallets())`, because a
+/// stream built inside `build` is a new stream on every rebuild: the
+/// StreamBuilder drops back to "no data yet" each time, which on a device
+/// holding 10,000 transactions left the tab on a spinner that never resolved.
+///
+/// ponytail: only the expensive stream is hoisted. The other
+/// `StreamBuilder(stream: ...)` call sites in lib/features read categories
+/// and accounts, tens of rows that resolve inside one frame, so the same
+/// shape is invisible there. Hoist one if a table it reads ever grows.
+final walletBalancesProvider = StreamProvider<List<WalletWithBalance>>((ref) {
+  return ref.watch(walletsRepositoryProvider).watchWallets();
+});
+
 final ledgerQueriesProvider = Provider<LedgerQueries>((ref) {
   return LedgerQueries(ref.watch(databaseProvider));
 });
