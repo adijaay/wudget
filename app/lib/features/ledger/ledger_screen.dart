@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/perf.dart';
 import '../../core/money_formatter.dart';
 import '../../core/providers.dart';
 import '../../data/daily_totals_repository.dart';
@@ -100,6 +101,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final render = Stopwatch()..start();
     final generation = ++_loadGeneration;
     setState(() {
       _entries.clear();
@@ -107,6 +109,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       _hasMore = true;
     });
     await _loadNextPage(generation);
+    if (mounted) perfMark('catat_render', render);
   }
 
   Future<void> _loadNextPage([int? generation]) async {

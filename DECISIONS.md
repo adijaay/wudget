@@ -958,3 +958,36 @@ import inventing one from a column value, or a backup restore. There was no UI a
   then renamed Transport to "Transport online" from Saya. Editing a category deliberately
   does not autofocus the name field, so the keyboard does not cover the icon and colour
   pickers when the thing you came to change is the colour.
+
+## Closing the gaps the log left open
+
+Four things had been logged as blocked rather than done: Sprint 4's
+save-to-dismissed timing, Sprint 7's performance gate, Sprint 17's state
+gallery, Sprint 19's store screenshots. Three of the four were blocked on an
+Android device or a release build, and both are available now — Build-Tools
+33.0.1 is installed (the Sprint 0 blocker), and `flutter build apk --release`
+succeeds.
+
+- **The performance gate ran on the real device, and every row passes.**
+  Profile build on the ASUS_AI2202, medians over five runs, against the
+  budget in plan/03-architecture.md:
+
+  | Path | Budget | Measured |
+  |---|---|---|
+  | Cold start to interactive capture sheet | 1.5 s | 652 ms (`am start -W` TotalTime), first frame rasterized 226 ms after engine enter |
+  | Widget tap to capture sheet | 800 ms | 620 ms, launching the widget's own intent |
+  | Save to sheet dismissed | 100 ms | 28 ms, with 10,000 transactions already in the table |
+  | Catat render, 10,000 transactions | 300 ms | 123 ms |
+  | Pantau render | 500 ms | 106 ms |
+
+  The 10,000 rows are real rows on the device, imported through the app's own
+  CSV importer rather than seeded behind its back, which incidentally proved
+  the column auto-mapping works on a file it had never seen. Numbers taken
+  while that import was still writing (474-631 ms) are not the gate: they are
+  a bulk write competing with the read, and the steady-state figures above are
+  the ones the budget is about.
+- **`lib/core/perf.dart` is how those three in-app numbers are taken**: a
+  stopwatch stopped in a post-frame callback, printed to logcat, compiled out
+  of release. It is deliberately not a timeline trace — `PERF <path> <n>ms` in
+  `adb logcat -s flutter` answers "did this path regress" without anyone
+  opening DevTools, and a trace is still there for the day the answer is yes.

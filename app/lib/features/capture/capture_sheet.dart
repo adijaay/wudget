@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/perf.dart';
 import '../../core/currency.dart';
 import '../../core/money.dart';
 import '../../core/money_formatter.dart';
@@ -192,6 +193,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   }
 
   Future<void> _save() async {
+    final saveToDismissed = Stopwatch()..start();
     final db = ref.read(databaseProvider);
     final txId = _uuid.v4();
     final now = DateTime.now();
@@ -277,6 +279,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
     if (!mounted) return;
     Navigator.of(context).pop();
+    perfMark('save_to_dismissed', saveToDismissed);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Tersimpan: ${_formatter.format(_amount)}'),

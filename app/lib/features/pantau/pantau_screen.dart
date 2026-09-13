@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/perf.dart';
 import '../../core/money.dart';
 import '../../core/money_formatter.dart';
 import '../../core/providers.dart';
@@ -133,6 +134,7 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   }
 
   Future<void> _load() async {
+    final render = Stopwatch()..start();
     final queries = ref.read(periodAggregateQueriesProvider);
     final period = ref.read(currentPeriodProvider);
     final today = _todayDayBucket();
@@ -165,6 +167,7 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       _weekExpense = weekExpense;
       _loaded = true;
     });
+    perfMark('pantau_render', render);
   }
 
   @override
