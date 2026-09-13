@@ -1051,3 +1051,14 @@ succeeds.
   app bar. The other three findings were comment hygiene: a dashed banner in
   `design_review.dart`, a comment naming the wrong CSV row numbers, and
   `perf.dart` explaining its post-frame stopwatch twice.
+- **The calculator never committed its result, which you spotted.** Tapping
+  the calculator key only flipped a bool. So `15000 + 5000` showed Rp 20.000
+  correctly, but the buffer still held the expression: the next digit extended
+  the last operand into `15000 + 50001`, and turning the mode off left that
+  expression on screen with the operator row gone, so it could no longer be
+  edited at all, only backspaced one character at a time. Leaving calculator
+  mode now collapses the buffer to what it evaluated to, which makes the
+  toggle the "=" this numpad has no key for, rather than adding a key and
+  losing a slot. `test/calculator_settle_test.dart` reproduces the 65.001 and
+  fails without the fix. Verified on the device: 15000 + 5000, leave the mode,
+  Rp 20.000 with no expression line, then 1 gives Rp 200.001.

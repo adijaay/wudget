@@ -157,6 +157,20 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     setState(() => _amountBuffer += '000');
   }
 
+  /// Leaving calculator mode is this numpad's "=": the expression collapses
+  /// to what it evaluated to, so the next digit starts a new number instead
+  /// of extending the last operand. Without it, turning the calculator off
+  /// left an expression on screen that could no longer be edited, since the
+  /// operator row goes with the mode.
+  void _settleBuffer() {
+    if (!_bufferHasExpression) return;
+    final info = CurrencyInfo.of(_currency);
+    final minor = _amount.minor;
+    _amountBuffer = info.exponent == 0
+        ? minor.toString()
+        : (minor / info.minorUnitsPerMajor).toString();
+  }
+
   void _appendOperator(String op) {
     if (_amountBuffer.isEmpty || _bufferEndsWithOperator) return;
     setState(() => _amountBuffer += op);
@@ -384,7 +398,10 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
               onZeros: _appendZeros,
               onBackspace: _backspace,
               onSave: _save,
-              onToggleCalculator: () => setState(() => _calculatorMode = !_calculatorMode),
+              onToggleCalculator: () => setState(() {
+                _calculatorMode = !_calculatorMode;
+                if (!_calculatorMode) _settleBuffer();
+              }),
               onPickDate: _pickDateTime,
             ),
           ],
