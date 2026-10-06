@@ -14,8 +14,8 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('defaults to day 1 with no row written yet', () async {
-    expect(await repo.watchPeriodStartDay().first, 1);
+  test('defaults to payday 25 with no row written yet (R3.1)', () async {
+    expect(await repo.watchPeriodStartDay().first, 25);
   });
 
   test('set then watch round-trips the value', () async {

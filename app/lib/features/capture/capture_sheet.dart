@@ -431,9 +431,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     final plain = 'Tersimpan: ${_formatter.format(_amount)}';
     if (_kind != CaptureKind.expense) return plain;
     final queries = ref.read(captureQueriesProvider);
-    final settings =
-        await (db.select(db.appSettings)..where((r) => r.id.equals(0))).getSingleOrNull();
-    final period = Period.containing(todayDayBucket(), monthStartDay: settings?.periodStartDay ?? 1);
+    final period = await ref.read(settingsRepositoryProvider).effectivePeriodFor(todayDayBucket());
     final remaining = await queries.kantongRemaining(_categoryId!, period);
     if (remaining == null) return plain;
     final category =

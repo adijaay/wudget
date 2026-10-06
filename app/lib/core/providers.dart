@@ -93,6 +93,10 @@ final periodStartDayProvider = StreamProvider<int>((ref) {
   return ref.watch(settingsRepositoryProvider).watchPeriodStartDay();
 });
 
+final settingsRowProvider = StreamProvider<AppSetting?>((ref) {
+  return ref.watch(settingsRepositoryProvider).watchRow();
+});
+
 /// How many periods forward (+) or back (-) from the one containing today.
 /// The period selector on every governed surface reads and writes this.
 final periodOffsetProvider = StateProvider<int>((ref) => 0);
@@ -101,12 +105,14 @@ final periodOffsetProvider = StateProvider<int>((ref) => 0);
 /// against — see plan/05-sprints.md Sprint 8, "period selector control that
 /// governs every surface below it".
 final currentPeriodProvider = Provider<Period>((ref) {
-  final startDay = ref.watch(periodStartDayProvider).valueOrNull ?? 1;
+  final startDay = ref.watch(periodStartDayProvider).valueOrNull ?? defaultPeriodStartDay;
+  final row = ref.watch(settingsRowProvider).valueOrNull;
   final offset = ref.watch(periodOffsetProvider);
-  final today = DateTime.now();
-  var period = Period.containing(
-    DateTime.utc(today.year, today.month, today.day).difference(DateTime.utc(1970, 1, 1)).inDays,
+  var period = effectivePeriod(
+    todayDayBucket(),
     monthStartDay: startDay,
+    customStart: row?.customPeriodStart,
+    customEndExclusive: row?.customPeriodEndExclusive,
   );
   for (var i = 0; i < offset; i++) {
     period = period.next;

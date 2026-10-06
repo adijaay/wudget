@@ -57,7 +57,9 @@ void main() {
     expect(find.text('Hari tercatat periode ini'), findsNothing);
 
     await tester.tap(find.text('Atur anggaran sekarang'));
-    expect(opened, 1);
+    await tester.pumpAndSettle();
+    expect(find.text('Lanjut bagi ke kantong'), findsOneWidget);
+    expect(opened, 0);
     await unmount(tester);
   });
 

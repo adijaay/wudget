@@ -17,7 +17,10 @@ import 'package:wudget/data/settings_repository.dart';
 import 'package:wudget/data/wallets_repository.dart';
 import 'package:wudget/design/tokens.dart';
 import 'package:wudget/domain/default_categories.dart';
+import 'package:wudget/domain/period.dart';
 import 'package:wudget/features/budget/budget_screen.dart';
+import 'package:wudget/features/payday/budget_review_screen.dart';
+import 'package:wudget/features/payday/payday_card.dart';
 import 'package:wudget/features/import/import_screen.dart';
 import 'package:wudget/features/recurring/recurring_screen.dart';
 import 'package:wudget/features/settings/backup_screen.dart';
@@ -226,6 +229,35 @@ void main() {
   testWidgets('capture', (t) => shoot(t, 'capture', const Scaffold(body: CaptureSheet())));
   testWidgets('capture dark',
       (t) => shoot(t, 'capture_dark', const Scaffold(body: CaptureSheet()), brightness: Brightness.dark));
+
+  // R3: screens 4a, 4b, 4c.
+  final payPeriod = Period.containing(todayDayBucket(), monthStartDay: 25);
+  Widget review() => BudgetReviewScreen(period: payPeriod, newMoneyMinor: 7500000, leftoverMinor: 420000);
+  Widget card() => Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: PaydayCard(
+            data: PaydayCardData(period: payPeriod, lastSalaryMinor: 7500000, leftoverMinor: 420000),
+            todayDay: payPeriod.startDay,
+            onChanged: () {},
+          ),
+        ),
+      );
+  Widget setNow() => Scaffold(
+        body: AmountSheet(
+          title: 'Atur anggaran sekarang',
+          subtitle: 'Uang yang kamu pegang untuk dipakai sampai gajian berikutnya.',
+          buttonLabel: 'Lanjut bagi ke kantong',
+          initialMinor: 3000000,
+          endChoices: setNowEndChoices(todayDayBucket(), monthStartDay: 25),
+        ),
+      );
+  testWidgets('payday card', (t) => shoot(t, 'payday_card', card()));
+  testWidgets('payday card dark', (t) => shoot(t, 'payday_card_dark', card(), brightness: Brightness.dark));
+  testWidgets('payday review', (t) => shoot(t, 'payday_review', review()));
+  testWidgets('payday review dark', (t) => shoot(t, 'payday_review_dark', review(), brightness: Brightness.dark));
+  testWidgets('set now', (t) => shoot(t, 'set_now', setNow()));
+  testWidgets('set now dark', (t) => shoot(t, 'set_now_dark', setNow(), brightness: Brightness.dark));
 
   /// A database with nothing in it but the seeded categories, which is what
   /// every first-run empty state actually renders against.

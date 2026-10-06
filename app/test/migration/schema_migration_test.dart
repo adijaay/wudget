@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:wudget/data/database.dart';
+import 'package:wudget/data/settings_repository.dart';
 
 /// Builds a fixture database on-disk shaped exactly like schema v1 (no
 /// transactions.photo_path), the way a real installed app's database looks
@@ -140,5 +141,21 @@ void main() {
     final settings = await wudget.select(wudget.appSettings).getSingle();
     expect(settings.periodStartDay, 15); // pre-existing data preserved
     expect(settings.lastAcknowledgedPeriodClose, isNull); // new column, no data invented
+    expect(settings.customPeriodStart, isNull);
+    expect(settings.lastSalaryMinor, isNull);
+  });
+
+  test('R3.1: an existing user without a settings row keeps start day 1', () async {
+    final wudget = WudgetDatabase(NativeDatabase.opened(_buildV1Fixture()));
+    addTearDown(wudget.close);
+    expect((await wudget.select(wudget.appSettings).getSingle()).periodStartDay, 1);
+  });
+
+  test('R3.1: a new install defaults to payday 25', () async {
+    final wudget = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(wudget.close);
+    expect(await SettingsRepository(wudget).watchPeriodStartDay().first, 25);
+    await SettingsRepository(wudget).snoozePayday(1);
+    expect((await wudget.select(wudget.appSettings).getSingle()).periodStartDay, 25);
   });
 }

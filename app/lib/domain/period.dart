@@ -1,5 +1,8 @@
 final _epoch = DateTime.utc(1970, 1, 1);
 
+/// Payday is the 25th (research/08-retention-baseline.md rule 5).
+const defaultPeriodStartDay = 25;
+
 /// Clamped per plan/05-sprints.md Sprint 8: "configurable month start day,
 /// capped at 28" — so every month has one, no February edge case to design
 /// around.
@@ -79,3 +82,31 @@ int todayDayBucket() {
 /// Days in [period] with at least one entry, given the day buckets entries
 /// fall on (duplicates and days outside the period are ignored).
 int loggedDays(Period period, Iterable<int> entryDays) => entryDays.where(period.contains).toSet().length;
+
+/// The period today falls in: the one stored "Atur sekarang" period while it
+/// lasts, otherwise the normal cycle. Its `next` is a normal period again.
+Period effectivePeriod(int todayDayBucket,
+    {required int monthStartDay, int? customStart, int? customEndExclusive}) {
+  if (customStart != null &&
+      customEndExclusive != null &&
+      todayDayBucket >= customStart &&
+      todayDayBucket < customEndExclusive) {
+    return Period(
+      startDay: customStart,
+      endDayExclusive: customEndExclusive,
+      monthStartDay: clampPeriodStartDay(monthStartDay),
+    );
+  }
+  return Period.containing(todayDayBucket, monthStartDay: monthStartDay);
+}
+
+/// "Atur sekarang" end choices: the coming period end, or the one after it.
+/// From the 15th the later one is the default, so an early salary lasts.
+({int coming, int later, bool laterIsDefault}) setNowEndChoices(int todayDayBucket, {required int monthStartDay}) {
+  final normal = Period.containing(todayDayBucket, monthStartDay: monthStartDay);
+  return (
+    coming: normal.endDayExclusive,
+    later: normal.next.endDayExclusive,
+    laterIsDefault: _dateForDayBucket(todayDayBucket).day >= 15,
+  );
+}

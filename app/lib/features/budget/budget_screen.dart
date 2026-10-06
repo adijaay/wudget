@@ -8,6 +8,7 @@ import '../../data/budget_history_queries.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/budget_proposal.dart';
+import '../payday/budget_review_screen.dart';
 
 const _formatter = MoneyFormatter();
 const _lookbackDays = 28;
@@ -180,7 +181,18 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Anggaran')),
+      appBar: AppBar(
+        title: const Text('Anggaran'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await startSetNow(context, ref);
+              if (mounted) _load();
+            },
+            child: const Text('Atur anggaran sekarang'),
+          ),
+        ],
+      ),
       body: rows == null
           ? const Center(child: CircularProgressIndicator())
           : rows.isEmpty

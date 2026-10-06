@@ -19,8 +19,11 @@ import '../../domain/period.dart';
 import '../../data/category_rank_queries.dart';
 import '../../domain/flow.dart';
 import '../../domain/insight.dart';
+import '../../domain/payday.dart';
 import '../../domain/pola.dart';
 import '../capture/capture_sheet.dart';
+import '../payday/budget_review_screen.dart';
+import '../payday/payday_card.dart';
 import '../widget/capture_deeplink.dart';
 import 'today_header.dart';
 
@@ -69,6 +72,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   AsyncValue<LoggedStripData> _strip = const AsyncLoading();
   AsyncValue<Insight?> _insight = const AsyncLoading();
   List<QuickChip> _quickChips = const [];
+  PaydayCardData? _payday;
 
   LedgerFilter get _filter => LedgerFilter(
         categoryId: _categoryId,
@@ -99,7 +103,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     // notification catches that.
     final db = ref.read(databaseProvider);
     _txChangesSubscription = db
-        .tableUpdates(TableUpdateQuery.onTable(db.transactions))
+        .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.budgets, db.appSettings]))
         .listen((_) => _loadFirstPage());
   }
 
@@ -139,19 +143,24 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   /// the rows agree about today. Each block is guarded on its own (R2.6).
   Future<void> _loadTodayHeader(int generation) async {
     final today = todayDayBucket();
-    final period = ref.read(currentPeriodProvider);
+    // The effective period, read fresh: a just-saved "Atur sekarang" must
+    // move the jatah and the strip without waiting on a provider stream.
+    final period = await ref.read(settingsRepositoryProvider).effectivePeriodFor(today);
     final queries = ref.read(periodAggregateQueriesProvider);
     bool stale() => !mounted || generation != _loadGeneration;
 
     final chips = await ref.read(captureQueriesProvider).quickChips(DateTime.now());
+    final payday = (await AsyncValue.guard(() => loadPaydayCard(ref, today))).valueOrNull;
     if (stale()) return;
     setState(() {
       _today = today;
       _quickChips = chips;
+      _payday = payday;
     });
 
     final jatah = await AsyncValue.guard(() async {
-      final budgets = await ref.read(budgetsRepositoryProvider).getAll();
+      // Tabungan is set aside, not spendable today.
+      final budgets = {...await ref.read(budgetsRepositoryProvider).getAll()}..remove(tabunganCategoryId);
       final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
       final totals = await queries.totalsFor(period);
       final todaySpend = await queries.dailyExpenseMinorInRange(today, today + 1);
@@ -385,6 +394,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_payday != null && _entries.isNotEmpty) ...[
+            PaydayCard(data: _payday!, todayDay: _today, onChanged: () => _loadTodayHeader(_loadGeneration)),
+            const SizedBox(height: WudgetTokens.space3),
+          ],
           TodayHeader(
             todayDay: _today,
             jatah: _jatah,
@@ -398,6 +411,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                         props: {'budgetSet': _jatah.valueOrNull?.allowance != null});
                     widget.onOpenKantong!();
                   },
+            onSetNow: () => startSetNow(context, ref),
             onCapture: () => showCaptureLaunch(
               context,
               const CaptureLaunch(kind: CaptureKind.expense),

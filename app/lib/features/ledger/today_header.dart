@@ -59,6 +59,7 @@ class TodayHeader extends StatelessWidget {
     required this.insight,
     this.firstRun = false,
     this.onOpenKantong,
+    this.onSetNow,
     this.onCapture,
     this.onRetry,
   });
@@ -71,6 +72,9 @@ class TodayHeader extends StatelessWidget {
   /// No entries yet: the strip and insight give way to one task.
   final bool firstRun;
   final VoidCallback? onOpenKantong;
+
+  /// Opens the "Atur sekarang" sheet from the no-budget card.
+  final VoidCallback? onSetNow;
   final VoidCallback? onCapture;
   final VoidCallback? onRetry;
 
@@ -89,7 +93,7 @@ class TodayHeader extends StatelessWidget {
         ),
         gap,
         switch (jatah) {
-          AsyncData(:final value) => _JatahCard(data: value, onOpenKantong: onOpenKantong),
+          AsyncData(:final value) => _JatahCard(data: value, onOpenKantong: onOpenKantong, onSetNow: onSetNow),
           AsyncError() => _BlockError('Jatah hari ini belum bisa dihitung.', onRetry: onRetry),
           _ => const _BlockLoading(height: 132, label: 'Menghitung jatah hari ini'),
         },
@@ -118,9 +122,10 @@ class TodayHeader extends StatelessWidget {
 }
 
 class _JatahCard extends StatelessWidget {
-  const _JatahCard({required this.data, this.onOpenKantong});
+  const _JatahCard({required this.data, this.onOpenKantong, this.onSetNow});
   final TodayHeaderData data;
   final VoidCallback? onOpenKantong;
+  final VoidCallback? onSetNow;
 
   @override
   Widget build(BuildContext context) {
@@ -128,10 +133,10 @@ class _JatahCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final allowance = data.allowance;
 
-    Widget link(String label) => Align(
+    Widget link(String label, {VoidCallback? onPressed}) => Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
-            onPressed: onOpenKantong,
+            onPressed: onPressed ?? onOpenKantong,
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               minimumSize: const Size(0, 44),
@@ -146,7 +151,7 @@ class _JatahCard extends StatelessWidget {
       body = [
         const SizedBox(height: WudgetTokens.space2),
         Text('Jatah muncul setelah kamu isi gaji atau anggaran per kategori.', style: text.bodyLarge),
-        link('Atur anggaran sekarang'),
+        link('Atur anggaran sekarang', onPressed: onSetNow),
       ];
     } else if (allowance.isOverBudget) {
       body = [

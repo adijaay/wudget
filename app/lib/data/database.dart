@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'connection/connection.dart';
+import '../domain/period.dart';
 
 part 'database.g.dart';
 
@@ -99,13 +100,23 @@ class DailyTotals extends Table {
 /// than seeding one on create.
 class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(0))();
-  IntColumn get periodStartDay => integer().withDefault(const Constant(1))();
+  /// 25 (payday) for new installs; upgrades get an explicit row with 1, see v10.
+  IntColumn get periodStartDay => integer().withDefault(const Constant(defaultPeriodStartDay))();
 
   /// The start day (day bucket) of the most recent period the user has
   /// dismissed the period-close ritual for — null means none yet. See
   /// plan/05-sprints.md Sprint 14, "fires once per period boundary,
   /// dismissible".
   IntColumn get lastAcknowledgedPeriodClose => integer().nullable()();
+
+  /// One "Atur sekarang" period, as day buckets; ignored once today is past it.
+  IntColumn get customPeriodStart => integer().nullable()();
+  IntColumn get customPeriodEndExclusive => integer().nullable()();
+  /// Money on hand typed for that period; counts like income in its leftover.
+  IntColumn get customPeriodAmountMinor => integer().nullable()();
+  IntColumn get lastSalaryMinor => integer().nullable()();
+  IntColumn get paydayConfirmedPeriodStart => integer().nullable()();
+  IntColumn get paydaySnoozedDay => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -219,7 +230,7 @@ class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -257,6 +268,23 @@ class WudgetDatabase extends _$WudgetDatabase {
           // this column added separately.
           if (from >= 7 && from < 9) {
             await m.addColumn(recurrences, recurrences.lastGenerationError);
+          }
+          if (from >= 4 && from < 10) {
+            for (final c in [
+              appSettings.customPeriodStart,
+              appSettings.customPeriodEndExclusive,
+              appSettings.customPeriodAmountMinor,
+              appSettings.lastSalaryMinor,
+              appSettings.paydayConfirmedPeriodStart,
+              appSettings.paydaySnoozedDay,
+            ]) {
+              await m.addColumn(appSettings, c);
+            }
+          }
+          // An existing user without a settings row was on the old default
+          // of 1; pin it so the new default of 25 only reaches new installs.
+          if (from < 10) {
+            await customStatement('INSERT OR IGNORE INTO app_settings (id, period_start_day) VALUES (0, 1)');
           }
         },
       );

@@ -2670,16 +2670,61 @@ class $AppSettingsTable extends AppSettings
       'period_start_day', aliasedName, false,
       type: DriftSqlType.int,
       requiredDuringInsert: false,
-      defaultValue: const Constant(1));
+      defaultValue: const Constant(defaultPeriodStartDay));
   static const VerificationMeta _lastAcknowledgedPeriodCloseMeta =
       const VerificationMeta('lastAcknowledgedPeriodClose');
   @override
   late final GeneratedColumn<int> lastAcknowledgedPeriodClose =
       GeneratedColumn<int>('last_acknowledged_period_close', aliasedName, true,
           type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _customPeriodStartMeta =
+      const VerificationMeta('customPeriodStart');
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, periodStartDay, lastAcknowledgedPeriodClose];
+  late final GeneratedColumn<int> customPeriodStart = GeneratedColumn<int>(
+      'custom_period_start', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _customPeriodEndExclusiveMeta =
+      const VerificationMeta('customPeriodEndExclusive');
+  @override
+  late final GeneratedColumn<int> customPeriodEndExclusive =
+      GeneratedColumn<int>('custom_period_end_exclusive', aliasedName, true,
+          type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _customPeriodAmountMinorMeta =
+      const VerificationMeta('customPeriodAmountMinor');
+  @override
+  late final GeneratedColumn<int> customPeriodAmountMinor =
+      GeneratedColumn<int>('custom_period_amount_minor', aliasedName, true,
+          type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _lastSalaryMinorMeta =
+      const VerificationMeta('lastSalaryMinor');
+  @override
+  late final GeneratedColumn<int> lastSalaryMinor = GeneratedColumn<int>(
+      'last_salary_minor', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _paydayConfirmedPeriodStartMeta =
+      const VerificationMeta('paydayConfirmedPeriodStart');
+  @override
+  late final GeneratedColumn<int> paydayConfirmedPeriodStart =
+      GeneratedColumn<int>('payday_confirmed_period_start', aliasedName, true,
+          type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _paydaySnoozedDayMeta =
+      const VerificationMeta('paydaySnoozedDay');
+  @override
+  late final GeneratedColumn<int> paydaySnoozedDay = GeneratedColumn<int>(
+      'payday_snoozed_day', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        periodStartDay,
+        lastAcknowledgedPeriodClose,
+        customPeriodStart,
+        customPeriodEndExclusive,
+        customPeriodAmountMinor,
+        lastSalaryMinor,
+        paydayConfirmedPeriodStart,
+        paydaySnoozedDay
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2706,6 +2751,45 @@ class $AppSettingsTable extends AppSettings
               data['last_acknowledged_period_close']!,
               _lastAcknowledgedPeriodCloseMeta));
     }
+    if (data.containsKey('custom_period_start')) {
+      context.handle(
+          _customPeriodStartMeta,
+          customPeriodStart.isAcceptableOrUnknown(
+              data['custom_period_start']!, _customPeriodStartMeta));
+    }
+    if (data.containsKey('custom_period_end_exclusive')) {
+      context.handle(
+          _customPeriodEndExclusiveMeta,
+          customPeriodEndExclusive.isAcceptableOrUnknown(
+              data['custom_period_end_exclusive']!,
+              _customPeriodEndExclusiveMeta));
+    }
+    if (data.containsKey('custom_period_amount_minor')) {
+      context.handle(
+          _customPeriodAmountMinorMeta,
+          customPeriodAmountMinor.isAcceptableOrUnknown(
+              data['custom_period_amount_minor']!,
+              _customPeriodAmountMinorMeta));
+    }
+    if (data.containsKey('last_salary_minor')) {
+      context.handle(
+          _lastSalaryMinorMeta,
+          lastSalaryMinor.isAcceptableOrUnknown(
+              data['last_salary_minor']!, _lastSalaryMinorMeta));
+    }
+    if (data.containsKey('payday_confirmed_period_start')) {
+      context.handle(
+          _paydayConfirmedPeriodStartMeta,
+          paydayConfirmedPeriodStart.isAcceptableOrUnknown(
+              data['payday_confirmed_period_start']!,
+              _paydayConfirmedPeriodStartMeta));
+    }
+    if (data.containsKey('payday_snoozed_day')) {
+      context.handle(
+          _paydaySnoozedDayMeta,
+          paydaySnoozedDay.isAcceptableOrUnknown(
+              data['payday_snoozed_day']!, _paydaySnoozedDayMeta));
+    }
     return context;
   }
 
@@ -2722,6 +2806,21 @@ class $AppSettingsTable extends AppSettings
       lastAcknowledgedPeriodClose: attachedDatabase.typeMapping.read(
           DriftSqlType.int,
           data['${effectivePrefix}last_acknowledged_period_close']),
+      customPeriodStart: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}custom_period_start']),
+      customPeriodEndExclusive: attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}custom_period_end_exclusive']),
+      customPeriodAmountMinor: attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}custom_period_amount_minor']),
+      lastSalaryMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}last_salary_minor']),
+      paydayConfirmedPeriodStart: attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}payday_confirmed_period_start']),
+      paydaySnoozedDay: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}payday_snoozed_day']),
     );
   }
 
@@ -2733,6 +2832,8 @@ class $AppSettingsTable extends AppSettings
 
 class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int id;
+
+  /// 25 (payday) for new installs; upgrades get an explicit row with 1, see v10.
   final int periodStartDay;
 
   /// The start day (day bucket) of the most recent period the user has
@@ -2740,10 +2841,26 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// plan/05-sprints.md Sprint 14, "fires once per period boundary,
   /// dismissible".
   final int? lastAcknowledgedPeriodClose;
+
+  /// One "Atur sekarang" period, as day buckets; ignored once today is past it.
+  final int? customPeriodStart;
+  final int? customPeriodEndExclusive;
+
+  /// Money on hand typed for that period; counts like income in its leftover.
+  final int? customPeriodAmountMinor;
+  final int? lastSalaryMinor;
+  final int? paydayConfirmedPeriodStart;
+  final int? paydaySnoozedDay;
   const AppSetting(
       {required this.id,
       required this.periodStartDay,
-      this.lastAcknowledgedPeriodClose});
+      this.lastAcknowledgedPeriodClose,
+      this.customPeriodStart,
+      this.customPeriodEndExclusive,
+      this.customPeriodAmountMinor,
+      this.lastSalaryMinor,
+      this.paydayConfirmedPeriodStart,
+      this.paydaySnoozedDay});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2752,6 +2869,27 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     if (!nullToAbsent || lastAcknowledgedPeriodClose != null) {
       map['last_acknowledged_period_close'] =
           Variable<int>(lastAcknowledgedPeriodClose);
+    }
+    if (!nullToAbsent || customPeriodStart != null) {
+      map['custom_period_start'] = Variable<int>(customPeriodStart);
+    }
+    if (!nullToAbsent || customPeriodEndExclusive != null) {
+      map['custom_period_end_exclusive'] =
+          Variable<int>(customPeriodEndExclusive);
+    }
+    if (!nullToAbsent || customPeriodAmountMinor != null) {
+      map['custom_period_amount_minor'] =
+          Variable<int>(customPeriodAmountMinor);
+    }
+    if (!nullToAbsent || lastSalaryMinor != null) {
+      map['last_salary_minor'] = Variable<int>(lastSalaryMinor);
+    }
+    if (!nullToAbsent || paydayConfirmedPeriodStart != null) {
+      map['payday_confirmed_period_start'] =
+          Variable<int>(paydayConfirmedPeriodStart);
+    }
+    if (!nullToAbsent || paydaySnoozedDay != null) {
+      map['payday_snoozed_day'] = Variable<int>(paydaySnoozedDay);
     }
     return map;
   }
@@ -2764,6 +2902,25 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           lastAcknowledgedPeriodClose == null && nullToAbsent
               ? const Value.absent()
               : Value(lastAcknowledgedPeriodClose),
+      customPeriodStart: customPeriodStart == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customPeriodStart),
+      customPeriodEndExclusive: customPeriodEndExclusive == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customPeriodEndExclusive),
+      customPeriodAmountMinor: customPeriodAmountMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customPeriodAmountMinor),
+      lastSalaryMinor: lastSalaryMinor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSalaryMinor),
+      paydayConfirmedPeriodStart:
+          paydayConfirmedPeriodStart == null && nullToAbsent
+              ? const Value.absent()
+              : Value(paydayConfirmedPeriodStart),
+      paydaySnoozedDay: paydaySnoozedDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paydaySnoozedDay),
     );
   }
 
@@ -2775,6 +2932,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       periodStartDay: serializer.fromJson<int>(json['periodStartDay']),
       lastAcknowledgedPeriodClose:
           serializer.fromJson<int?>(json['lastAcknowledgedPeriodClose']),
+      customPeriodStart: serializer.fromJson<int?>(json['customPeriodStart']),
+      customPeriodEndExclusive:
+          serializer.fromJson<int?>(json['customPeriodEndExclusive']),
+      customPeriodAmountMinor:
+          serializer.fromJson<int?>(json['customPeriodAmountMinor']),
+      lastSalaryMinor: serializer.fromJson<int?>(json['lastSalaryMinor']),
+      paydayConfirmedPeriodStart:
+          serializer.fromJson<int?>(json['paydayConfirmedPeriodStart']),
+      paydaySnoozedDay: serializer.fromJson<int?>(json['paydaySnoozedDay']),
     );
   }
   @override
@@ -2785,19 +2951,52 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'periodStartDay': serializer.toJson<int>(periodStartDay),
       'lastAcknowledgedPeriodClose':
           serializer.toJson<int?>(lastAcknowledgedPeriodClose),
+      'customPeriodStart': serializer.toJson<int?>(customPeriodStart),
+      'customPeriodEndExclusive':
+          serializer.toJson<int?>(customPeriodEndExclusive),
+      'customPeriodAmountMinor':
+          serializer.toJson<int?>(customPeriodAmountMinor),
+      'lastSalaryMinor': serializer.toJson<int?>(lastSalaryMinor),
+      'paydayConfirmedPeriodStart':
+          serializer.toJson<int?>(paydayConfirmedPeriodStart),
+      'paydaySnoozedDay': serializer.toJson<int?>(paydaySnoozedDay),
     };
   }
 
   AppSetting copyWith(
           {int? id,
           int? periodStartDay,
-          Value<int?> lastAcknowledgedPeriodClose = const Value.absent()}) =>
+          Value<int?> lastAcknowledgedPeriodClose = const Value.absent(),
+          Value<int?> customPeriodStart = const Value.absent(),
+          Value<int?> customPeriodEndExclusive = const Value.absent(),
+          Value<int?> customPeriodAmountMinor = const Value.absent(),
+          Value<int?> lastSalaryMinor = const Value.absent(),
+          Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
+          Value<int?> paydaySnoozedDay = const Value.absent()}) =>
       AppSetting(
         id: id ?? this.id,
         periodStartDay: periodStartDay ?? this.periodStartDay,
         lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose.present
             ? lastAcknowledgedPeriodClose.value
             : this.lastAcknowledgedPeriodClose,
+        customPeriodStart: customPeriodStart.present
+            ? customPeriodStart.value
+            : this.customPeriodStart,
+        customPeriodEndExclusive: customPeriodEndExclusive.present
+            ? customPeriodEndExclusive.value
+            : this.customPeriodEndExclusive,
+        customPeriodAmountMinor: customPeriodAmountMinor.present
+            ? customPeriodAmountMinor.value
+            : this.customPeriodAmountMinor,
+        lastSalaryMinor: lastSalaryMinor.present
+            ? lastSalaryMinor.value
+            : this.lastSalaryMinor,
+        paydayConfirmedPeriodStart: paydayConfirmedPeriodStart.present
+            ? paydayConfirmedPeriodStart.value
+            : this.paydayConfirmedPeriodStart,
+        paydaySnoozedDay: paydaySnoozedDay.present
+            ? paydaySnoozedDay.value
+            : this.paydaySnoozedDay,
       );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -2808,6 +3007,24 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       lastAcknowledgedPeriodClose: data.lastAcknowledgedPeriodClose.present
           ? data.lastAcknowledgedPeriodClose.value
           : this.lastAcknowledgedPeriodClose,
+      customPeriodStart: data.customPeriodStart.present
+          ? data.customPeriodStart.value
+          : this.customPeriodStart,
+      customPeriodEndExclusive: data.customPeriodEndExclusive.present
+          ? data.customPeriodEndExclusive.value
+          : this.customPeriodEndExclusive,
+      customPeriodAmountMinor: data.customPeriodAmountMinor.present
+          ? data.customPeriodAmountMinor.value
+          : this.customPeriodAmountMinor,
+      lastSalaryMinor: data.lastSalaryMinor.present
+          ? data.lastSalaryMinor.value
+          : this.lastSalaryMinor,
+      paydayConfirmedPeriodStart: data.paydayConfirmedPeriodStart.present
+          ? data.paydayConfirmedPeriodStart.value
+          : this.paydayConfirmedPeriodStart,
+      paydaySnoozedDay: data.paydaySnoozedDay.present
+          ? data.paydaySnoozedDay.value
+          : this.paydaySnoozedDay,
     );
   }
 
@@ -2816,14 +3033,28 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return (StringBuffer('AppSetting(')
           ..write('id: $id, ')
           ..write('periodStartDay: $periodStartDay, ')
-          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose')
+          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose, ')
+          ..write('customPeriodStart: $customPeriodStart, ')
+          ..write('customPeriodEndExclusive: $customPeriodEndExclusive, ')
+          ..write('customPeriodAmountMinor: $customPeriodAmountMinor, ')
+          ..write('lastSalaryMinor: $lastSalaryMinor, ')
+          ..write('paydayConfirmedPeriodStart: $paydayConfirmedPeriodStart, ')
+          ..write('paydaySnoozedDay: $paydaySnoozedDay')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, periodStartDay, lastAcknowledgedPeriodClose);
+  int get hashCode => Object.hash(
+      id,
+      periodStartDay,
+      lastAcknowledgedPeriodClose,
+      customPeriodStart,
+      customPeriodEndExclusive,
+      customPeriodAmountMinor,
+      lastSalaryMinor,
+      paydayConfirmedPeriodStart,
+      paydaySnoozedDay);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2831,45 +3062,99 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.id == this.id &&
           other.periodStartDay == this.periodStartDay &&
           other.lastAcknowledgedPeriodClose ==
-              this.lastAcknowledgedPeriodClose);
+              this.lastAcknowledgedPeriodClose &&
+          other.customPeriodStart == this.customPeriodStart &&
+          other.customPeriodEndExclusive == this.customPeriodEndExclusive &&
+          other.customPeriodAmountMinor == this.customPeriodAmountMinor &&
+          other.lastSalaryMinor == this.lastSalaryMinor &&
+          other.paydayConfirmedPeriodStart == this.paydayConfirmedPeriodStart &&
+          other.paydaySnoozedDay == this.paydaySnoozedDay);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> id;
   final Value<int> periodStartDay;
   final Value<int?> lastAcknowledgedPeriodClose;
+  final Value<int?> customPeriodStart;
+  final Value<int?> customPeriodEndExclusive;
+  final Value<int?> customPeriodAmountMinor;
+  final Value<int?> lastSalaryMinor;
+  final Value<int?> paydayConfirmedPeriodStart;
+  final Value<int?> paydaySnoozedDay;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.periodStartDay = const Value.absent(),
     this.lastAcknowledgedPeriodClose = const Value.absent(),
+    this.customPeriodStart = const Value.absent(),
+    this.customPeriodEndExclusive = const Value.absent(),
+    this.customPeriodAmountMinor = const Value.absent(),
+    this.lastSalaryMinor = const Value.absent(),
+    this.paydayConfirmedPeriodStart = const Value.absent(),
+    this.paydaySnoozedDay = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
     this.periodStartDay = const Value.absent(),
     this.lastAcknowledgedPeriodClose = const Value.absent(),
+    this.customPeriodStart = const Value.absent(),
+    this.customPeriodEndExclusive = const Value.absent(),
+    this.customPeriodAmountMinor = const Value.absent(),
+    this.lastSalaryMinor = const Value.absent(),
+    this.paydayConfirmedPeriodStart = const Value.absent(),
+    this.paydaySnoozedDay = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
     Expression<int>? periodStartDay,
     Expression<int>? lastAcknowledgedPeriodClose,
+    Expression<int>? customPeriodStart,
+    Expression<int>? customPeriodEndExclusive,
+    Expression<int>? customPeriodAmountMinor,
+    Expression<int>? lastSalaryMinor,
+    Expression<int>? paydayConfirmedPeriodStart,
+    Expression<int>? paydaySnoozedDay,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (periodStartDay != null) 'period_start_day': periodStartDay,
       if (lastAcknowledgedPeriodClose != null)
         'last_acknowledged_period_close': lastAcknowledgedPeriodClose,
+      if (customPeriodStart != null) 'custom_period_start': customPeriodStart,
+      if (customPeriodEndExclusive != null)
+        'custom_period_end_exclusive': customPeriodEndExclusive,
+      if (customPeriodAmountMinor != null)
+        'custom_period_amount_minor': customPeriodAmountMinor,
+      if (lastSalaryMinor != null) 'last_salary_minor': lastSalaryMinor,
+      if (paydayConfirmedPeriodStart != null)
+        'payday_confirmed_period_start': paydayConfirmedPeriodStart,
+      if (paydaySnoozedDay != null) 'payday_snoozed_day': paydaySnoozedDay,
     });
   }
 
   AppSettingsCompanion copyWith(
       {Value<int>? id,
       Value<int>? periodStartDay,
-      Value<int?>? lastAcknowledgedPeriodClose}) {
+      Value<int?>? lastAcknowledgedPeriodClose,
+      Value<int?>? customPeriodStart,
+      Value<int?>? customPeriodEndExclusive,
+      Value<int?>? customPeriodAmountMinor,
+      Value<int?>? lastSalaryMinor,
+      Value<int?>? paydayConfirmedPeriodStart,
+      Value<int?>? paydaySnoozedDay}) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       periodStartDay: periodStartDay ?? this.periodStartDay,
       lastAcknowledgedPeriodClose:
           lastAcknowledgedPeriodClose ?? this.lastAcknowledgedPeriodClose,
+      customPeriodStart: customPeriodStart ?? this.customPeriodStart,
+      customPeriodEndExclusive:
+          customPeriodEndExclusive ?? this.customPeriodEndExclusive,
+      customPeriodAmountMinor:
+          customPeriodAmountMinor ?? this.customPeriodAmountMinor,
+      lastSalaryMinor: lastSalaryMinor ?? this.lastSalaryMinor,
+      paydayConfirmedPeriodStart:
+          paydayConfirmedPeriodStart ?? this.paydayConfirmedPeriodStart,
+      paydaySnoozedDay: paydaySnoozedDay ?? this.paydaySnoozedDay,
     );
   }
 
@@ -2886,6 +3171,27 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       map['last_acknowledged_period_close'] =
           Variable<int>(lastAcknowledgedPeriodClose.value);
     }
+    if (customPeriodStart.present) {
+      map['custom_period_start'] = Variable<int>(customPeriodStart.value);
+    }
+    if (customPeriodEndExclusive.present) {
+      map['custom_period_end_exclusive'] =
+          Variable<int>(customPeriodEndExclusive.value);
+    }
+    if (customPeriodAmountMinor.present) {
+      map['custom_period_amount_minor'] =
+          Variable<int>(customPeriodAmountMinor.value);
+    }
+    if (lastSalaryMinor.present) {
+      map['last_salary_minor'] = Variable<int>(lastSalaryMinor.value);
+    }
+    if (paydayConfirmedPeriodStart.present) {
+      map['payday_confirmed_period_start'] =
+          Variable<int>(paydayConfirmedPeriodStart.value);
+    }
+    if (paydaySnoozedDay.present) {
+      map['payday_snoozed_day'] = Variable<int>(paydaySnoozedDay.value);
+    }
     return map;
   }
 
@@ -2894,7 +3200,13 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     return (StringBuffer('AppSettingsCompanion(')
           ..write('id: $id, ')
           ..write('periodStartDay: $periodStartDay, ')
-          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose')
+          ..write('lastAcknowledgedPeriodClose: $lastAcknowledgedPeriodClose, ')
+          ..write('customPeriodStart: $customPeriodStart, ')
+          ..write('customPeriodEndExclusive: $customPeriodEndExclusive, ')
+          ..write('customPeriodAmountMinor: $customPeriodAmountMinor, ')
+          ..write('lastSalaryMinor: $lastSalaryMinor, ')
+          ..write('paydayConfirmedPeriodStart: $paydayConfirmedPeriodStart, ')
+          ..write('paydaySnoozedDay: $paydaySnoozedDay')
           ..write(')'))
         .toString();
   }
@@ -4801,7 +5113,7 @@ final class $$AccountsTableReferences
 
   $$PostingsTableProcessedTableManager get postingsRefs {
     final manager = $$PostingsTableTableManager($_db, $_db.postings)
-        .filter((f) => f.accountId.id($_item.id));
+        .filter((f) => f.accountId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_postingsRefsTable($_db));
     return ProcessedTableManager(
@@ -5126,7 +5438,7 @@ class $$AccountsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (postingsRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Account, $AccountsTable, Posting>(
                         currentTable: table,
                         referencedTable:
                             $$AccountsTableReferences._postingsRefsTable(db),
@@ -5192,9 +5504,10 @@ final class $$CategoriesTableReferences
           $_aliasNameGenerator(db.categories.parentId, db.categories.id));
 
   $$CategoriesTableProcessedTableManager? get parentId {
-    if ($_item.parentId == null) return null;
+    final $_column = $_itemColumn<String>('parent_id');
+    if ($_column == null) return null;
     final manager = $$CategoriesTableTableManager($_db, $_db.categories)
-        .filter((f) => f.id($_item.parentId!));
+        .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_parentIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -5209,7 +5522,7 @@ final class $$CategoriesTableReferences
 
   $$PostingsTableProcessedTableManager get postingsRefs {
     final manager = $$PostingsTableTableManager($_db, $_db.postings)
-        .filter((f) => f.categoryId.id($_item.id));
+        .filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_postingsRefsTable($_db));
     return ProcessedTableManager(
@@ -5543,7 +5856,8 @@ class $$CategoriesTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (postingsRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Category, $CategoriesTable,
+                            Posting>(
                         currentTable: table,
                         referencedTable:
                             $$CategoriesTableReferences._postingsRefsTable(db),
@@ -5625,8 +5939,8 @@ final class $$TransactionsTableReferences
               db.transactions.id, db.postings.transactionId));
 
   $$PostingsTableProcessedTableManager get postingsRefs {
-    final manager = $$PostingsTableTableManager($_db, $_db.postings)
-        .filter((f) => f.transactionId.id($_item.id));
+    final manager = $$PostingsTableTableManager($_db, $_db.postings).filter(
+        (f) => f.transactionId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_postingsRefsTable($_db));
     return ProcessedTableManager(
@@ -5965,7 +6279,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (postingsRefs)
-                    await $_getPrefetchedData(
+                    await $_getPrefetchedData<Transaction, $TransactionsTable,
+                            Posting>(
                         currentTable: table,
                         referencedTable: $$TransactionsTableReferences
                             ._postingsRefsTable(db),
@@ -6027,8 +6342,10 @@ final class $$PostingsTableReferences
           $_aliasNameGenerator(db.postings.transactionId, db.transactions.id));
 
   $$TransactionsTableProcessedTableManager get transactionId {
+    final $_column = $_itemColumn<String>('transaction_id')!;
+
     final manager = $$TransactionsTableTableManager($_db, $_db.transactions)
-        .filter((f) => f.id($_item.transactionId));
+        .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_transactionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6039,9 +6356,10 @@ final class $$PostingsTableReferences
       .createAlias($_aliasNameGenerator(db.postings.accountId, db.accounts.id));
 
   $$AccountsTableProcessedTableManager? get accountId {
-    if ($_item.accountId == null) return null;
+    final $_column = $_itemColumn<String>('account_id');
+    if ($_column == null) return null;
     final manager = $$AccountsTableTableManager($_db, $_db.accounts)
-        .filter((f) => f.id($_item.accountId!));
+        .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6053,9 +6371,10 @@ final class $$PostingsTableReferences
           $_aliasNameGenerator(db.postings.categoryId, db.categories.id));
 
   $$CategoriesTableProcessedTableManager? get categoryId {
-    if ($_item.categoryId == null) return null;
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
     final manager = $$CategoriesTableTableManager($_db, $_db.categories)
-        .filter((f) => f.id($_item.categoryId!));
+        .filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6590,12 +6909,24 @@ typedef $$AppSettingsTableCreateCompanionBuilder = AppSettingsCompanion
   Value<int> id,
   Value<int> periodStartDay,
   Value<int?> lastAcknowledgedPeriodClose,
+  Value<int?> customPeriodStart,
+  Value<int?> customPeriodEndExclusive,
+  Value<int?> customPeriodAmountMinor,
+  Value<int?> lastSalaryMinor,
+  Value<int?> paydayConfirmedPeriodStart,
+  Value<int?> paydaySnoozedDay,
 });
 typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
     Function({
   Value<int> id,
   Value<int> periodStartDay,
   Value<int?> lastAcknowledgedPeriodClose,
+  Value<int?> customPeriodStart,
+  Value<int?> customPeriodEndExclusive,
+  Value<int?> customPeriodAmountMinor,
+  Value<int?> lastSalaryMinor,
+  Value<int?> paydayConfirmedPeriodStart,
+  Value<int?> paydaySnoozedDay,
 });
 
 class $$AppSettingsTableFilterComposer
@@ -6616,6 +6947,30 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get lastAcknowledgedPeriodClose => $composableBuilder(
       column: $table.lastAcknowledgedPeriodClose,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get customPeriodStart => $composableBuilder(
+      column: $table.customPeriodStart,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get customPeriodEndExclusive => $composableBuilder(
+      column: $table.customPeriodEndExclusive,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get customPeriodAmountMinor => $composableBuilder(
+      column: $table.customPeriodAmountMinor,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get lastSalaryMinor => $composableBuilder(
+      column: $table.lastSalaryMinor,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get paydayConfirmedPeriodStart => $composableBuilder(
+      column: $table.paydayConfirmedPeriodStart,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get paydaySnoozedDay => $composableBuilder(
+      column: $table.paydaySnoozedDay,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -6638,6 +6993,30 @@ class $$AppSettingsTableOrderingComposer
   ColumnOrderings<int> get lastAcknowledgedPeriodClose => $composableBuilder(
       column: $table.lastAcknowledgedPeriodClose,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get customPeriodStart => $composableBuilder(
+      column: $table.customPeriodStart,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get customPeriodEndExclusive => $composableBuilder(
+      column: $table.customPeriodEndExclusive,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get customPeriodAmountMinor => $composableBuilder(
+      column: $table.customPeriodAmountMinor,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get lastSalaryMinor => $composableBuilder(
+      column: $table.lastSalaryMinor,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get paydayConfirmedPeriodStart => $composableBuilder(
+      column: $table.paydayConfirmedPeriodStart,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get paydaySnoozedDay => $composableBuilder(
+      column: $table.paydaySnoozedDay,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -6657,6 +7036,24 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<int> get lastAcknowledgedPeriodClose => $composableBuilder(
       column: $table.lastAcknowledgedPeriodClose, builder: (column) => column);
+
+  GeneratedColumn<int> get customPeriodStart => $composableBuilder(
+      column: $table.customPeriodStart, builder: (column) => column);
+
+  GeneratedColumn<int> get customPeriodEndExclusive => $composableBuilder(
+      column: $table.customPeriodEndExclusive, builder: (column) => column);
+
+  GeneratedColumn<int> get customPeriodAmountMinor => $composableBuilder(
+      column: $table.customPeriodAmountMinor, builder: (column) => column);
+
+  GeneratedColumn<int> get lastSalaryMinor => $composableBuilder(
+      column: $table.lastSalaryMinor, builder: (column) => column);
+
+  GeneratedColumn<int> get paydayConfirmedPeriodStart => $composableBuilder(
+      column: $table.paydayConfirmedPeriodStart, builder: (column) => column);
+
+  GeneratedColumn<int> get paydaySnoozedDay => $composableBuilder(
+      column: $table.paydaySnoozedDay, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager extends RootTableManager<
@@ -6688,21 +7085,45 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<int> periodStartDay = const Value.absent(),
             Value<int?> lastAcknowledgedPeriodClose = const Value.absent(),
+            Value<int?> customPeriodStart = const Value.absent(),
+            Value<int?> customPeriodEndExclusive = const Value.absent(),
+            Value<int?> customPeriodAmountMinor = const Value.absent(),
+            Value<int?> lastSalaryMinor = const Value.absent(),
+            Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
+            Value<int?> paydaySnoozedDay = const Value.absent(),
           }) =>
               AppSettingsCompanion(
             id: id,
             periodStartDay: periodStartDay,
             lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose,
+            customPeriodStart: customPeriodStart,
+            customPeriodEndExclusive: customPeriodEndExclusive,
+            customPeriodAmountMinor: customPeriodAmountMinor,
+            lastSalaryMinor: lastSalaryMinor,
+            paydayConfirmedPeriodStart: paydayConfirmedPeriodStart,
+            paydaySnoozedDay: paydaySnoozedDay,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<int> periodStartDay = const Value.absent(),
             Value<int?> lastAcknowledgedPeriodClose = const Value.absent(),
+            Value<int?> customPeriodStart = const Value.absent(),
+            Value<int?> customPeriodEndExclusive = const Value.absent(),
+            Value<int?> customPeriodAmountMinor = const Value.absent(),
+            Value<int?> lastSalaryMinor = const Value.absent(),
+            Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
+            Value<int?> paydaySnoozedDay = const Value.absent(),
           }) =>
               AppSettingsCompanion.insert(
             id: id,
             periodStartDay: periodStartDay,
             lastAcknowledgedPeriodClose: lastAcknowledgedPeriodClose,
+            customPeriodStart: customPeriodStart,
+            customPeriodEndExclusive: customPeriodEndExclusive,
+            customPeriodAmountMinor: customPeriodAmountMinor,
+            lastSalaryMinor: lastSalaryMinor,
+            paydayConfirmedPeriodStart: paydayConfirmedPeriodStart,
+            paydaySnoozedDay: paydaySnoozedDay,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

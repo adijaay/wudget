@@ -70,4 +70,53 @@ void main() {
       expect(period.contains(_day(2026, 4, 1)), isFalse);
     });
   });
+
+  group('R3.4 custom start, payday 25th', () {
+    Period setNow(int today, {required bool later}) {
+      final c = setNowEndChoices(today, monthStartDay: 25);
+      return Period(startDay: today, endDayExclusive: later ? c.later : c.coming, monthStartDay: 25);
+    }
+
+    Period effective(int today, Period custom) => effectivePeriod(today,
+        monthStartDay: 25, customStart: custom.startDay, customEndExclusive: custom.endDayExclusive);
+
+    test('set on 7 Oct ends 24 Oct', () {
+      final custom = setNow(_day(2026, 10, 7), later: false);
+      final p = effective(_day(2026, 10, 7), custom);
+      expect(p.startDate, DateTime.utc(2026, 10, 7));
+      expect(p.lastDate, DateTime.utc(2026, 10, 24));
+      expect(p.next.startDate, DateTime.utc(2026, 10, 25));
+      expect(p.next.lastDate, DateTime.utc(2026, 11, 24));
+    });
+
+    test('set on 20 Oct ends 24 Nov; 25 Nov starts a normal period', () {
+      final custom = setNow(_day(2026, 10, 20), later: true);
+      expect(effective(_day(2026, 11, 3), custom).startDate, DateTime.utc(2026, 10, 20));
+      expect(effective(_day(2026, 11, 24), custom).lastDate, DateTime.utc(2026, 11, 24));
+      final after = effective(_day(2026, 11, 25), custom);
+      expect(after, Period.containing(_day(2026, 11, 25), monthStartDay: 25));
+      expect(after.startDate, DateTime.utc(2026, 11, 25));
+      expect(after.lastDate, DateTime.utc(2026, 12, 24));
+    });
+
+    test('no override is exactly Period.containing', () {
+      expect(effectivePeriod(_day(2026, 10, 7), monthStartDay: 25),
+          Period.containing(_day(2026, 10, 7), monthStartDay: 25));
+    });
+  });
+
+  group('R3.5 Atur sekarang default chip', () {
+    test('on the 14th the coming 24th is the default', () {
+      final c = setNowEndChoices(_day(2026, 10, 14), monthStartDay: 25);
+      expect(c.laterIsDefault, isFalse);
+      expect(c.coming, _day(2026, 10, 25));
+      expect(c.later, _day(2026, 11, 25));
+    });
+
+    test('on the 15th the 24th after it is the default', () {
+      final c = setNowEndChoices(_day(2026, 10, 15), monthStartDay: 25);
+      expect(c.laterIsDefault, isTrue);
+      expect(c.later, _day(2026, 11, 25));
+    });
+  });
 }
