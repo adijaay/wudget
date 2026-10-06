@@ -96,6 +96,46 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
   });
 
+  testWidgets('a category that exists but has no spend yet still gets a row, at Rp 0', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await db.into(db.categories).insert(CategoriesCompanion.insert(
+          id: 'cat_makan', name: 'Makan', kind: 'expense', iconKey: 'food', hueIndex: 0, sortOrder: 0, updatedAt: 0,
+        ));
+    // A second category with real history, so this test also proves the
+    // no-history row sits alongside a proposed one rather than only
+    // appearing when it is the sole category.
+    await db.into(db.categories).insert(CategoriesCompanion.insert(
+          id: 'cat_transport', name: 'Transport', kind: 'expense', iconKey: 'car', hueIndex: 1, sortOrder: 1,
+          updatedAt: 0,
+        ));
+    await expense(db, 'tx1', 'cat_transport', DateTime.now().subtract(const Duration(days: 5)), 70000);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const BudgetScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Both categories are listed, not just the one with history.
+    expect(find.text('Makan'), findsOneWidget);
+    expect(find.text('Transport'), findsOneWidget);
+
+    final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+    expect(fields, hasLength(2));
+    // The unused category's field is an honest zero the user can type
+    // over, never a fabricated guess or a missing field.
+    expect(fields.map((f) => f.controller!.text), contains('0'));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
   testWidgets('no history and no saved budget shows the empty state, not a blank row', (tester) async {
     final db = WudgetDatabase(NativeDatabase.memory());
     addTearDown(db.close);

@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; }
+    a { color: oklch(0.52 0.09 205); } a:hover { color: oklch(0.42 0.09 205); }
+    .amt { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+    .card { background: oklch(0.995 0.003 80); border: 1px solid oklch(0.92 0.008 70); border-radius: 16px; padding: 15px 16px; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .say { font-size: 12.5px; color: oklch(0.40 0.02 60); line-height: 1.45; text-wrap: pretty; }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 1190px; background: oklch(0.985 0.006 80); position: relative; color: oklch(0.22 0.015 60);">
+
+  <div style="padding: 56px 20px 12px 20px;">
+    <div style="font-size: 24px; font-weight: 700; letter-spacing: -0.01em;">Pantau</div>
+  </div>
+
+  <div style="padding: 0 16px 10px 16px; display: flex; gap: 4px;">
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.94 0.008 70); font-size: 13px; font-weight: 600; color: oklch(0.42 0.02 60);">Bulan ini</div>
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.94 0.008 70); font-size: 13px; font-weight: 600; color: oklch(0.42 0.02 60);">Pola</div>
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.52 0.09 205); font-size: 13px; font-weight: 700; color: oklch(0.99 0.005 80);">Aliran</div>
+  </div>
+
+  <!-- Only closed months can be drawn as a flow. The running month says so instead of pretending. -->
+  <div style="padding: 4px 16px 0 16px; display: flex; gap: 8px;">
+    <div style="min-height: 44px; padding: 0 16px; display: flex; align-items: center; border-radius: 11px; background: oklch(0.995 0.003 80); border: 1px solid oklch(0.90 0.008 70); font-size: 13px; font-weight: 600;">Juli</div>
+    <div style="min-height: 44px; padding: 0 16px; display: flex; align-items: center; border-radius: 11px; background: oklch(0.93 0.025 205); border: 1.5px solid oklch(0.52 0.09 205); font-size: 13px; font-weight: 700; color: oklch(0.32 0.07 205);">Agustus</div>
+    <div style="min-height: 44px; padding: 0 14px; display: flex; flex-direction: column; justify-content: center; border-radius: 11px; border: 1px dashed oklch(0.87 0.008 70);">
+      <span style="font-size: 13px; font-weight: 600; color: oklch(0.50 0.02 60);">September</span>
+      <span style="font-size: 10px; color: oklch(0.50 0.02 60);">masih jalan</span>
+    </div>
+  </div>
+
+  <div style="padding: 12px 16px 108px 16px; display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- THE FLOW. One picture of a closed month: where it came in, where it went out. -->
+    <div class="card">
+      <div style="font-size: 14px; font-weight: 700;">Agustus masuk dari mana, keluar ke mana</div>
+      <div style="font-size: 11.5px; color: oklch(0.50 0.02 60); margin-top: 3px;">Lebar pita sebanding dengan nominalnya</div>
+
+      <svg width="326" height="214" viewBox="0 0 326 214" style="margin-top: 14px;" role="img" aria-label="Aliran uang Agustus: masuk Rp 8.500.000 dari gaji dan freelance, lalu terbagi jadi dipakai Rp 6.210.000 dan ditabung Rp 2.290.000, dan yang dipakai pecah ke rumah, makan, transport, belanja, dan lainnya">
+
+        <!-- masuk, dua sumber -->
+        <rect x="0"     y="0" width="300.2" height="16" rx="3" fill="oklch(0.72 0.03 70)"/>
+        <rect x="303.2" y="0" width="22.8"  height="16" rx="3" fill="oklch(0.84 0.02 70)"/>
+
+        <path d="M0 16 C0 28, 0 32, 0 44 L302.9 44 C302.9 32, 300.2 28, 300.2 16 Z" fill="oklch(0.72 0.03 70)" opacity="0.5"/>
+        <path d="M303.2 16 C303.2 28, 302.9 32, 302.9 44 L326 44 C326 32, 326 28, 326 16 Z" fill="oklch(0.84 0.02 70)" opacity="0.72"/>
+
+        <rect x="0" y="44" width="326" height="18" rx="3" fill="oklch(0.72 0.03 70)"/>
+        <text x="163" y="57" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10.5" font-weight="700" fill="oklch(0.25 0.02 60)">MASUK Rp 8.500.000</text>
+
+        <!-- pertigaan pertama: dipakai atau ditabung -->
+        <path d="M0 62 C0 82, 0 88, 0 104 L235.2 104 C235.2 88, 238.2 82, 238.2 62 Z" fill="oklch(0.72 0.03 70)" opacity="0.55"/>
+        <path d="M238.2 62 C238.2 82, 239.2 88, 239.2 104 L326 104 C326 88, 326 82, 326 62 Z" fill="oklch(0.50 0.12 150)" opacity="0.4"/>
+
+        <rect x="0"     y="104" width="235.2" height="18" rx="3" fill="oklch(0.80 0.03 70)"/>
+        <rect x="239.2" y="104" width="86.8"  height="18" rx="3" fill="oklch(0.72 0.10 150)"/>
+        <text x="117" y="117" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" font-weight="700" fill="oklch(0.25 0.02 60)">DIPAKAI 6.210.000</text>
+        <text x="282" y="117" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" font-weight="700" fill="oklch(0.25 0.02 60)">DITABUNG</text>
+
+        <!-- yang dipakai pecah jadi lima, yang ditabung jalan lurus -->
+        <path d="M0 122 C0 152, 0 166, 0 196 L74.1 196 C74.1 166, 79.5 152, 79.5 122 Z" fill="oklch(0.58 0.08 130)" opacity="0.5"/>
+        <path d="M79.5 122 C79.5 152, 78.1 166, 78.1 196 L140.9 196 C140.9 166, 146.9 152, 146.9 122 Z" fill="oklch(0.62 0.10 40)" opacity="0.5"/>
+        <path d="M146.9 122 C146.9 152, 144.9 166, 144.9 196 L181.3 196 C181.3 166, 185.9 152, 185.9 122 Z" fill="oklch(0.58 0.09 205)" opacity="0.5"/>
+        <path d="M185.9 122 C185.9 152, 185.3 166, 185.3 196 L201.9 196 C201.9 166, 203.7 152, 203.7 122 Z" fill="oklch(0.58 0.09 320)" opacity="0.5"/>
+        <path d="M203.7 122 C203.7 152, 205.9 166, 205.9 196 L235.2 196 C235.2 166, 235.2 152, 235.2 122 Z" fill="oklch(0.58 0.03 70)" opacity="0.5"/>
+        <path d="M239.2 122 L326 122 L326 196 L239.2 196 Z" fill="oklch(0.50 0.12 150)" opacity="0.4"/>
+
+        <rect x="0"     y="196" width="74.1" height="18" rx="3" fill="oklch(0.58 0.08 130)"/>
+        <rect x="78.1"  y="196" width="62.8" height="18" rx="3" fill="oklch(0.62 0.10 40)"/>
+        <rect x="144.9" y="196" width="36.4" height="18" rx="3" fill="oklch(0.58 0.09 205)"/>
+        <rect x="185.3" y="196" width="16.6" height="18" rx="3" fill="oklch(0.58 0.09 320)"/>
+        <rect x="205.9" y="196" width="29.3" height="18" rx="3" fill="oklch(0.58 0.03 70)"/>
+        <rect x="239.2" y="196" width="86.8" height="18" rx="3" fill="oklch(0.50 0.12 150)"/>
+      </svg>
+
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: oklch(0.46 0.02 60); margin-top: 6px;">
+        <span>Gaji Rp 7.900.000</span>
+        <span>Freelance Rp 600.000</span>
+      </div>
+
+      <div style="height: 1px; background: oklch(0.94 0.006 70); margin: 13px 0;"></div>
+
+      <!-- names and amounts live outside the bands, so no text sits on a category fill -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="row">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.58 0.08 130);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Rumah</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">25%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right;">2.100.000</span>
+        </div>
+        <div class="row">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.62 0.10 40);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Makan &amp; minum</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">21%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right;">1.780.000</span>
+        </div>
+        <div class="row">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.58 0.09 205);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Transport</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">12%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right;">1.030.000</span>
+        </div>
+        <div class="row">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.58 0.09 320);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Belanja</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">6%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right;">470.000</span>
+        </div>
+        <div class="row">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.58 0.03 70);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Lainnya</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">10%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right;">830.000</span>
+        </div>
+        <div class="row" style="padding-top: 10px; border-top: 1px solid oklch(0.94 0.006 70);">
+          <span style="width: 9px; height: 9px; border-radius: 3px; background: oklch(0.50 0.12 150);"></span>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700;">Ditabung</span>
+          <span style="font-size: 11.5px; color: oklch(0.48 0.02 60); width: 34px; text-align: right;">27%</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700; width: 78px; text-align: right; color: oklch(0.42 0.12 150);">+2.290.000</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: oklch(0.94 0.006 70); margin: 13px 0 11px 0;"></div>
+      <div class="say">Dari tiap Rp 100.000 yang masuk bulan Agustus, Rp 27.000 nggak kamu pakai. Rumah dan makan berdua sudah ambil Rp 46.000.</div>
+    </div>
+
+    <!-- WHAT MOVED. Direction is carried by the arrow and the sign, not by the colour. -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div style="font-size: 14px; font-weight: 700;">Yang berubah dari Juli</div>
+        <span class="amt" style="font-size: 12.5px; font-weight: 700; color: oklch(0.46 0.13 40);">+320.000</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 11px; margin-top: 13px;">
+        <div class="row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.46 0.13 40)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Belanja</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700;">+120.000</span>
+        </div>
+        <div class="row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.46 0.13 40)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Makan &amp; minum</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700;">+90.000</span>
+        </div>
+        <div class="row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.46 0.13 40)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Lainnya</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700;">+60.000</span>
+        </div>
+        <div class="row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.46 0.13 40)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></svg>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600;">Transport</span>
+          <span class="amt" style="font-size: 13px; font-weight: 700;">+50.000</span>
+        </div>
+        <div class="row">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(0.50 0.02 60)" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 600; color: oklch(0.42 0.02 60);">Rumah</span>
+          <span style="font-size: 12.5px; color: oklch(0.48 0.02 60);">tetap</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: oklch(0.94 0.006 70); margin: 13px 0 11px 0;"></div>
+      <div class="say">Naiknya nyebar di empat kategori, bukan satu belanja besar. Yang paling kelihatan sepatu kerja Rp 320.000 di awal September.</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 88px; background: oklch(0.995 0.003 80); border-top: 1px solid oklch(0.92 0.008 70);">
+    <div style="display: flex; padding: 10px 8px 0 8px;">
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7M8 17h4"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Catat</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.52 0.09 205)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V11M12 19V6M19 19v-5"/></svg>
+        <span style="font-size: 10.5px; font-weight: 700; color: oklch(0.52 0.09 205);">Pantau</span>
+      </div>
+      <div style="width: 62px;"></div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H19v12H6.5A2.5 2.5 0 0 1 4 15.5z"/><path d="M16 12h2"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Kantong</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Saya</span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 50%; margin-left: -28px; top: -22px; width: 56px; height: 56px; border-radius: 18px; background: oklch(0.52 0.09 205); box-shadow: 0 6px 18px oklch(0.52 0.09 205 / 0.34); display: flex; align-items: center; justify-content: center;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="oklch(0.99 0.005 80)" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":1190}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

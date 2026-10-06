@@ -142,7 +142,9 @@ void main() {
     // reason instead of fabricating a comparison (chart rule 8).
     expect(find.text('Belum ada periode sebelumnya untuk dibandingkan.'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Lihat sisa anggaran'));
+    // The Bulan ini / Pola / Aliran switcher sits above the scroll view, so
+    // the tap row is one screen further down than it used to be.
+    await tester.scrollUntilVisible(find.text('Lihat sisa anggaran'), 200, maxScrolls: 30);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Lihat sisa anggaran'));
     await tester.pumpAndSettle();

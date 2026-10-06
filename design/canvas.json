@@ -63,6 +63,38 @@
       "y": 1180,
       "w": 1720,
       "h": 960
+    },
+    {
+      "file": "CatatHariIni.dc.html",
+      "title": "Catat, kepala hari ini (v2)",
+      "x": 0,
+      "y": 2560,
+      "w": 390,
+      "h": 960
+    },
+    {
+      "file": "Pola.dc.html",
+      "title": "Pantau > Pola (kalender, hari, bulan)",
+      "x": 470,
+      "y": 2560,
+      "w": 390,
+      "h": 1580
+    },
+    {
+      "file": "Aliran.dc.html",
+      "title": "Pantau > Aliran (masuk ke keluar)",
+      "x": 940,
+      "y": 2560,
+      "w": 390,
+      "h": 1190
+    },
+    {
+      "file": "StatesPola.dc.html",
+      "title": "Pola dan Aliran, keadaan selain penuh",
+      "x": 1410,
+      "y": 2560,
+      "w": 1230,
+      "h": 690
     }
   ],
   "annotations": [
@@ -71,7 +103,7 @@
       "x": 0,
       "y": -150,
       "w": 620,
-      "text": "wudget, mockup statis.\nArah: kepribadian lokal yang hangat, ENERGY 2 / RHYTHM 2 / MOTION 2 (DESIGN.md).\nAksen, huruf, dan motif masih usulan, belum diputuskan. Coba chip Warna di artboard pertama."
+      "text": "wudget, mockup statis.\nArah: kepribadian lokal yang hangat, ENERGY 2 / RHYTHM 2 / MOTION 2 (DESIGN.md).\nAksen, huruf, dan motif masih usulan, belum diputuskan. Coba chip Warna di artboard pertama.\nSemua nominal di kanvas ini angka contoh, bukan data orang sungguhan."
     },
     {
       "id": "pace-bet",
@@ -86,6 +118,34 @@
       "y": 1086,
       "w": 520,
       "text": "Tidak satu pun dari 28 screenshot pesaing menunjukkan layar kosong, menunggu, atau error. Justru di situ mereka rusak menurut review. Empat layar ini yang dibedakan."
+    },
+    {
+      "id": "v2-brief",
+      "x": 0,
+      "y": 2400,
+      "w": 900,
+      "text": "Baris kedua, putaran kedua: lebih hangat, lebih banyak gambar, lebih banyak angka.\nHangatnya datang dari sapaan, bingkai sehari, dan motif amplop. Bukan dari level, lencana, atau api beruntun, karena DESIGN.md sudah menolak itu dan riset bilang yang dihadiahi jadi kegiatan mencatat, bukan hasilnya.\nBaris ini pakai satu set angka yang sama: September hari ke-11, anggaran Rp 4.500.000, terpakai Rp 2.430.000. Agustus sudah tutup di Rp 6.210.000."
+    },
+    {
+      "id": "v2-pola",
+      "x": 470,
+      "y": 4190,
+      "w": 420,
+      "text": "Satu nilai per kotak kalender, bukan dua seperti Ollo. Hari yang belum jalan digambar putus-putus, tidak pernah ditulis nol. Hari tanpa pengeluaran punya bentuk sendiri, jadi warna bukan satu-satunya penanda."
+    },
+    {
+      "id": "v2-aliran",
+      "x": 940,
+      "y": 3800,
+      "w": 420,
+      "text": "Aliran cuma bisa digambar untuk bulan yang sudah tutup, jadi September ditandai masih jalan, bukan digambar setengah. Nama dan nominal ditaruh di luar pita karena warna kategori tidak cukup kontras buat teks di atasnya."
+    },
+    {
+      "id": "v2-todo",
+      "x": 1410,
+      "y": 3300,
+      "w": 540,
+      "text": "Yang belum: Pantau versi lama (baris atas) belum punya pengalih Bulan ini / Pola / Aliran. Kalau baris kedua ini dipakai, Pantau.dc.html perlu ikut diubah supaya navigasinya cocok."
     }
   ],
   "launch": {

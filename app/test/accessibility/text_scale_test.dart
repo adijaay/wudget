@@ -107,6 +107,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+
+    // Catat now opens on the day header (jatah harian and the week bars),
+    // which at 200% is most of a viewport on its own, so the first ledger
+    // row starts below the fold. Scroll to it: what this test guards is
+    // that the row holds together at that scale, not where it sits.
+    await tester.scrollUntilVisible(find.text('Makan'), 200, maxScrolls: 30);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
     expect(find.text('Makan'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());

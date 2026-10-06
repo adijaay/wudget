@@ -18,6 +18,30 @@ class PeriodTotals {
   final int incomeMinor;
 }
 
+/// One of the period's largest single expenses, for Pola's "nota paling
+/// besar". A statistic the user can act on: tapping it opens the
+/// transaction, so an amount that looks wrong can be checked rather than
+/// just read.
+class LargeExpense {
+  const LargeExpense({
+    required this.transactionId,
+    required this.day,
+    required this.amountMinor,
+    required this.note,
+    required this.categoryName,
+    required this.hueIndex,
+  });
+  final String transactionId;
+  final int day;
+  final int amountMinor;
+
+  /// The user's own note, or null when they saved without one — the view
+  /// falls back to the category name rather than inventing a description.
+  final String? note;
+  final String? categoryName;
+  final int hueIndex;
+}
+
 /// Per-period reads for Pantau. Bounded by the period's day range (a month
 /// at most), so unlike an all-time scan this stays fast without a
 /// dedicated cache table — see DECISIONS.md, Sprint 8.
@@ -102,6 +126,47 @@ class PeriodAggregateQueries {
       byDay[day] = (byDay[day] ?? 0) + row.readTable(_db.postings).amountMinor.abs();
     }
     return byDay;
+  }
+
+  /// The [limit] largest single expenses in [period], biggest first.
+  ///
+  /// Ordering happens in Dart rather than SQL because "which day is this
+  /// on" is per-row (each transaction carries its own tz offset), so the
+  /// SQL scan cannot be bounded to the period exactly — same shape as
+  /// every other read in this file.
+  Future<List<LargeExpense>> largestExpenses(Period period, {int limit = 3}) async {
+    final scanStart = period.startDay * _millisPerDay - _millisPerDay;
+    final scanEnd = period.endDayExclusive * _millisPerDay + _millisPerDay;
+
+    final rows = await (_db.select(_db.postings).join([
+      innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
+      leftOuterJoin(_db.categories, _db.categories.id.equalsExp(_db.postings.categoryId)),
+    ])
+          ..where(_db.postings.categoryId.isNotNull() &
+              _db.transactions.kind.equals('expense') &
+              isActualTransaction(_db.transactions) &
+              _db.transactions.occurredAt.isBiggerOrEqualValue(scanStart) &
+              _db.transactions.occurredAt.isSmallerThanValue(scanEnd)))
+        .get();
+
+    final expenses = <LargeExpense>[];
+    for (final row in rows) {
+      final tx = row.readTable(_db.transactions);
+      final day = dayBucketFor(tx.occurredAt, tx.tzOffsetMinutes);
+      if (!period.contains(day)) continue;
+      final category = row.readTableOrNull(_db.categories);
+      expenses.add(LargeExpense(
+        transactionId: tx.id,
+        day: day,
+        amountMinor: row.readTable(_db.postings).amountMinor.abs(),
+        note: tx.note,
+        categoryName: category?.name,
+        hueIndex: category?.hueIndex ?? 0,
+      ));
+    }
+
+    expenses.sort((a, b) => b.amountMinor.compareTo(a.amountMinor));
+    return expenses.take(limit).toList();
   }
 
   /// The prior period's expense total, for the pace baseline — null unless

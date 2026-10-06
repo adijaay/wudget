@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; }
+    a { color: oklch(0.52 0.09 205); } a:hover { color: oklch(0.42 0.09 205); }
+    .amt { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+    .card { background: oklch(0.995 0.003 80); border: 1px solid oklch(0.92 0.008 70); border-radius: 16px; padding: 15px 16px; }
+    .q { font-size: 14px; font-weight: 700; line-height: 1.3; }
+    .say { font-size: 12.5px; color: oklch(0.40 0.02 60); line-height: 1.45; text-wrap: pretty; }
+    .cell { height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .leg { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: oklch(0.46 0.02 60); }
+  </style>
+</helmet>
+
+<div style="width: 390px; min-height: 1580px; background: oklch(0.985 0.006 80); position: relative; color: oklch(0.22 0.015 60);">
+
+  <div style="padding: 56px 20px 12px 20px;">
+    <div style="font-size: 24px; font-weight: 700; letter-spacing: -0.01em;">Pantau</div>
+  </div>
+
+  <!-- Pantau holds three views. This one answers "kapan" rather than "berapa sisa". -->
+  <div style="padding: 0 16px 10px 16px; display: flex; gap: 4px; background: transparent;">
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.94 0.008 70); font-size: 13px; font-weight: 600; color: oklch(0.42 0.02 60);">Bulan ini</div>
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.52 0.09 205); font-size: 13px; font-weight: 700; color: oklch(0.99 0.005 80);">Pola</div>
+    <div style="flex-grow: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: oklch(0.94 0.008 70); font-size: 13px; font-weight: 600; color: oklch(0.42 0.02 60);">Aliran</div>
+  </div>
+
+  <!-- three derived numbers, on one line, no delta badges invented for them -->
+  <div style="margin: 4px 16px 0 16px; padding: 12px 16px; background: oklch(0.965 0.005 75); border-radius: 12px; display: flex; align-items: center;">
+    <div style="flex-grow: 1;">
+      <div class="amt" style="font-size: 16px; font-weight: 700;">11</div>
+      <div style="font-size: 10.5px; color: oklch(0.48 0.02 60); margin-top: 1px;">hari jalan</div>
+    </div>
+    <div style="width: 1px; height: 26px; background: oklch(0.89 0.008 70);"></div>
+    <div style="flex-grow: 1; padding-left: 14px;">
+      <div class="amt" style="font-size: 16px; font-weight: 700;">34</div>
+      <div style="font-size: 10.5px; color: oklch(0.48 0.02 60); margin-top: 1px;">transaksi</div>
+    </div>
+    <div style="width: 1px; height: 26px; background: oklch(0.89 0.008 70);"></div>
+    <div style="flex-grow: 1.4; padding-left: 14px;">
+      <div class="amt" style="font-size: 16px; font-weight: 700;">Rp 221.000</div>
+      <div style="font-size: 10.5px; color: oklch(0.48 0.02 60); margin-top: 1px;">rata-rata per hari</div>
+    </div>
+  </div>
+
+  <div style="padding: 12px 16px 108px 16px; display: flex; flex-direction: column; gap: 12px;">
+
+    <!-- KALENDER. One value per cell. Days that have not happened are never drawn as zero. -->
+    <div class="card">
+      <div class="q">Hari mana yang berat</div>
+      <div style="font-size: 11.5px; color: oklch(0.50 0.02 60); margin-top: 2px;">September 2026, per hari</div>
+
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 12px;">
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Sn</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Sl</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Rb</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Km</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Jm</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Sb</div>
+        <div style="text-align: center; font-size: 10px; font-weight: 700; color: oklch(0.50 0.02 60);">Mg</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 5px;">
+        <div></div>
+        <div class="cell" style="background: oklch(0.700 0.105 205); color: oklch(0.25 0.02 60);">1</div>
+        <div class="cell" style="background: oklch(0.930 0.030 205); color: oklch(0.25 0.02 60);">2</div>
+        <div class="cell" style="background: oklch(0.995 0.003 80); border: 1.5px solid oklch(0.76 0.04 205); color: oklch(0.40 0.02 60);">3</div>
+        <div class="cell" style="background: oklch(0.885 0.045 205); color: oklch(0.25 0.02 60);">4</div>
+        <div class="cell" style="background: oklch(0.775 0.082 205); color: oklch(0.25 0.02 60);">5</div>
+        <div class="cell" style="background: oklch(0.835 0.062 205); color: oklch(0.25 0.02 60);">6</div>
+
+        <div class="cell" style="background: oklch(0.885 0.045 205); color: oklch(0.25 0.02 60);">7</div>
+        <div class="cell" style="background: oklch(0.995 0.003 80); border: 1.5px solid oklch(0.76 0.04 205); color: oklch(0.40 0.02 60);">8</div>
+        <div class="cell" style="background: oklch(0.885 0.045 205); color: oklch(0.25 0.02 60);">9</div>
+        <div class="cell" style="background: oklch(0.930 0.030 205); color: oklch(0.25 0.02 60);">10</div>
+        <div class="cell" style="background: oklch(0.930 0.030 205); box-shadow: 0 0 0 2px oklch(0.52 0.09 205); color: oklch(0.25 0.02 60);">11</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">12</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">13</div>
+
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">14</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">15</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">16</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">17</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">18</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">19</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">20</div>
+
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">21</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">22</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">23</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">24</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">25</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">26</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">27</div>
+
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">28</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">29</div>
+        <div class="cell" style="border: 1px dashed oklch(0.87 0.008 70); color: oklch(0.52 0.02 60);">30</div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 13px;">
+        <div class="leg">
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.930 0.030 205);"></span>
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.885 0.045 205);"></span>
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.835 0.062 205);"></span>
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.775 0.082 205);"></span>
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.700 0.105 205);"></span>
+          <span>0 sampai 1jt</span>
+        </div>
+        <div class="leg">
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.995 0.003 80); border: 1.5px solid oklch(0.76 0.04 205);"></span>
+          <span>nggak keluar duit</span>
+        </div>
+        <div class="leg">
+          <span style="width: 13px; height: 13px; border-radius: 4px; background: oklch(0.930 0.030 205); box-shadow: 0 0 0 2px oklch(0.52 0.09 205);"></span>
+          <span>hari ini</span>
+        </div>
+        <div class="leg">
+          <span style="width: 13px; height: 13px; border-radius: 4px; border: 1px dashed oklch(0.87 0.008 70);"></span>
+          <span>belum jalan</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: oklch(0.94 0.006 70); margin: 13px 0 11px 0;"></div>
+      <div class="say">Yang paling berat 1 September, Rp 950.000, dan itu kos plus listrik. Dua hari sejauh ini nggak ada pengeluaran sama sekali.</div>
+    </div>
+
+    <!-- WEEKDAY PATTERN. The comparison is written out so the bars do not have to be read precisely. -->
+    <div class="card">
+      <div class="q">Akhir pekan berapa kali lipat</div>
+      <div style="font-size: 11.5px; color: oklch(0.50 0.02 60); margin-top: 2px;">Rata-rata per hari, 3 bulan terakhir</div>
+
+      <svg width="326" height="118" viewBox="0 0 326 118" style="margin-top: 12px;" role="img" aria-label="Rata-rata pengeluaran per hari dalam seminggu, Sabtu tertinggi Rp 318.000">
+        <rect x="6"   y="46" width="32" height="38" rx="5" fill="oklch(0.84 0.045 205)"/>
+        <rect x="52"  y="51" width="32" height="33" rx="5" fill="oklch(0.84 0.045 205)"/>
+        <rect x="98"  y="53" width="32" height="31" rx="5" fill="oklch(0.84 0.045 205)"/>
+        <rect x="144" y="50" width="32" height="34" rx="5" fill="oklch(0.84 0.045 205)"/>
+        <rect x="190" y="33" width="32" height="51" rx="5" fill="oklch(0.84 0.045 205)"/>
+        <rect x="236" y="14" width="32" height="70" rx="5" fill="oklch(0.66 0.095 205)"/>
+        <rect x="282" y="26" width="32" height="58" rx="5" fill="oklch(0.66 0.095 205)"/>
+
+        <text x="22"  y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.46 0.02 60)">Sen</text>
+        <text x="68"  y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.46 0.02 60)">Sel</text>
+        <text x="114" y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.46 0.02 60)">Rab</text>
+        <text x="160" y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.46 0.02 60)">Kam</text>
+        <text x="206" y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.46 0.02 60)">Jum</text>
+        <text x="252" y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.30 0.02 60)" font-weight="700">Sab</text>
+        <text x="298" y="97" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9.5" fill="oklch(0.30 0.02 60)" font-weight="700">Min</text>
+
+        <path d="M236 103h78" stroke="oklch(0.62 0.02 60)" stroke-width="1.2"/>
+        <path d="M236 103v-4M314 103v-4" stroke="oklch(0.62 0.02 60)" stroke-width="1.2"/>
+        <text x="275" y="112" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="9" fill="oklch(0.46 0.02 60)">akhir pekan</text>
+      </svg>
+
+      <div class="say" style="margin-top: 6px;">Akhir pekan Rp 291.000 per hari, hari kerja Rp 169.000. Hampir dua kali lipat.</div>
+    </div>
+
+    <!-- THREE MONTHS. The forecast bar is outlined and dashed, never filled like a fact. -->
+    <div class="card">
+      <div class="q">Tiga bulan terakhir, naik atau turun</div>
+      <div style="font-size: 11.5px; color: oklch(0.50 0.02 60); margin-top: 2px;">Total keluar per bulan</div>
+
+      <svg width="326" height="138" viewBox="0 0 326 138" style="margin-top: 12px;" role="img" aria-label="Juli 5,89 juta, Agustus 6,21 juta, September perkiraan 4,98 juta">
+        <rect x="18"  y="24"   width="74" height="91"   rx="6" fill="oklch(0.80 0.055 205)"/>
+        <rect x="126" y="19"   width="74" height="96"   rx="6" fill="oklch(0.66 0.095 205)"/>
+        <rect x="234" y="38.5" width="74" height="76.5" rx="6" fill="none" stroke="oklch(0.60 0.05 205)" stroke-width="1.8" stroke-dasharray="6 4"/>
+
+        <text x="55"  y="131" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="oklch(0.44 0.02 60)">Juli</text>
+        <text x="163" y="131" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="oklch(0.44 0.02 60)">Agustus</text>
+        <text x="271" y="131" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="oklch(0.44 0.02 60)">September</text>
+
+        <text x="55"  y="18" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10.5" font-weight="700" fill="oklch(0.28 0.02 60)">5,89jt</text>
+        <text x="163" y="13" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10.5" font-weight="700" fill="oklch(0.28 0.02 60)">6,21jt</text>
+        <text x="271" y="32" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10.5" font-weight="700" fill="oklch(0.38 0.05 205)">4,98jt</text>
+      </svg>
+
+      <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+        <svg width="16" height="5" aria-hidden="true"><line x1="0" y1="2.5" x2="16" y2="2.5" stroke="oklch(0.60 0.05 205)" stroke-width="2" stroke-dasharray="5 3"/></svg>
+        <span style="font-size: 11px; color: oklch(0.46 0.02 60);">Perkiraan, belum terjadi</span>
+      </div>
+
+      <div class="say" style="margin-top: 9px;">Perkiraan September dihitung dari 11 hari. Kos sudah kebayar di awal, jadi angka ini biasanya masih naik.</div>
+    </div>
+
+    <!-- BIGGEST RECEIPTS. A statistic you can act on: tap one and check it. -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <div class="q">Nota paling besar</div>
+        <div style="font-size: 11.5px; color: oklch(0.50 0.02 60);">September &#183; 3 teratas</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.08 130);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Kos bulanan</div>
+            <div style="font-size: 11px; color: oklch(0.50 0.02 60);">1 September &#183; Rumah &#183; Transfer BCA</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">780.000</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.09 320);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Sepatu kerja</div>
+            <div style="font-size: 11px; color: oklch(0.50 0.02 60);">5 September &#183; Belanja &#183; ShopeePay</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">320.000</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <span style="width: 8px; height: 8px; border-radius: 3px; background: oklch(0.58 0.08 130);"></span>
+          <div style="flex-grow: 1;">
+            <div style="font-size: 13.5px; font-weight: 600;">Listrik</div>
+            <div style="font-size: 11px; color: oklch(0.50 0.02 60);">1 September &#183; Rumah &#183; Tunai</div>
+          </div>
+          <span class="amt" style="font-size: 13.5px; font-weight: 700;">170.000</span>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: oklch(0.94 0.006 70); margin: 12px 0 10px 0;"></div>
+      <div class="say">Tiga nota ini Rp 1.270.000, lebih dari separuh belanja bulan ini.</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 88px; background: oklch(0.995 0.003 80); border-top: 1px solid oklch(0.92 0.008 70);">
+    <div style="display: flex; padding: 10px 8px 0 8px;">
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h7M8 13h7M8 17h4"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Catat</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.52 0.09 205)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19V11M12 19V6M19 19v-5"/></svg>
+        <span style="font-size: 10.5px; font-weight: 700; color: oklch(0.52 0.09 205);">Pantau</span>
+      </div>
+      <div style="width: 62px;"></div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H19v12H6.5A2.5 2.5 0 0 1 4 15.5z"/><path d="M16 12h2"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Kantong</span>
+      </div>
+      <div style="flex-grow: 1; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="oklch(0.55 0.02 60)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+        <span style="font-size: 10.5px; color: oklch(0.55 0.02 60);">Saya</span>
+      </div>
+    </div>
+    <div style="position: absolute; left: 50%; margin-left: -28px; top: -22px; width: 56px; height: 56px; border-radius: 18px; background: oklch(0.52 0.09 205); box-shadow: 0 6px 18px oklch(0.52 0.09 205 / 0.34); display: flex; align-items: center; justify-content: center;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="oklch(0.99 0.005 80)" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":1580}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

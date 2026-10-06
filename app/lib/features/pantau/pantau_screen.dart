@@ -14,23 +14,35 @@ import '../../data/feature_flags_repository.dart';
 import '../../data/period_aggregate_queries.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../domain/flow.dart';
 import '../../domain/pace.dart';
 import '../../domain/period.dart';
 import '../../domain/period_close.dart';
+import '../../domain/pola.dart';
 import '../period/period_selector.dart';
 import 'actual_forecast_chart.dart';
+import 'aliran_view.dart';
 import 'category_ranked_list.dart';
+import 'month_compare_chart.dart';
 import 'pace_ring.dart';
 import 'period_close_sheet.dart';
+import 'pola_view.dart';
 import 'week_bar_chart.dart';
 
 const _formatter = MoneyFormatter();
 const _waitingDays = 14;
+final _monthLabel = DateFormat('MMM yyyy', 'id_ID');
 
-int _todayDayBucket() {
-  final now = DateTime.now();
-  return DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(1970, 1, 1)).inDays;
-}
+/// How far back the weekday averages look. Clamped to the user's first
+/// transaction, so a three-week-old install never reports a Sunday average
+/// diluted by weeks it was not installed for.
+const _weekdayWindowDays = 90;
+
+/// Pantau's three views. "Bulan ini" answers how this period is going,
+/// "Pola" when money goes out, "Aliran" where a finished period's money
+/// went — plan/04-ux-design.md keeps them on one tab because they are
+/// three questions about the same period, not three destinations.
+enum PantauView { bulanIni, pola, aliran }
 
 /// Pantau: the review surface. Leads with pace against elapsed time and a
 /// forecast, not the remaining balance, unless the framing experiment's
@@ -51,6 +63,9 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   List<CategoryRank> _categoryRanks = const [];
   List<int> _weekDays = const [];
   Map<int, int> _weekExpense = const {};
+  PolaData? _pola;
+  AliranData? _aliran;
+  PantauView _view = PantauView.bulanIni;
   bool _loaded = false;
 
   StreamSubscription<void>? _txChangesSubscription;
@@ -133,11 +148,123 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     await settings.setLastAcknowledgedPeriodClose(closing.startDay);
   }
 
+
+  /// Pola and Aliran cost four extra period-bounded reads, so they load on
+  /// first open of their segment rather than with the screen.
+  ///
+  /// Loading all three together took pantau_render from 596ms to 1043ms in
+  /// the test runner, for two views a session may never open. Cleared by
+  /// [_load], so a recorded transaction or a period change reloads them the
+  /// next time they are shown.
+  Future<void> _loadSecondaryViews() async {
+    final totals = _totals;
+    if (totals == null) return;
+
+    final queries = ref.read(periodAggregateQueriesProvider);
+    final period = ref.read(currentPeriodProvider);
+    final today = todayDayBucket();
+    final firstDay = _firstDay;
+    final daily = _dailyExpense;
+    final ranks = _categoryRanks;
+
+    final totalDays = period.endDayExclusive - period.startDay;
+    final daysElapsed = (today - period.startDay + 1).clamp(1, totalDays);
+    final isClosed = period.endDayExclusive <= today;
+
+    final weekdayStart = firstDay == null
+        ? today
+        : (today - _weekdayWindowDays + 1 < firstDay ? firstDay : today - _weekdayWindowDays + 1);
+    final weekdayExpense = await queries.dailyExpenseMinorInRange(weekdayStart, today + 1);
+    final largest = await queries.largestExpenses(period, limit: 3);
+
+    // A period that starts before the user's first transaction would show
+    // an artificially low bar, so it is left out entirely rather than
+    // drawn small — the same rule the pace baseline already follows.
+    final months = <MonthTotal>[];
+    for (final earlier in [period.previous.previous, period.previous]) {
+      if (firstDay == null || earlier.startDay < firstDay) continue;
+      months.add(MonthTotal(
+        label: _monthLabel.format(earlier.startDate),
+        totalMinor: (await queries.totalsFor(earlier)).expenseMinor,
+      ));
+    }
+    months.add(MonthTotal(
+      label: _monthLabel.format(period.startDate),
+      totalMinor: isClosed
+          ? totals.expenseMinor
+          : computePace(
+              daysElapsed: daysElapsed,
+              totalDaysInPeriod: totalDays,
+              spendMinor: totals.expenseMinor,
+              baselineTotalMinor: null,
+            ).forecastTotalMinor,
+      isForecast: !isClosed,
+    ));
+
+    final polaData = PolaData(
+      period: period,
+      todayDay: today,
+      dailyExpense: daily,
+      transactionCount: ranks.fold<int>(0, (sum, r) => sum + r.count),
+      expenseMinor: totals.expenseMinor,
+      weekdayPattern: computeWeekdayPattern(
+        dailyExpenseMinor: weekdayExpense,
+        sinceDayInclusive: weekdayStart,
+        untilDayExclusive: today + 1,
+      ),
+      weekdayWindowDays: today + 1 - weekdayStart,
+      months: months,
+      largestExpenses: largest,
+    );
+
+    // The previous period is only read when there is a closed period to
+    // compare it against, so the common case pays for one query less.
+    final previousRanks = isClosed
+        ? await ref
+            .read(categoryRankQueriesProvider)
+            .rankedSpend(period.previous.startDay, period.previous.endDayExclusive)
+        : const <CategoryRank>[];
+
+    final aliranData = AliranData(
+      isPeriodRunning: !isClosed,
+      flow: !isClosed
+          ? null
+          : buildFlowBreakdown(
+              incomeMinor: totals.incomeMinor,
+              expenseMinor: totals.expenseMinor,
+              ranks: [
+                for (final r in ranks)
+                  (name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+              ],
+            ),
+      deltas: !isClosed
+          ? const []
+          : buildCategoryDeltas(
+              current: [
+                for (final r in ranks)
+                  (key: r.key, name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+              ],
+              previous: [
+                for (final r in previousRanks)
+                  (key: r.key, name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+              ],
+            ),
+      previousLabel: _monthLabel.format(period.previous.startDate),
+    );
+
+
+    if (!mounted) return;
+    setState(() {
+      _pola = polaData;
+      _aliran = aliranData;
+    });
+  }
+
   Future<void> _load() async {
     final render = Stopwatch()..start();
     final queries = ref.read(periodAggregateQueriesProvider);
     final period = ref.read(currentPeriodProvider);
-    final today = _todayDayBucket();
+    final today = todayDayBucket();
 
     final firstDay = await queries.firstTransactionDay();
     final totals = await queries.totalsFor(period);
@@ -165,9 +292,13 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       _categoryRanks = ranks;
       _weekDays = weekDays;
       _weekExpense = weekExpense;
+      // Stale the moment the underlying period data changes.
+      _pola = null;
+      _aliran = null;
       _loaded = true;
     });
     perfMark('pantau_render', render);
+    if (_view != PantauView.bulanIni) unawaited(_loadSecondaryViews());
   }
 
   @override
@@ -183,12 +314,16 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       );
     }
 
-    final todayDay = _todayDayBucket();
+    final todayDay = todayDayBucket();
     final daysSinceFirst = _firstDay == null ? 0 : todayDay - _firstDay! + 1;
     final period = ref.watch(currentPeriodProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pantau')),
+      // The segment appears only once there is enough history for all
+      // three views to say something. During the first fortnight two of
+      // them would be empty states, which is a worse first run than not
+      // offering them yet.
       body: daysSinceFirst < _waitingDays
           ? _WaitingState(
               daysSoFar: daysSinceFirst,
@@ -196,14 +331,50 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
               daysElapsedInPeriod: (todayDay - period.startDay + 1)
                   .clamp(1, period.endDayExclusive - period.startDay),
             )
-          : _ReviewBody(
-              totals: _totals!,
-              dailyExpense: _dailyExpense,
-              baselineExpenseMinor: _baselineExpenseMinor,
-              todayDay: todayDay,
-              categoryRanks: _categoryRanks,
-              weekDays: _weekDays,
-              weekExpense: _weekExpense,
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    WudgetTokens.space4,
+                    0,
+                    WudgetTokens.space4,
+                    WudgetTokens.space3,
+                  ),
+                  child: SegmentedTray<PantauView>(
+                    segments: const {
+                      PantauView.bulanIni: 'Bulan ini',
+                      PantauView.pola: 'Pola',
+                      PantauView.aliran: 'Aliran',
+                    },
+                    value: _view,
+                    onChanged: (view) {
+                      setState(() => _view = view);
+                      if (view != PantauView.bulanIni && _pola == null) {
+                        unawaited(_loadSecondaryViews());
+                      }
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: switch (_view) {
+                    PantauView.bulanIni => _ReviewBody(
+                        totals: _totals!,
+                        dailyExpense: _dailyExpense,
+                        baselineExpenseMinor: _baselineExpenseMinor,
+                        todayDay: todayDay,
+                        categoryRanks: _categoryRanks,
+                        weekDays: _weekDays,
+                        weekExpense: _weekExpense,
+                      ),
+                    PantauView.pola => _pola == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : PolaView(data: _pola!),
+                    PantauView.aliran => _aliran == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : AliranView(data: _aliran!),
+                  },
+                ),
+              ],
             ),
     );
   }

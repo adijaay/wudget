@@ -70,25 +70,35 @@ class WudgetCard extends StatelessWidget {
     );
     if (!dashed) return decorated;
     return CustomPaint(
-      painter: _DashedBorderPainter(color: tokens.borderStrong),
+      painter: DashedBorderPainter(color: tokens.borderStrong),
       child: decorated,
     );
   }
 }
 
-class _DashedBorderPainter extends CustomPainter {
-  _DashedBorderPainter({required this.color});
+/// A dashed rounded outline. Public because a forecast bar needs the same
+/// stroke a dashed card uses: chart rule 5 in design/Tokens.dc.html asks
+/// for one dash pattern meaning "not a fact yet", and two painters would
+/// have drifted apart.
+class DashedBorderPainter extends CustomPainter {
+  DashedBorderPainter({
+    required this.color,
+    this.radius = WudgetTokens.radiusCard,
+    this.strokeWidth = 1,
+  });
   final Color color;
+  final double radius;
+  final double strokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = strokeWidth;
     final rrect = RRect.fromRectAndRadius(
       Offset.zero & size,
-      const Radius.circular(WudgetTokens.radiusCard),
+      Radius.circular(radius),
     );
     for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
       var distance = 0.0;
@@ -100,7 +110,90 @@ class _DashedBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DashedBorderPainter old) => old.color != color;
+  bool shouldRepaint(covariant DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.radius != radius ||
+      oldDelegate.strokeWidth != strokeWidth;
+}
+
+/// The segmented tray: a muted track with the selected segment filled,
+/// from design/Main.dc.html and design/Pola.dc.html.
+///
+/// Built rather than taken from Material's SegmentedButton, whose
+/// selected-state checkmark and minimum widths pushed "Pengeluaran" onto
+/// two lines on a real device. Lifted out of the capture sheet when Pantau
+/// needed the same control, so the two cannot drift apart.
+class SegmentedTray<T> extends StatelessWidget {
+  const SegmentedTray({
+    super.key,
+    required this.segments,
+    required this.value,
+    required this.onChanged,
+  });
+
+  /// Value to label, in the order they should appear.
+  final Map<T, String> segments;
+  final T value;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: tokens.surfaceMuted,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
+      ),
+      child: Row(
+        children: [
+          for (final entry in segments.entries)
+            Expanded(
+              child: Semantics(
+                selected: value == entry.key,
+                button: true,
+                label: entry.value,
+                excludeSemantics: true,
+                child: Material(
+                  color: value == entry.key ? tokens.accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    onTap: () => onChanged(entry.key),
+                    borderRadius: BorderRadius.circular(8),
+                    child: ConstrainedBox(
+                      // The tray's own padding plus this clears the 44px
+                      // minimum; the label alone did not.
+                      constraints: const BoxConstraints(minHeight: WudgetTokens.minTapTarget - 6),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: WudgetTokens.space1,
+                            vertical: WudgetTokens.space2,
+                          ),
+                          child: Text(
+                            entry.value,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: WudgetTokens.fontFamily,
+                              fontSize: 13,
+                              fontWeight:
+                                  value == entry.key ? FontWeight.w600 : FontWeight.w500,
+                              color: value == entry.key ? tokens.inkOnAccent : tokens.ink2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Rows inside one card, separated by a hairline that starts past the icon

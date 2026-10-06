@@ -31,9 +31,13 @@ class CaptureSheet extends ConsumerStatefulWidget {
     this.initialToAccountId,
     this.initialAmountMinor,
     this.initialCategoryId,
+    this.initialSubcategoryId,
     this.initialAccountId,
     this.initialNote,
+    this.initialOccurredAt,
+    this.initialPhotoPath,
     this.confirmingTransactionId,
+    this.editingTransactionId,
   });
 
   /// Lets a caller (e.g. the card "Bayar" button in Kantong) open the sheet
@@ -46,15 +50,40 @@ class CaptureSheet extends ConsumerStatefulWidget {
   /// Pre-fills the category/account/note — used by a bill reminder
   /// notification's deep link (Sprint 13) to open the sheet already set up
   /// the way the recurring item's template says, rather than empty.
+  ///
+  /// [initialCategoryId] must be a top-level category, same requirement
+  /// the category grid itself has; a transaction actually recorded against
+  /// a subcategory passes that subcategory's parent here and the
+  /// subcategory itself in [initialSubcategoryId].
   final String? initialCategoryId;
+  final String? initialSubcategoryId;
   final String? initialAccountId;
   final String? initialNote;
+
+  /// Prefilling the entry's own date, rather than defaulting to now — a
+  /// transaction being edited keeps the moment it actually happened
+  /// unless the user deliberately changes it via the date/time field.
+  final DateTime? initialOccurredAt;
+  final String? initialPhotoPath;
 
   /// When set, a successful save removes this transaction — the
   /// recurrence engine's projected placeholder this save supersedes, so
   /// confirming a reminder produces one real transaction, not two. See
   /// `RecurrenceRepository` and DECISIONS.md, Sprint 13.
   final String? confirmingTransactionId;
+
+  /// When set, this sheet is editing a real, already-recorded transaction
+  /// rather than capturing a new one: a successful save soft-deletes this
+  /// transaction (same as the ledger's own delete, so the "Batalkan" undo
+  /// on the save snackbar can restore it) and the edited values are saved
+  /// as a fresh entry.
+  ///
+  /// Deliberately not reusing [confirmingTransactionId]: that path hard-
+  /// deletes a recurrence engine's projected placeholder, which was never
+  /// a real entry and regenerates on its own — soft-deleting a genuine
+  /// historical transaction needs the undo-restore path a hard delete
+  /// cannot offer back.
+  final String? editingTransactionId;
 
   @override
   ConsumerState<CaptureSheet> createState() => _CaptureSheetState();
@@ -64,15 +93,15 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   late CaptureKind _kind = widget.initialKind;
   String _amountBuffer = '';
   late String? _categoryId = widget.initialCategoryId;
-  String? _subcategoryId;
+  late String? _subcategoryId = widget.initialSubcategoryId;
   late String? _accountId = widget.initialAccountId;
   late String? _toAccountId = widget.initialToAccountId;
   bool _calculatorMode = false;
   bool _saveBlocked = false;
   bool _noteExpanded = false;
   final _noteController = TextEditingController();
-  DateTime _occurredAt = DateTime.now();
-  String? _photoPath;
+  late DateTime _occurredAt = widget.initialOccurredAt ?? DateTime.now();
+  late String? _photoPath = widget.initialPhotoPath;
   late Future<List<CaptureTemplate>> _templatesFuture;
 
   static const _formatter = MoneyFormatter();
@@ -264,6 +293,11 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     }
     final saveToDismissed = Stopwatch()..start();
     final db = ref.read(databaseProvider);
+    // Captured once, up front: the snackbar's "Batalkan" runs after this
+    // sheet has already popped and this State has disposed, so `ref` is no
+    // longer safe to read from inside that closure — the repository itself
+    // is a plain object and doesn't care about the widget's lifecycle.
+    final postings = ref.read(postingsRepositoryProvider);
     final txId = _uuid.v4();
     final now = DateTime.now();
 
@@ -271,7 +305,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       // Transfer: from-account negative, to-account positive, no category
       // leg — that absence is what keeps a transfer (including a card
       // payment) out of spending statistics. See spending_queries.dart.
-      await ref.read(postingsRepositoryProvider).insertTransaction(
+      await postings.insertTransaction(
         transaction: TransactionsCompanion.insert(
           id: txId,
           kind: 'transfer',
@@ -307,7 +341,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       // Income: account leg positive, category leg negative.
       final sign = _kind == CaptureKind.expense ? -1 : 1;
 
-      await ref.read(postingsRepositoryProvider).insertTransaction(
+      await postings.insertTransaction(
         transaction: TransactionsCompanion.insert(
           id: txId,
           kind: _kind == CaptureKind.expense ? 'expense' : 'income',
@@ -339,7 +373,13 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     }
 
     if (widget.confirmingTransactionId != null) {
-      await ref.read(postingsRepositoryProvider).undoInsert(widget.confirmingTransactionId!);
+      await postings.undoInsert(widget.confirmingTransactionId!);
+    }
+    if (widget.editingTransactionId != null) {
+      // Soft delete, not undoInsert: this is a real historical entry, and
+      // the point of soft delete is exactly this — the undo below can
+      // bring it back, the same restore path the ledger's own delete uses.
+      await postings.deleteTransaction(widget.editingTransactionId!);
     }
 
     if (!mounted) return;
@@ -350,7 +390,11 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         content: Text('Tersimpan: ${_formatter.format(_amount)}'),
         action: SnackBarAction(
           label: 'Batalkan',
-          onPressed: () => ref.read(postingsRepositoryProvider).undoInsert(txId),
+          onPressed: () {
+            postings.undoInsert(txId);
+            final editing = widget.editingTransactionId;
+            if (editing != null) postings.restoreTransaction(editing);
+          },
         ),
       ),
     );
@@ -393,8 +437,13 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                       child: Row(
                         children: [
                           Expanded(
-                            child: _TypeSegments(
-                              kind: _kind,
+                            child: SegmentedTray<CaptureKind>(
+                              segments: const {
+                                CaptureKind.expense: 'Pengeluaran',
+                                CaptureKind.income: 'Pemasukan',
+                                CaptureKind.transfer: 'Transfer',
+                              },
+                              value: _kind,
                               onChanged: (k) => setState(() {
                                 _kind = k;
                                 _categoryId = null;
@@ -703,70 +752,6 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                   ),
                 );
               },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The type control: a tray with the selected segment filled, from
-/// design/Main.dc.html. Built rather than taken from Material's
-/// SegmentedButton, whose selected-state checkmark and minimum widths were
-/// what pushed "Pengeluaran" onto two lines on a real device.
-class _TypeSegments extends StatelessWidget {
-  const _TypeSegments({required this.kind, required this.onChanged});
-  final CaptureKind kind;
-  final ValueChanged<CaptureKind> onChanged;
-
-  static const _labels = {
-    CaptureKind.expense: 'Pengeluaran',
-    CaptureKind.income: 'Pemasukan',
-    CaptureKind.transfer: 'Transfer',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<WudgetTokens>()!;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: tokens.surfaceMuted,
-        borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
-      ),
-      child: Row(
-        children: [
-          for (final entry in _labels.entries)
-            Expanded(
-              child: Semantics(
-                selected: kind == entry.key,
-                button: true,
-                label: entry.value,
-                excludeSemantics: true,
-                child: Material(
-                  color: kind == entry.key ? tokens.accent : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                  child: InkWell(
-                    onTap: () => onChanged(entry.key),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space2),
-                      child: Text(
-                        entry.value,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: WudgetTokens.fontFamily,
-                          fontSize: 13,
-                          fontWeight: kind == entry.key ? FontWeight.w600 : FontWeight.w500,
-                          color: kind == entry.key ? tokens.inkOnAccent : tokens.ink2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             ),
         ],
       ),

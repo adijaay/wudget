@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Design tokens for wudget, ported from the mockups in `design/` (authored
 /// in OKLCH) via `tool/oklch.py`. The accent is Petrol, oklch(0.52 0.09 205),
@@ -376,7 +376,7 @@ ThemeData buildWudgetTheme(WudgetTokens tokens, Brightness brightness) {
       centerTitle: false,
       titleTextStyle: text.headlineMedium,
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: tokens.surfaceCard,
       surfaceTintColor: Colors.transparent,
       elevation: 0,

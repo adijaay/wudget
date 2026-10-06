@@ -67,3 +67,11 @@ class Period {
   @override
   int get hashCode => Object.hash(startDay, endDayExclusive);
 }
+
+/// Today's local day bucket. Lives here rather than in each screen,
+/// because two screens with their own copy is two places for the
+/// midnight-rollover bug to hide.
+int todayDayBucket() {
+  final now = DateTime.now();
+  return DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(1970, 1, 1)).inDays;
+}

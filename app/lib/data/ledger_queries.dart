@@ -16,8 +16,13 @@ class LedgerEntry {
     required this.occurredAtUtcMillis,
     required this.tzOffsetMinutes,
     required this.note,
+    required this.photoPath,
     required this.amountMinor,
+    required this.accountId,
     required this.accountName,
+    this.toAccountId,
+    this.categoryId,
+    this.categoryParentId,
     this.categoryName,
     this.categoryIconKey,
     this.categoryHueIndex,
@@ -27,13 +32,29 @@ class LedgerEntry {
   final int occurredAtUtcMillis;
   final int tzOffsetMinutes;
   final String? note;
+  final String? photoPath;
   final int amountMinor;
+  final String accountId;
   final String accountName;
+
+  /// The "to" leg of a transfer — null for expense/income, which have
+  /// only the one account.
+  final String? toAccountId;
+
+  /// The category leg's own id, which may be a subcategory — see
+  /// [categoryParentId]. Null on a transfer, which has no category leg by
+  /// design.
+  final String? categoryId;
+
+  /// Set only when [categoryId] is itself a subcategory, so a caller that
+  /// needs "the top-level category, plus which child" (the capture sheet's
+  /// own category-then-subcategory selection) doesn't have to look the
+  /// parent up separately.
+  final String? categoryParentId;
   final String? categoryName;
 
   /// The category's own icon and hue, so a row can draw the same chip the
-  /// capture sheet used to record it. Null on a transfer, which has no
-  /// category leg by design.
+  /// capture sheet used to record it.
   final String? categoryIconKey;
   final int? categoryHueIndex;
 }
@@ -185,9 +206,10 @@ class LedgerQueries {
       legs.sort((a, b) =>
           a.readTable(_db.postings).amountMinor.compareTo(b.readTable(_db.postings).amountMinor));
       final primary = legs.first; // the only leg, or the negative "from" leg of a transfer
+      final primaryAccount = primary.readTable(_db.accounts);
       final accountName = legs.length == 1
-          ? primary.readTable(_db.accounts).name
-          : '${primary.readTable(_db.accounts).name} -> ${legs.last.readTable(_db.accounts).name}';
+          ? primaryAccount.name
+          : '${primaryAccount.name} -> ${legs.last.readTable(_db.accounts).name}';
 
       final category = categoryByTx[txId];
       entries.add(LedgerEntry(
@@ -196,8 +218,13 @@ class LedgerQueries {
         occurredAtUtcMillis: tx.occurredAt,
         tzOffsetMinutes: tx.tzOffsetMinutes,
         note: tx.note,
+        photoPath: tx.photoPath,
         amountMinor: primary.readTable(_db.postings).amountMinor,
+        accountId: primaryAccount.id,
         accountName: accountName,
+        toAccountId: legs.length == 1 ? null : legs.last.readTable(_db.accounts).id,
+        categoryId: category?.id,
+        categoryParentId: category?.parentId,
         categoryName: category?.name,
         categoryIconKey: category?.iconKey,
         categoryHueIndex: category?.hueIndex,

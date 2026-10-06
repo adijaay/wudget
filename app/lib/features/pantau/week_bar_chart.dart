@@ -63,6 +63,14 @@ class WeekBarChart extends StatelessWidget {
                           child: Align(
                             alignment: Alignment.bottomCenter,
                             child: FractionallySizedBox(
+                              // Without widthFactor the bar rendered zero
+                              // pixels wide: FractionallySizedBox only
+                              // tightens the axis it has a factor for, and
+                              // the Align above hands it a loose width, so
+                              // a DecoratedBox with no intrinsic size
+                              // collapsed. This chart had been drawing
+                              // nothing but its axis labels.
+                              widthFactor: 1,
                               heightFactor: maxValue == 0 ? 0 : values[i] / maxValue,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(

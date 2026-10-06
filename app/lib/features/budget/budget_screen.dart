@@ -108,7 +108,19 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final totals = await aggregateQueries.totalsFor(period);
     final categories = {for (final c in await db.select(db.categories).get()) c.id: c};
 
-    final keys = {...proposals.keys, ...saved.keys}.toList()
+    // Every top-level expense category gets a row, not just the ones with
+    // spend history or a saved amount. A category with no history still
+    // gets no *proposed* number (proposeBudgets rightly refuses to guess
+    // one — see its own doc comment), but it does get a listing and an
+    // honest Rp 0 the user can type over themselves. Those are different
+    // things: the app never invents a number, but the user setting one for
+    // a category they haven't used yet is their input, not a guess.
+    final allExpenseKeys = {
+      for (final c in categories.values)
+        if (c.kind == 'expense' && c.parentId == null && !c.isIrregular) c.id,
+    };
+
+    final keys = {...allExpenseKeys, ...proposals.keys, ...saved.keys}.toList()
       ..sort((a, b) {
         if (a == irregularBudgetKey) return 1;
         if (b == irregularBudgetKey) return -1;
@@ -121,7 +133,7 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       rows.add(_BudgetRow(
         key: key,
         name: await historyQueries.displayNameFor(key),
-        amountMinor: saved[key] ?? proposals[key]!,
+        amountMinor: saved[key] ?? proposals[key] ?? 0,
         spentMinor: currentSpend[key] ?? 0,
         lookbackSpendMinor: lookbackSpend[key] ?? 0,
         lookbackDays: historyWindowDays,

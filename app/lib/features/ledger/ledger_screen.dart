@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show TableUpdateQuery, Value;
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +13,10 @@ import '../../data/database.dart';
 import '../../data/ledger_queries.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../domain/period.dart';
+import '../../domain/pola.dart';
 import '../capture/capture_sheet.dart';
+import 'today_header.dart';
 
 const _pageSize = 50;
 
@@ -21,8 +24,9 @@ const _pageSize = 50;
 /// day is one card with its own header and net total, and each row carries
 /// the category's chip, the wallet and the time it happened, because "Makan"
 /// and an amount alone is not enough to recognise an entry you made
-/// yesterday. Editing an existing amount is still out of scope (see
-/// DECISIONS.md); the note is editable, delete is a soft delete with undo.
+/// yesterday. Tapping a row reopens the capture sheet prefilled from it —
+/// editing is a full recapture, not a one-field dialog. Delete is a soft
+/// delete with undo.
 class LedgerScreen extends ConsumerStatefulWidget {
   const LedgerScreen({super.key});
 
@@ -51,6 +55,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   // to _entries: a page fetch started under an older generation is
   // discarded once a newer one has started.
   int _loadGeneration = 0;
+  TodayHeaderData? _todayHeader;
 
   LedgerFilter get _filter => LedgerFilter(
         categoryId: _categoryId,
@@ -109,7 +114,45 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       _hasMore = true;
     });
     await _loadNextPage(generation);
+    // The mark stops here on purpose: `catat_render` measures time to the
+    // ledger being on screen, and the header fills in after it rather than
+    // holding the rows back. Folding the header into the mark would have
+    // changed what the number means mid-history.
     if (mounted) perfMark('catat_render', render);
+    await _loadTodayHeader(generation);
+  }
+
+  /// Today framed as a day, above the ledger. Loaded alongside the first
+  /// page rather than in its own listener, so the header and the rows can
+  /// never disagree about what happened today.
+  Future<void> _loadTodayHeader(int generation) async {
+    final today = todayDayBucket();
+    final period = ref.read(currentPeriodProvider);
+    final queries = ref.read(periodAggregateQueriesProvider);
+
+    final budgets = await ref.read(budgetsRepositoryProvider).getAll();
+    final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
+    final totals = await queries.totalsFor(period);
+
+    final weekDays = List<int>.generate(7, (i) => today - 6 + i);
+    final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
+
+    if (!mounted || generation != _loadGeneration) return;
+    setState(() {
+      _todayHeader = TodayHeaderData(
+        todayDay: today,
+        todaySpendMinor: weekExpense[today] ?? 0,
+        allowance: computeDailyAllowance(
+          budgetTotalMinor: budgetTotal,
+          spentMinor: totals.expenseMinor,
+          // Today is already spent, so the allowance spreads what is left
+          // over the days after it, not including it.
+          daysRemaining: period.endDayExclusive - today - 1,
+        ),
+        weekDays: weekDays,
+        weekExpense: weekExpense,
+      );
+    });
   }
 
   Future<void> _loadNextPage([int? generation]) async {
@@ -152,28 +195,32 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
-  Future<void> _editNote(LedgerEntry entry) async {
-    final db = ref.read(databaseProvider);
-    final controller = TextEditingController(text: entry.note ?? '');
-    final newNote = await showDialog<String>(
+  /// Editing an entry opens the same capture sheet a new transaction does,
+  /// prefilled from what's already recorded — calculator, categories,
+  /// wallet, date, photo, all of it — rather than a one-field dialog that
+  /// could only ever touch the note. See CaptureSheet.editingTransactionId.
+  void _editEntry(LedgerEntry entry) {
+    final occurredAt =
+        DateTime.fromMillisecondsSinceEpoch(entry.occurredAtUtcMillis, isUtc: true)
+            .add(Duration(minutes: entry.tzOffsetMinutes));
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ubah catatan'),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
-    if (newNote == null) return;
-    await (db.update(db.transactions)..where((t) => t.id.equals(entry.transactionId))).write(
-      TransactionsCompanion(
-        note: Value(newNote.isEmpty ? null : newNote),
-        updatedAt: Value(DateTime.now().toUtc().millisecondsSinceEpoch),
+      isScrollControlled: true,
+      builder: (_) => CaptureSheet(
+        initialKind: switch (entry.kind) {
+          'income' => CaptureKind.income,
+          'transfer' => CaptureKind.transfer,
+          _ => CaptureKind.expense,
+        },
+        initialAmountMinor: entry.amountMinor.abs(),
+        initialCategoryId: entry.categoryParentId ?? entry.categoryId,
+        initialSubcategoryId: entry.categoryParentId == null ? null : entry.categoryId,
+        initialAccountId: entry.accountId,
+        initialToAccountId: entry.toAccountId,
+        initialNote: entry.note,
+        initialOccurredAt: occurredAt,
+        initialPhotoPath: entry.photoPath,
+        editingTransactionId: entry.transactionId,
       ),
     );
   }
@@ -313,8 +360,20 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         WudgetTokens.space4,
         WudgetTokens.space6,
       ),
-      itemCount: days.length + 1,
+      // The header is item 0, so the day list is offset by one. It only
+      // appears on the unfiltered ledger: a filtered view is a search
+      // result, and "today" is not what the user is looking at.
+      itemCount: days.length + 2,
       itemBuilder: (context, index) {
+        if (index == 0) {
+          final header = _todayHeader;
+          if (_hasActiveFilter || header == null) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: WudgetTokens.space5),
+            child: TodayHeader(data: header),
+          );
+        }
+        index -= 1;
         if (index == days.length) {
           return _loading
               ? const Padding(
@@ -336,7 +395,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                     _EntryRow(
                       entry: entry,
                       onDelete: () => _deleteEntry(entry),
-                      onEditNote: () => _editNote(entry),
+                      onEdit: () => _editEntry(entry),
                     ),
                 ],
               ),
@@ -505,10 +564,10 @@ class _DayHeader extends StatelessWidget {
 }
 
 class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.entry, required this.onDelete, required this.onEditNote});
+  const _EntryRow({required this.entry, required this.onDelete, required this.onEdit});
   final LedgerEntry entry;
   final VoidCallback onDelete;
-  final VoidCallback onEditNote;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -561,7 +620,7 @@ class _EntryRow extends StatelessWidget {
           showSymbol: false,
           colorBySign: true,
         ),
-        onTap: onEditNote,
+        onTap: onEdit,
       ),
     );
   }
