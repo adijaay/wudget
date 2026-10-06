@@ -9,6 +9,7 @@ import '../categories/categories_screen.dart';
 import '../import/import_screen.dart';
 import '../recurring/recurring_screen.dart';
 import 'backup_screen.dart';
+import 'capture_debug_screen.dart';
 
 /// Saya: the fourth tab in the mockups' bottom bar. Everything here already
 /// existed but was only reachable from an icon in another screen's app bar
@@ -105,6 +106,22 @@ class SayaScreen extends ConsumerWidget {
               ),
             ],
           ),
+          if (ref.watch(captureDebugFlagProvider).valueOrNull ?? false) ...[
+            const SizedBox(height: WudgetTokens.space5),
+            CardGroup(
+              dividerIndent: WudgetTokens.space3,
+              children: [
+                CardRow(
+                  title: 'Angka pencatatan',
+                  subtitle: 'Waktu sampai simpan dan hari tercatat',
+                  trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CaptureDebugScreen()),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: WudgetTokens.space5),
           // Stated because it is the product's actual promise, and because
           // it is what makes the backup row above matter: nothing is stored

@@ -33,6 +33,7 @@ class HomeWidgetService {
         initialAmountMinor: launch.amountMinor,
         initialNote: launch.note,
         confirmingTransactionId: launch.confirmingTransactionId,
+        source: CaptureSource.widget,
       ),
     );
   }

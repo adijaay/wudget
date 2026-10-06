@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'core/providers.dart';
+import 'data/analytics_repository.dart';
 import 'data/database.dart';
 import 'data/notification_scheduler.dart';
 import 'data/recurrence_repository.dart';
@@ -73,6 +74,7 @@ Future<void> main() async {
     ),
   );
 
+  await AnalyticsRepository(db).logEvent('app_open');
   await HomeWidgetService(navigatorKey).init();
 
   // Materialisation runs on every app open, per plan/03-architecture.md —

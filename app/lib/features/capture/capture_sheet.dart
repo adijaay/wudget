@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,12 @@ const _uuid = Uuid();
 
 enum CaptureKind { expense, income, transfer }
 
+abstract final class CaptureSource {
+  static const nav = 'nav';
+  static const widget = 'widget';
+  static const chip = 'chip';
+}
+
 /// The capture sheet: the one screen the product lives or dies on. See
 /// plan/04-ux-design.md "The capture sheet, specified", and
 /// design/Main.dc.html for the layout. Three taps to a saved expense:
@@ -38,7 +46,11 @@ class CaptureSheet extends ConsumerStatefulWidget {
     this.initialPhotoPath,
     this.confirmingTransactionId,
     this.editingTransactionId,
+    this.source = CaptureSource.nav,
   });
+
+  /// Where the sheet was opened from, logged with the capture timing events.
+  final String source;
 
   /// Lets a caller (e.g. the card "Bayar" button in Kantong) open the sheet
   /// pre-filled as a transfer, rather than every screen needing its own
@@ -103,6 +115,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   late DateTime _occurredAt = widget.initialOccurredAt ?? DateTime.now();
   late String? _photoPath = widget.initialPhotoPath;
   late Future<List<CaptureTemplate>> _templatesFuture;
+  final _sinceOpen = Stopwatch()..start();
 
   static const _formatter = MoneyFormatter();
   static const _currency = 'IDR'; // only currency seeded so far; see Sprint 5
@@ -123,6 +136,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       _noteExpanded = true;
     }
     _loadTemplates();
+    unawaited(ref.read(analyticsRepositoryProvider).logEvent('capture_open', props: {'source': widget.source}));
   }
 
   @override
@@ -370,6 +384,13 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           ),
         ],
       );
+    }
+
+    if (widget.editingTransactionId == null) {
+      unawaited(ref.read(analyticsRepositoryProvider).logEvent(
+        'capture_save',
+        props: {'source': widget.source, 'ms': _sinceOpen.elapsedMilliseconds},
+      ));
     }
 
     if (widget.confirmingTransactionId != null) {

@@ -44,6 +44,19 @@ class DailyTotalsRepository {
   /// Rebuilds every day's row from scratch. `daily_totals` is a derived
   /// cache, not a source of truth, so it isn't part of the JSON export —
   /// call this once after a restore instead. See DECISIONS.md, Sprint 6.
+  /// Day buckets in [startDay, endDayExclusive) holding at least one actual entry.
+  Future<Set<int>> entryDays(int startDay, int endDayExclusive) async {
+    // A day of slack each side: occurredAt is UTC, the bucket is local.
+    final rows = await (_db.select(_db.transactions)
+          ..where((t) =>
+              isActualTransaction(t) &
+              t.occurredAt.isBetweenValues((startDay - 1) * _millisPerDay, (endDayExclusive + 1) * _millisPerDay)))
+        .get();
+    return {
+      for (final t in rows) dayBucketFor(t.occurredAt, t.tzOffsetMinutes),
+    }..removeWhere((d) => d < startDay || d >= endDayExclusive);
+  }
+
   Future<void> recomputeAll() async {
     final transactions = await (_db.select(_db.transactions)
           ..where((t) => isActualTransaction(t)))

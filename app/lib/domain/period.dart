@@ -75,3 +75,7 @@ int todayDayBucket() {
   final now = DateTime.now();
   return DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(1970, 1, 1)).inDays;
 }
+
+/// Days in [period] with at least one entry, given the day buckets entries
+/// fall on (duplicates and days outside the period are ignored).
+int loggedDays(Period period, Iterable<int> entryDays) => entryDays.where(period.contains).toSet().length;

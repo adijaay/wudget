@@ -30,4 +30,24 @@ class AnalyticsRepository {
           ..orderBy([(e) => OrderingTerm.asc(e.occurredAt)]))
         .get();
   }
+
+  /// Open-to-save milliseconds of the last [count] captures, newest first.
+  Future<List<int>> recentCaptureSaveMs({int count = 20}) async {
+    final rows = await (_db.select(_db.analyticsEvents)
+          ..where((e) => e.name.equals('capture_save'))
+          ..orderBy([(e) => OrderingTerm.desc(e.occurredAt)])
+          ..limit(count))
+        .get();
+    return [
+      for (final r in rows)
+        if ((jsonDecode(r.propsJson ?? '{}') as Map)['ms'] case final int ms) ms,
+    ];
+  }
+}
+
+int? medianMs(List<int> values) {
+  if (values.isEmpty) return null;
+  final sorted = [...values]..sort();
+  final mid = sorted.length ~/ 2;
+  return sorted.length.isOdd ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) ~/ 2;
 }
