@@ -84,7 +84,7 @@ Open, with the sprint each one blocks:
 | R0.6 | Pick and approve the share package for R4 | 1 | Name and reason recorded here |
 | R0.7 | Buffer | 1 | |
 
-**Exit:** a real median time-to-save. Today's value: `[REAL DATA]`.
+**Exit:** a real median time-to-save. Pixel 4, machine-speed: 1,525 ms (see Metrics).
 
 ## Sprint R1: capture under 3 seconds (screens 2, 3)
 
@@ -179,7 +179,9 @@ baseline.
 
 | Metric | R0 | After R5 |
 |---|---|---|
-| Median time-to-save, repeat expense | `[REAL DATA]` | |
+| Median open-to-save, machine-speed taps, Pixel 4 (app cost, not human time) | 1,525 ms | 1,523 ms after R1 |
+| Taps for a repeat expense | 4 plus digits (open, category, wallet, save) | 2 plus digits after R1, or 1 tap on a home chip then save |
+| Median time-to-save, real user | `[REAL DATA]`, from capture_save events | |
 | Share of days in a period with at least one entry | `[REAL DATA]` | |
 | Share of gaps of 3 or more days followed by a return | `[REAL DATA]` | |
 | Taps from payday card to saved budget | n/a | |
