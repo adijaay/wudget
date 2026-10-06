@@ -10,6 +10,7 @@ import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/period_close.dart';
 import '../capture/capture_sheet.dart';
+import 'recap_card.dart';
 
 const _formatter = MoneyFormatter();
 
@@ -29,8 +30,15 @@ class PeriodCloseSheet extends ConsumerWidget {
     required this.summary,
     required this.onClose,
     this.periodLabel,
+    this.recap,
+    this.rangeLabel = '',
   });
   final PeriodCloseSummary summary;
+
+  /// Present when the period had a plan; then the leftover joins the next
+  /// budget at payday instead of being offered as a transfer.
+  final PeriodRecap? recap;
+  final String rangeLabel;
   final VoidCallback onClose;
 
   /// The period that just ended, e.g. "September". Falls back to a neutral
@@ -68,9 +76,13 @@ class PeriodCloseSheet extends ConsumerWidget {
                 summary.sentence((minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR'))),
                 style: text.bodyMedium?.copyWith(color: tokens.inkInverse2),
               ),
+              if (recap != null) ...[
+                const SizedBox(height: WudgetTokens.space4),
+                RecapShare(recap: recap!, rangeLabel: rangeLabel, inkColor: tokens.inkInverse2),
+              ],
               const SizedBox(height: WudgetTokens.space4),
               _InOutCard(summary: summary),
-              if (summary.surplusMinor > 0) ...[
+              if (recap == null && summary.surplusMinor > 0) ...[
                 const SizedBox(height: WudgetTokens.space3),
                 _SurplusCard(surplusMinor: summary.surplusMinor, onDone: onClose),
               ],

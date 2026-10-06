@@ -26,7 +26,9 @@ import 'package:wudget/features/recurring/recurring_screen.dart';
 import 'package:wudget/features/settings/backup_screen.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
 import 'package:wudget/features/ledger/ledger_screen.dart';
+import 'package:wudget/domain/period_close.dart';
 import 'package:wudget/features/pantau/pantau_screen.dart';
+import 'package:wudget/features/pantau/recap_card.dart';
 import 'package:wudget/features/settings/saya_screen.dart';
 import 'package:wudget/features/wallets/wallets_screen.dart';
 
@@ -256,6 +258,26 @@ void main() {
   testWidgets('payday card dark', (t) => shoot(t, 'payday_card_dark', card(), brightness: Brightness.dark));
   testWidgets('payday review', (t) => shoot(t, 'payday_review', review()));
   testWidgets('payday review dark', (t) => shoot(t, 'payday_review_dark', review(), brightness: Brightness.dark));
+  // R4: screen 5, the recap card that gets shared as an image.
+  Widget recap() => const Scaffold(
+        body: Padding(
+          padding: EdgeInsets.all(16),
+          child: RecapShare(
+            rangeLabel: '25 Agustus sampai 24 September',
+            recap: PeriodRecap(
+              planMinor: 6500000,
+              spentMinor: 6120000,
+              bestHeldName: 'Transport',
+              bestHeldPercent: 79,
+              overName: 'Hiburan',
+              overMinor: 70000,
+              overCount: 1,
+            ),
+          ),
+        ),
+      );
+  testWidgets('recap', (t) => shoot(t, 'recap', recap()));
+  testWidgets('recap dark', (t) => shoot(t, 'recap_dark', recap(), brightness: Brightness.dark));
   testWidgets('set now', (t) => shoot(t, 'set_now', setNow()));
   testWidgets('set now dark', (t) => shoot(t, 'set_now_dark', setNow(), brightness: Brightness.dark));
 

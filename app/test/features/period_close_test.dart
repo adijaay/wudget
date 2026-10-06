@@ -1,10 +1,14 @@
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wudget/core/providers.dart';
+import 'package:wudget/data/budgets_repository.dart';
 import 'package:wudget/data/database.dart';
 import 'package:wudget/data/postings_repository.dart';
 import 'package:wudget/design/tokens.dart';
@@ -100,6 +104,57 @@ void main() {
 
     expect(find.text('TUTUP PERIODE'), findsNothing);
     expect(find.text('Sudah beberapa waktu'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('with a plan, the recap card shows and Bagikan opens the system share sheet',
+      (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedCategory(db);
+    await BudgetsRepository(db).setAmount('cat', 300000);
+    final now = DateTime.now();
+    await expense(db, 'tx0', DateTime(now.year, now.month - 2, 10), 5000);
+    await expense(db, 'tx1', DateTime(now.year, now.month - 1, 15), 200000);
+
+    final shared = <MethodCall>[];
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(const MethodChannel('dev.fluttercommunity.plus/share'), (call) async {
+      shared.add(call);
+      return 'dev.fluttercommunity.plus/share/unavailable';
+    });
+    final tmp = Directory.systemTemp.createTempSync('recap');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'), (_) async => tmp.path);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Terpakai'), findsOneWidget);
+    expect(find.text('Sisa Rp 100.000. Semua kantong aman.'), findsOneWidget);
+    expect(find.text('Sisa Rp 100.000 ikut ke anggaran periode berikutnya saat gajian.'), findsOneWidget);
+    // The leftover joins the next budget; no transfer is offered next to it.
+    expect(find.textContaining('Sisihkan'), findsNothing);
+
+    await tester.ensureVisible(find.text('Bagikan'));
+    await tester.tap(find.text('Bagikan'));
+    // toImage and the temp-file write are real async work, outside fake time.
+    for (var i = 0; i < 50 && shared.isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
+    expect(shared.single.method, 'share');
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

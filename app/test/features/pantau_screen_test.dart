@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wudget/core/providers.dart';
+import 'package:wudget/data/budgets_repository.dart';
 import 'package:wudget/data/database.dart';
+import 'package:wudget/data/settings_repository.dart';
 import 'package:wudget/data/feature_flags_repository.dart';
 import 'package:wudget/data/postings_repository.dart';
 import 'package:wudget/design/tokens.dart';
@@ -344,6 +346,61 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Tidak ada catatan di periode ini'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 50));
+  });
+
+  testWidgets('kantong with a plan are listed, and Pola and Aliran sit one tap down', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+    final postings = PostingsRepository(db);
+    Future<void> spend(String id, String category, DateTime at, int amount) => postings.insertTransaction(
+          transaction: TransactionsCompanion.insert(
+              id: id, kind: 'expense', occurredAt: at.toUtc().millisecondsSinceEpoch, tzOffsetMinutes: 0, updatedAt: 0),
+          postings: [
+            PostingsCompanion.insert(id: '${id}a', transactionId: id, accountId: const Value('acc_cash'),
+                amountMinor: -amount, currency: 'IDR', baseAmountMinor: -amount),
+            PostingsCompanion.insert(id: '${id}c', transactionId: id, categoryId: Value(category),
+                amountMinor: amount, currency: 'IDR', baseAmountMinor: amount),
+          ],
+        );
+    await spend('old', 'cat_makan', DateTime.now().subtract(const Duration(days: 40)), 1000);
+    await spend('t1', 'cat_belanja', DateTime.now(), 90000);
+    await spend('t2', 'cat_tagihan', DateTime.now(), 50000);
+    final budgets = BudgetsRepository(db);
+    await budgets.setAmount('cat_belanja', 100000);
+    await budgets.setAmount('cat_tagihan', 50000);
+    await budgets.setAmount('cat_makan', 1000000);
+    await SettingsRepository(db).setLastAcknowledgedPeriodClose(1 << 30);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: buildWudgetTheme(WudgetTokens.light, Brightness.light),
+          home: const PantauScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kantong, yang paling perlu dilihat di atas'), findsOneWidget);
+    final belanja = tester.getTopLeft(find.text('Belanja').first).dy;
+    final makan = tester.getTopLeft(find.text('Makan').first).dy;
+    final tagihan = tester.getTopLeft(find.text('Tagihan').first).dy;
+    expect(belanja < makan && makan < tagihan, isTrue);
+
+    await tester.scrollUntilVisible(find.text('Lihat pola dan aliran'), 200, maxScrolls: 30);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lihat pola dan aliran'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pola dan aliran'), findsOneWidget);
+    await tester.tap(find.text('Aliran'));
+    await tester.pumpAndSettle();
+    expect(find.text('Periode ini masih jalan'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

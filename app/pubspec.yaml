@@ -42,6 +42,9 @@ dependencies:
   # CSV import from a competitor export (Sprint 16)
   file_picker: ^8.1.2
 
+  # recap card shared as an image through the system sheet (R4.2)
+  share_plus: ^12.0.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

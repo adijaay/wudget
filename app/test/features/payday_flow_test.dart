@@ -13,6 +13,7 @@ import 'package:wudget/data/settings_repository.dart';
 import 'package:wudget/design/tokens.dart';
 import 'package:wudget/domain/default_categories.dart';
 import 'package:wudget/domain/payday.dart';
+import 'package:wudget/domain/period_close.dart';
 import 'package:wudget/domain/period.dart';
 import 'package:wudget/features/payday/budget_review_screen.dart';
 import 'package:wudget/features/payday/payday_card.dart';
@@ -64,7 +65,37 @@ void main() {
     expect(saved.values.fold<int>(0, (a, b) => a + b), 7920000);
     final tabungan = await (db.select(db.categories)..where((c) => c.id.equals(tabunganCategoryId))).getSingle();
     expect(tabungan.name, 'Tabungan');
-    expect(await SettingsRepository(db).getRow(), isNull); // payday: no custom period stored
+    expect((await SettingsRepository(db).getRow())?.customPeriodStart, isNull); // payday: no custom period stored
+  });
+
+  testWidgets('the recap of the closed period uses the plan it ran on, not the one payday saves',
+      (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await seedDefaultsIfEmpty(db);
+    final budgets = BudgetsRepository(db);
+    await budgets.setAmount('cat_makan', 1000000); // plan A
+    final period = Period.containing(todayDayBucket(), monthStartDay: 25);
+    final closing = period.previous;
+
+    await pump(tester, db, BudgetReviewScreen(period: period, newMoneyMinor: 3000000, leftoverMinor: 0));
+    await tester.tap(find.text('Pakai anggaran ini'));
+    await tester.pumpAndSettle();
+    expect(await budgets.getAll(), isNot(equals({'cat_makan': 1000000}))); // plan B is live
+
+    final plan = await budgets.planFor(closing.startDay);
+    expect(plan, {'cat_makan': 1000000});
+    final recap = buildPeriodRecap(
+      summary: const PeriodCloseSummary(
+        incomeMinor: 0, expenseMinor: 600000, largestCategoryName: 'Makan', largestCategoryAmountMinor: 600000,
+        mostChangedCategoryName: null, mostChangedCategoryDeltaMinor: 0,
+      ),
+      planByKey: plan,
+      spentByKey: const {'cat_makan': 600000},
+      nameByKey: const {'cat_makan': 'Makan'},
+    )!;
+    expect(recap.planMinor, 1000000);
+    expect(recap.leftoverMinor, 400000);
   });
 
   testWidgets('review: a tapped row edits, Tabungan takes the difference', (tester) async {

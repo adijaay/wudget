@@ -23,6 +23,7 @@ import '../period/period_selector.dart';
 import 'actual_forecast_chart.dart';
 import 'aliran_view.dart';
 import 'category_ranked_list.dart';
+import 'kantong_pace_list.dart';
 import 'month_compare_chart.dart';
 import 'pace_ring.dart';
 import 'period_close_sheet.dart';
@@ -30,19 +31,19 @@ import 'pola_view.dart';
 import 'week_bar_chart.dart';
 
 const _formatter = MoneyFormatter();
+String _rp(int minor) => _formatter.format(Money.fromMinor(minor, 'IDR'));
 const _waitingDays = 14;
 final _monthLabel = DateFormat('MMM yyyy', 'id_ID');
+final _dayMonth = DateFormat('d MMMM', 'id_ID');
 
 /// How far back the weekday averages look. Clamped to the user's first
 /// transaction, so a three-week-old install never reports a Sunday average
 /// diluted by weeks it was not installed for.
 const _weekdayWindowDays = 90;
 
-/// Pantau's three views. "Bulan ini" answers how this period is going,
-/// "Pola" when money goes out, "Aliran" where a finished period's money
-/// went — plan/04-ux-design.md keeps them on one tab because they are
-/// three questions about the same period, not three destinations.
-enum PantauView { bulanIni, pola, aliran }
+/// The two views behind "Lihat pola dan aliran": "Pola" when money goes
+/// out, "Aliran" where a finished period's money went.
+enum PantauView { pola, aliran }
 
 /// Pantau: the review surface. Leads with pace against elapsed time and a
 /// forecast, not the remaining balance, unless the framing experiment's
@@ -63,9 +64,7 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   List<CategoryRank> _categoryRanks = const [];
   List<int> _weekDays = const [];
   Map<int, int> _weekExpense = const {};
-  PolaData? _pola;
-  AliranData? _aliran;
-  PantauView _view = PantauView.bulanIni;
+  AsyncValue<List<KantongSpend>> _kantong = const AsyncLoading();
   bool _loaded = false;
 
   StreamSubscription<void>? _txChangesSubscription;
@@ -135,12 +134,23 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     );
     if (summary == null) return; // no data for the closing period — skip the ritual entirely
 
+    final plan = await ref.read(budgetsRepositoryProvider).planFor(closing.startDay);
+    final history = ref.read(budgetHistoryQueriesProvider);
+    final recap = buildPeriodRecap(
+      summary: summary,
+      planByKey: plan,
+      spentByKey: await history.categorySpendByKey(closing.startDay, closing.endDayExclusive),
+      nameByKey: {for (final key in plan.keys) key: await history.displayNameFor(key)},
+    );
+
     if (!mounted) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => PeriodCloseSheet(
         summary: summary,
+        recap: recap,
+        rangeLabel: '${_dayMonth.format(closing.startDate)} sampai ${_dayMonth.format(closing.lastDate)}',
         periodLabel: periodCloseLabel(closing.startDate),
         onClose: () => Navigator.of(context).pop(),
       ),
@@ -156,9 +166,8 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
   /// the test runner, for two views a session may never open. Cleared by
   /// [_load], so a recorded transaction or a period change reloads them the
   /// next time they are shown.
-  Future<void> _loadSecondaryViews() async {
-    final totals = _totals;
-    if (totals == null) return;
+  Future<(PolaData, AliranData)> _loadSecondaryViews() async {
+    final totals = _totals!;
 
     final queries = ref.read(periodAggregateQueriesProvider);
     final period = ref.read(currentPeriodProvider);
@@ -252,12 +261,7 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       previousLabel: _monthLabel.format(period.previous.startDate),
     );
 
-
-    if (!mounted) return;
-    setState(() {
-      _pola = polaData;
-      _aliran = aliranData;
-    });
+    return (polaData, aliranData);
   }
 
   Future<void> _load() async {
@@ -274,6 +278,7 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
         await ref.read(categoryRankQueriesProvider).rankedSpend(period.startDay, period.endDayExclusive);
     final weekDays = List<int>.generate(7, (i) => today - 6 + i);
     final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
+    final kantong = await AsyncValue.guard(() => _loadKantong(period));
 
     final paceFirst = await ref
         .read(featureFlagsRepositoryProvider)
@@ -292,13 +297,30 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       _categoryRanks = ranks;
       _weekDays = weekDays;
       _weekExpense = weekExpense;
-      // Stale the moment the underlying period data changes.
-      _pola = null;
-      _aliran = null;
+      _kantong = kantong;
       _loaded = true;
     });
     perfMark('pantau_render', render);
-    if (_view != PantauView.bulanIni) unawaited(_loadSecondaryViews());
+  }
+
+  Future<List<KantongSpend>> _loadKantong(Period period) async {
+    final db = ref.read(databaseProvider);
+    final plan = await ref.read(budgetsRepositoryProvider).getAll();
+    final history = ref.read(budgetHistoryQueriesProvider);
+    final spent = await history.categorySpendByKey(period.startDay, period.endDayExclusive);
+    final categories = {
+      for (final c in await db.select(db.categories).get()) c.id: c,
+    };
+    return [
+      for (final MapEntry(:key, value: planMinor) in plan.entries)
+        (
+          key: key,
+          name: categories[key]?.name ?? await history.displayNameFor(key),
+          planMinor: planMinor,
+          spentMinor: spent[key] ?? 0,
+          hueIndex: categories[key]?.hueIndex ?? 7,
+        ),
+    ];
   }
 
   @override
@@ -320,10 +342,8 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Pantau')),
-      // The segment appears only once there is enough history for all
-      // three views to say something. During the first fortnight two of
-      // them would be empty states, which is a worse first run than not
-      // offering them yet.
+      // During the first fortnight Pola and Aliran would be empty states,
+      // so the waiting state stands in for the whole screen.
       body: daysSinceFirst < _waitingDays
           ? _WaitingState(
               daysSoFar: daysSinceFirst,
@@ -331,50 +351,18 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
               daysElapsedInPeriod: (todayDay - period.startDay + 1)
                   .clamp(1, period.endDayExclusive - period.startDay),
             )
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    WudgetTokens.space4,
-                    0,
-                    WudgetTokens.space4,
-                    WudgetTokens.space3,
-                  ),
-                  child: SegmentedTray<PantauView>(
-                    segments: const {
-                      PantauView.bulanIni: 'Bulan ini',
-                      PantauView.pola: 'Pola',
-                      PantauView.aliran: 'Aliran',
-                    },
-                    value: _view,
-                    onChanged: (view) {
-                      setState(() => _view = view);
-                      if (view != PantauView.bulanIni && _pola == null) {
-                        unawaited(_loadSecondaryViews());
-                      }
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: switch (_view) {
-                    PantauView.bulanIni => _ReviewBody(
-                        totals: _totals!,
-                        dailyExpense: _dailyExpense,
-                        baselineExpenseMinor: _baselineExpenseMinor,
-                        todayDay: todayDay,
-                        categoryRanks: _categoryRanks,
-                        weekDays: _weekDays,
-                        weekExpense: _weekExpense,
-                      ),
-                    PantauView.pola => _pola == null
-                        ? const Center(child: CircularProgressIndicator())
-                        : PolaView(data: _pola!),
-                    PantauView.aliran => _aliran == null
-                        ? const Center(child: CircularProgressIndicator())
-                        : AliranView(data: _aliran!),
-                  },
-                ),
-              ],
+          : _ReviewBody(
+              totals: _totals!,
+              dailyExpense: _dailyExpense,
+              baselineExpenseMinor: _baselineExpenseMinor,
+              todayDay: todayDay,
+              categoryRanks: _categoryRanks,
+              weekDays: _weekDays,
+              weekExpense: _weekExpense,
+              kantong: _kantong,
+              onOpenPatterns: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => _PatternsPage(data: _loadSecondaryViews()),
+              )),
             ),
     );
   }
@@ -389,6 +377,8 @@ class _ReviewBody extends ConsumerWidget {
     required this.categoryRanks,
     required this.weekDays,
     required this.weekExpense,
+    required this.kantong,
+    required this.onOpenPatterns,
   });
 
   final PeriodTotals totals;
@@ -398,6 +388,8 @@ class _ReviewBody extends ConsumerWidget {
   final List<CategoryRank> categoryRanks;
   final List<int> weekDays;
   final Map<int, int> weekExpense;
+  final AsyncValue<List<KantongSpend>> kantong;
+  final VoidCallback onOpenPatterns;
 
   PaceResult _computePace(Period period) {
     final totalDays = period.endDayExclusive - period.startDay;
@@ -488,11 +480,27 @@ class _ReviewBody extends ConsumerWidget {
     final remaining = totals.incomeMinor - totals.expenseMinor;
     final todayIndex = period.contains(todayDay) ? todayDay - period.startDay : null;
 
+    final sorted = sortKantongByPace(kantong.valueOrNull ?? const [], pace.elapsedFraction);
+    final kantongSentence = kantongPaceSentence(sorted, _rp);
+
     return ListView(
       padding: padding,
       children: [
         const PeriodSelector(),
         const SizedBox(height: WudgetTokens.space4),
+        if (kantongSentence != null) ...[
+          WudgetCard(child: Text(kantongSentence, style: text.bodyLarge)),
+          const SizedBox(height: WudgetTokens.space3),
+        ],
+        if (kantong.hasError)
+          ...[
+            const InsetNotice(icon: Icons.error_outline, message: 'Kantong belum bisa dimuat. Buka Pantau lagi nanti.'),
+            const SizedBox(height: WudgetTokens.space3),
+          ]
+        else if (sorted.isNotEmpty) ...[
+          KantongPaceList(sorted: sorted),
+          const SizedBox(height: WudgetTokens.space3),
+        ],
         if (paceFirst) ...[
           _PaceCard(pace: pace),
           const SizedBox(height: WudgetTokens.space3),
@@ -559,6 +567,8 @@ class _ReviewBody extends ConsumerWidget {
         ),
         const SizedBox(height: WudgetTokens.space5),
         CategoryRankedList(ranks: categoryRanks),
+        const SizedBox(height: WudgetTokens.space3),
+        _TapRow(icon: Icons.bar_chart, label: 'Lihat pola dan aliran', onTap: onOpenPatterns),
       ],
     );
   }
@@ -837,6 +847,57 @@ class _WaitingState extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Pola and Aliran, one tap down from Pantau (screen 8).
+class _PatternsPage extends StatefulWidget {
+  const _PatternsPage({required this.data});
+  final Future<(PolaData, AliranData)> data;
+
+  @override
+  State<_PatternsPage> createState() => _PatternsPageState();
+}
+
+class _PatternsPageState extends State<_PatternsPage> {
+  PantauView _view = PantauView.pola;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pola dan aliran')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(WudgetTokens.space4, 0, WudgetTokens.space4, WudgetTokens.space3),
+            child: SegmentedTray<PantauView>(
+              segments: const {PantauView.pola: 'Pola', PantauView.aliran: 'Aliran'},
+              value: _view,
+              onChanged: (view) => setState(() => _view = view),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder(
+              future: widget.data,
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.all(WudgetTokens.space4),
+                    child: InsetNotice(icon: Icons.error_outline, message: 'Pola dan aliran belum bisa dimuat. Coba buka lagi.'),
+                  );
+                }
+                final data = snap.data;
+                if (data == null) return const Center(child: CircularProgressIndicator());
+                return switch (_view) {
+                  PantauView.pola => PolaView(data: data.$1),
+                  PantauView.aliran => AliranView(data: data.$2),
+                };
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

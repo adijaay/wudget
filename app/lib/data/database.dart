@@ -118,6 +118,10 @@ class AppSettings extends Table {
   IntColumn get paydayConfirmedPeriodStart => integer().nullable()();
   IntColumn get paydaySnoozedDay => integer().nullable()();
 
+  /// JSON {periodStartDay: {budgetKey: amountMinor}}: the plan a period ran
+  /// on, saved before payday or "Atur sekarang" overwrites Budgets (R4.1).
+  TextColumn get budgetSnapshotsJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -230,7 +234,7 @@ class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -280,6 +284,9 @@ class WudgetDatabase extends _$WudgetDatabase {
             ]) {
               await m.addColumn(appSettings, c);
             }
+          }
+          if (from >= 4 && from < 11) {
+            await m.addColumn(appSettings, appSettings.budgetSnapshotsJson);
           }
           // An existing user without a settings row was on the old default
           // of 1; pin it so the new default of 25 only reaches new installs.

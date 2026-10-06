@@ -143,6 +143,7 @@ void main() {
     expect(settings.lastAcknowledgedPeriodClose, isNull); // new column, no data invented
     expect(settings.customPeriodStart, isNull);
     expect(settings.lastSalaryMinor, isNull);
+    expect(settings.budgetSnapshotsJson, isNull);
   });
 
   test('R3.1: an existing user without a settings row keeps start day 1', () async {

@@ -1,3 +1,6 @@
+import 'pace.dart' show tagihanCategoryId;
+import 'payday.dart' show tabunganCategoryId;
+
 /// One category's spend for a period — the subset of
 /// `data/category_rank_queries.dart`'s `CategoryRank` this pure function
 /// needs, restated here so domain/ has no dependency on data/.
@@ -99,5 +102,84 @@ PeriodCloseSummary? buildPeriodCloseSummary({
     largestCategoryAmountMinor: largest.amountMinor,
     mostChangedCategoryName: mostChangedName,
     mostChangedCategoryDeltaMinor: mostChangedDelta,
+  );
+}
+
+/// The shareable recap card (screen 5): only the user's own numbers.
+class PeriodRecap {
+  const PeriodRecap({
+    required this.planMinor,
+    required this.spentMinor,
+    this.bestHeldName,
+    this.bestHeldPercent = 0,
+    this.overName,
+    this.overMinor = 0,
+    this.overCount = 0,
+  });
+
+  final int planMinor;
+  final int spentMinor;
+  final String? bestHeldName;
+  final int bestHeldPercent;
+  final String? overName;
+  final int overMinor;
+  final int overCount;
+
+  int get leftoverMinor => planMinor - spentMinor;
+
+  String sentence(String Function(int minor) format) {
+    final head = leftoverMinor >= 0
+        ? 'Sisa ${format(leftoverMinor)}.'
+        : 'Lewat ${format(-leftoverMinor)} dari rencana.';
+    final tail = switch (overCount) {
+      0 => 'Semua kantong aman.',
+      1 => '$overName lewat sedikit, yang lain aman.',
+      _ => '$overName lewat paling banyak.',
+    };
+    return '$head $tail';
+  }
+}
+
+/// Spent comes from [summary] so the card and the close sheet agree; money
+/// moved into Tabungan is savings, so it counts neither as spent nor as over.
+PeriodRecap? buildPeriodRecap({
+  required PeriodCloseSummary summary,
+  required Map<String, int> planByKey,
+  required Map<String, int> spentByKey,
+  required Map<String, String> nameByKey,
+}) {
+  final plan = {...planByKey}..remove(tabunganCategoryId);
+  plan.removeWhere((_, v) => v <= 0);
+  if (plan.isEmpty) return null;
+
+  String? bestKey;
+  num? bestShare;
+  String? overKey;
+  var overMinor = 0;
+  var overCount = 0;
+  for (final MapEntry(:key, value: planned) in plan.entries) {
+    final spent = spentByKey[key] ?? 0;
+    final share = spent / planned;
+    if (key != tagihanCategoryId && (bestShare == null || share < bestShare)) {
+      bestShare = share;
+      bestKey = key;
+    }
+    if (spent > planned) {
+      overCount++;
+      if (spent - planned > overMinor) {
+        overMinor = spent - planned;
+        overKey = key;
+      }
+    }
+  }
+
+  return PeriodRecap(
+    planMinor: plan.values.fold(0, (a, b) => a + b),
+    spentMinor: summary.expenseMinor - (spentByKey[tabunganCategoryId] ?? 0),
+    bestHeldName: bestKey == null ? null : nameByKey[bestKey] ?? bestKey,
+    bestHeldPercent: bestKey == null ? 0 : (bestShare! * 100).round(),
+    overName: overKey == null ? null : nameByKey[overKey] ?? overKey,
+    overMinor: overMinor,
+    overCount: overCount,
   );
 }

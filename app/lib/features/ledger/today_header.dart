@@ -207,7 +207,7 @@ class _JatahCard extends StatelessWidget {
               left: 0,
               right: 0,
               height: 46,
-              child: IgnorePointer(child: CustomPaint(painter: _FlapPainter(tokens.accent.withValues(alpha: 0.16)))),
+              child: IgnorePointer(child: CustomPaint(painter: FlapPainter(tokens.accent.withValues(alpha: 0.16)))),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -228,8 +228,8 @@ class _JatahCard extends StatelessWidget {
 }
 
 /// The amplop flap from DESIGN.md, on the one card that holds money.
-class _FlapPainter extends CustomPainter {
-  const _FlapPainter(this.color);
+class FlapPainter extends CustomPainter {
+  const FlapPainter(this.color);
   final Color color;
 
   @override
@@ -248,7 +248,7 @@ class _FlapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FlapPainter old) => old.color != color;
+  bool shouldRepaint(FlapPainter old) => old.color != color;
 }
 
 /// Logged days filled, missed days hollow, today outlined, future muted.

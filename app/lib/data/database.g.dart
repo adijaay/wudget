@@ -2713,6 +2713,12 @@ class $AppSettingsTable extends AppSettings
   late final GeneratedColumn<int> paydaySnoozedDay = GeneratedColumn<int>(
       'payday_snoozed_day', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _budgetSnapshotsJsonMeta =
+      const VerificationMeta('budgetSnapshotsJson');
+  @override
+  late final GeneratedColumn<String> budgetSnapshotsJson =
+      GeneratedColumn<String>('budget_snapshots_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2723,7 +2729,8 @@ class $AppSettingsTable extends AppSettings
         customPeriodAmountMinor,
         lastSalaryMinor,
         paydayConfirmedPeriodStart,
-        paydaySnoozedDay
+        paydaySnoozedDay,
+        budgetSnapshotsJson
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2790,6 +2797,12 @@ class $AppSettingsTable extends AppSettings
           paydaySnoozedDay.isAcceptableOrUnknown(
               data['payday_snoozed_day']!, _paydaySnoozedDayMeta));
     }
+    if (data.containsKey('budget_snapshots_json')) {
+      context.handle(
+          _budgetSnapshotsJsonMeta,
+          budgetSnapshotsJson.isAcceptableOrUnknown(
+              data['budget_snapshots_json']!, _budgetSnapshotsJsonMeta));
+    }
     return context;
   }
 
@@ -2821,6 +2834,8 @@ class $AppSettingsTable extends AppSettings
           data['${effectivePrefix}payday_confirmed_period_start']),
       paydaySnoozedDay: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}payday_snoozed_day']),
+      budgetSnapshotsJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}budget_snapshots_json']),
     );
   }
 
@@ -2851,6 +2866,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final int? lastSalaryMinor;
   final int? paydayConfirmedPeriodStart;
   final int? paydaySnoozedDay;
+
+  /// JSON {periodStartDay: {budgetKey: amountMinor}}: the plan a period ran
+  /// on, saved before payday or "Atur sekarang" overwrites Budgets (R4.1).
+  final String? budgetSnapshotsJson;
   const AppSetting(
       {required this.id,
       required this.periodStartDay,
@@ -2860,7 +2879,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       this.customPeriodAmountMinor,
       this.lastSalaryMinor,
       this.paydayConfirmedPeriodStart,
-      this.paydaySnoozedDay});
+      this.paydaySnoozedDay,
+      this.budgetSnapshotsJson});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2890,6 +2910,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     }
     if (!nullToAbsent || paydaySnoozedDay != null) {
       map['payday_snoozed_day'] = Variable<int>(paydaySnoozedDay);
+    }
+    if (!nullToAbsent || budgetSnapshotsJson != null) {
+      map['budget_snapshots_json'] = Variable<String>(budgetSnapshotsJson);
     }
     return map;
   }
@@ -2921,6 +2944,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       paydaySnoozedDay: paydaySnoozedDay == null && nullToAbsent
           ? const Value.absent()
           : Value(paydaySnoozedDay),
+      budgetSnapshotsJson: budgetSnapshotsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(budgetSnapshotsJson),
     );
   }
 
@@ -2941,6 +2967,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       paydayConfirmedPeriodStart:
           serializer.fromJson<int?>(json['paydayConfirmedPeriodStart']),
       paydaySnoozedDay: serializer.fromJson<int?>(json['paydaySnoozedDay']),
+      budgetSnapshotsJson:
+          serializer.fromJson<String?>(json['budgetSnapshotsJson']),
     );
   }
   @override
@@ -2960,6 +2988,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'paydayConfirmedPeriodStart':
           serializer.toJson<int?>(paydayConfirmedPeriodStart),
       'paydaySnoozedDay': serializer.toJson<int?>(paydaySnoozedDay),
+      'budgetSnapshotsJson': serializer.toJson<String?>(budgetSnapshotsJson),
     };
   }
 
@@ -2972,7 +3001,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           Value<int?> customPeriodAmountMinor = const Value.absent(),
           Value<int?> lastSalaryMinor = const Value.absent(),
           Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
-          Value<int?> paydaySnoozedDay = const Value.absent()}) =>
+          Value<int?> paydaySnoozedDay = const Value.absent(),
+          Value<String?> budgetSnapshotsJson = const Value.absent()}) =>
       AppSetting(
         id: id ?? this.id,
         periodStartDay: periodStartDay ?? this.periodStartDay,
@@ -2997,6 +3027,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         paydaySnoozedDay: paydaySnoozedDay.present
             ? paydaySnoozedDay.value
             : this.paydaySnoozedDay,
+        budgetSnapshotsJson: budgetSnapshotsJson.present
+            ? budgetSnapshotsJson.value
+            : this.budgetSnapshotsJson,
       );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -3025,6 +3058,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       paydaySnoozedDay: data.paydaySnoozedDay.present
           ? data.paydaySnoozedDay.value
           : this.paydaySnoozedDay,
+      budgetSnapshotsJson: data.budgetSnapshotsJson.present
+          ? data.budgetSnapshotsJson.value
+          : this.budgetSnapshotsJson,
     );
   }
 
@@ -3039,7 +3075,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('customPeriodAmountMinor: $customPeriodAmountMinor, ')
           ..write('lastSalaryMinor: $lastSalaryMinor, ')
           ..write('paydayConfirmedPeriodStart: $paydayConfirmedPeriodStart, ')
-          ..write('paydaySnoozedDay: $paydaySnoozedDay')
+          ..write('paydaySnoozedDay: $paydaySnoozedDay, ')
+          ..write('budgetSnapshotsJson: $budgetSnapshotsJson')
           ..write(')'))
         .toString();
   }
@@ -3054,7 +3091,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       customPeriodAmountMinor,
       lastSalaryMinor,
       paydayConfirmedPeriodStart,
-      paydaySnoozedDay);
+      paydaySnoozedDay,
+      budgetSnapshotsJson);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3068,7 +3106,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.customPeriodAmountMinor == this.customPeriodAmountMinor &&
           other.lastSalaryMinor == this.lastSalaryMinor &&
           other.paydayConfirmedPeriodStart == this.paydayConfirmedPeriodStart &&
-          other.paydaySnoozedDay == this.paydaySnoozedDay);
+          other.paydaySnoozedDay == this.paydaySnoozedDay &&
+          other.budgetSnapshotsJson == this.budgetSnapshotsJson);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -3081,6 +3120,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int?> lastSalaryMinor;
   final Value<int?> paydayConfirmedPeriodStart;
   final Value<int?> paydaySnoozedDay;
+  final Value<String?> budgetSnapshotsJson;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.periodStartDay = const Value.absent(),
@@ -3091,6 +3131,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.lastSalaryMinor = const Value.absent(),
     this.paydayConfirmedPeriodStart = const Value.absent(),
     this.paydaySnoozedDay = const Value.absent(),
+    this.budgetSnapshotsJson = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -3102,6 +3143,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.lastSalaryMinor = const Value.absent(),
     this.paydayConfirmedPeriodStart = const Value.absent(),
     this.paydaySnoozedDay = const Value.absent(),
+    this.budgetSnapshotsJson = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -3113,6 +3155,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? lastSalaryMinor,
     Expression<int>? paydayConfirmedPeriodStart,
     Expression<int>? paydaySnoozedDay,
+    Expression<String>? budgetSnapshotsJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3128,6 +3171,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (paydayConfirmedPeriodStart != null)
         'payday_confirmed_period_start': paydayConfirmedPeriodStart,
       if (paydaySnoozedDay != null) 'payday_snoozed_day': paydaySnoozedDay,
+      if (budgetSnapshotsJson != null)
+        'budget_snapshots_json': budgetSnapshotsJson,
     });
   }
 
@@ -3140,7 +3185,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       Value<int?>? customPeriodAmountMinor,
       Value<int?>? lastSalaryMinor,
       Value<int?>? paydayConfirmedPeriodStart,
-      Value<int?>? paydaySnoozedDay}) {
+      Value<int?>? paydaySnoozedDay,
+      Value<String?>? budgetSnapshotsJson}) {
     return AppSettingsCompanion(
       id: id ?? this.id,
       periodStartDay: periodStartDay ?? this.periodStartDay,
@@ -3155,6 +3201,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       paydayConfirmedPeriodStart:
           paydayConfirmedPeriodStart ?? this.paydayConfirmedPeriodStart,
       paydaySnoozedDay: paydaySnoozedDay ?? this.paydaySnoozedDay,
+      budgetSnapshotsJson: budgetSnapshotsJson ?? this.budgetSnapshotsJson,
     );
   }
 
@@ -3192,6 +3239,10 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (paydaySnoozedDay.present) {
       map['payday_snoozed_day'] = Variable<int>(paydaySnoozedDay.value);
     }
+    if (budgetSnapshotsJson.present) {
+      map['budget_snapshots_json'] =
+          Variable<String>(budgetSnapshotsJson.value);
+    }
     return map;
   }
 
@@ -3206,7 +3257,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('customPeriodAmountMinor: $customPeriodAmountMinor, ')
           ..write('lastSalaryMinor: $lastSalaryMinor, ')
           ..write('paydayConfirmedPeriodStart: $paydayConfirmedPeriodStart, ')
-          ..write('paydaySnoozedDay: $paydaySnoozedDay')
+          ..write('paydaySnoozedDay: $paydaySnoozedDay, ')
+          ..write('budgetSnapshotsJson: $budgetSnapshotsJson')
           ..write(')'))
         .toString();
   }
@@ -6915,6 +6967,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder = AppSettingsCompanion
   Value<int?> lastSalaryMinor,
   Value<int?> paydayConfirmedPeriodStart,
   Value<int?> paydaySnoozedDay,
+  Value<String?> budgetSnapshotsJson,
 });
 typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
     Function({
@@ -6927,6 +6980,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder = AppSettingsCompanion
   Value<int?> lastSalaryMinor,
   Value<int?> paydayConfirmedPeriodStart,
   Value<int?> paydaySnoozedDay,
+  Value<String?> budgetSnapshotsJson,
 });
 
 class $$AppSettingsTableFilterComposer
@@ -6971,6 +7025,10 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<int> get paydaySnoozedDay => $composableBuilder(
       column: $table.paydaySnoozedDay,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get budgetSnapshotsJson => $composableBuilder(
+      column: $table.budgetSnapshotsJson,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -7017,6 +7075,10 @@ class $$AppSettingsTableOrderingComposer
   ColumnOrderings<int> get paydaySnoozedDay => $composableBuilder(
       column: $table.paydaySnoozedDay,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get budgetSnapshotsJson => $composableBuilder(
+      column: $table.budgetSnapshotsJson,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -7054,6 +7116,9 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<int> get paydaySnoozedDay => $composableBuilder(
       column: $table.paydaySnoozedDay, builder: (column) => column);
+
+  GeneratedColumn<String> get budgetSnapshotsJson => $composableBuilder(
+      column: $table.budgetSnapshotsJson, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager extends RootTableManager<
@@ -7091,6 +7156,7 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<int?> lastSalaryMinor = const Value.absent(),
             Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
             Value<int?> paydaySnoozedDay = const Value.absent(),
+            Value<String?> budgetSnapshotsJson = const Value.absent(),
           }) =>
               AppSettingsCompanion(
             id: id,
@@ -7102,6 +7168,7 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             lastSalaryMinor: lastSalaryMinor,
             paydayConfirmedPeriodStart: paydayConfirmedPeriodStart,
             paydaySnoozedDay: paydaySnoozedDay,
+            budgetSnapshotsJson: budgetSnapshotsJson,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -7113,6 +7180,7 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             Value<int?> lastSalaryMinor = const Value.absent(),
             Value<int?> paydayConfirmedPeriodStart = const Value.absent(),
             Value<int?> paydaySnoozedDay = const Value.absent(),
+            Value<String?> budgetSnapshotsJson = const Value.absent(),
           }) =>
               AppSettingsCompanion.insert(
             id: id,
@@ -7124,6 +7192,7 @@ class $$AppSettingsTableTableManager extends RootTableManager<
             lastSalaryMinor: lastSalaryMinor,
             paydayConfirmedPeriodStart: paydayConfirmedPeriodStart,
             paydaySnoozedDay: paydaySnoozedDay,
+            budgetSnapshotsJson: budgetSnapshotsJson,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

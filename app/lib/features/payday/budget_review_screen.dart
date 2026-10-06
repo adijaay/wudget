@@ -292,6 +292,8 @@ class _BudgetReviewScreenState extends ConsumerState<BudgetReviewScreen> {
           mode: InsertMode.insertOrIgnore,
         );
     final budgets = ref.read(budgetsRepositoryProvider);
+    final closing = await ref.read(settingsRepositoryProvider).effectivePeriodFor(widget.period.startDay - 1);
+    await budgets.snapshotFor(closing.startDay);
     for (final e in placed.entries) {
       await budgets.setAmount(e.key, e.value);
     }

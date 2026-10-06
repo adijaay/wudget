@@ -1,3 +1,5 @@
+import 'payday.dart' show tabunganCategoryId;
+
 /// How this period's spend, projected to the period's end, compares with
 /// the same period last time — the hero number of Pantau. See
 /// plan/05-sprints.md Sprint 9 and the chart rules in plan/04-ux-design.md.
@@ -94,4 +96,54 @@ PaceResult computePace({
     forecastTotalMinor: forecastTotal,
     baselineTotalMinor: baselineTotalMinor,
   );
+}
+
+const tagihanCategoryId = 'cat_tagihan';
+
+/// One kantong for the Pantau list: its plan this period and what it has spent.
+typedef KantongSpend = ({String key, String name, int planMinor, int spentMinor, int hueIndex});
+
+class KantongPace {
+  const KantongPace(this.kantong, this.elapsedFraction);
+  final KantongSpend kantong;
+  final num elapsedFraction;
+
+  /// Bills are paid once a period, so a full Tagihan on day 3 is not a pace.
+  bool get isFixed => kantong.key == tagihanCategoryId;
+
+  num get spentShare => kantong.planMinor <= 0 ? 0 : kantong.spentMinor / kantong.planMinor;
+
+  /// Spent share minus time share: positive means ahead of time.
+  num get lead => spentShare - elapsedFraction;
+
+  bool get isAhead => !isFixed && lead > paceTolerance;
+
+  /// Spend projected linearly to the period's end, minus the plan.
+  int get projectedOverMinor => elapsedFraction <= 0
+      ? kantong.spentMinor - kantong.planMinor
+      : (kantong.spentMinor / elapsedFraction).round() - kantong.planMinor;
+}
+
+/// Most in need of a look first; Tabungan is savings and left out, Tagihan last.
+List<KantongPace> sortKantongByPace(List<KantongSpend> kantong, num elapsedFraction) {
+  final paced = [
+    for (final k in kantong)
+      if (k.key != tabunganCategoryId && k.planMinor > 0) KantongPace(k, elapsedFraction),
+  ];
+  paced.sort((a, b) {
+    if (a.isFixed != b.isFixed) return a.isFixed ? 1 : -1;
+    return b.lead.compareTo(a.lead);
+  });
+  return paced;
+}
+
+/// The sentence Pantau opens with, or null when no kantong is ahead of time.
+String? kantongPaceSentence(List<KantongPace> sorted, String Function(int minor) format) {
+  if (sorted.isEmpty || !sorted.first.isAhead) return null;
+  final top = sorted.first;
+  final spent = (top.spentShare * 100).round();
+  final time = (top.elapsedFraction * 100).round();
+  final over = top.projectedOverMinor;
+  final tail = over > 0 ? ' Kalau begini terus, lewat sekitar ${format(over)}.' : '';
+  return '${top.kantong.name} sudah $spent% padahal periode baru jalan $time%.$tail';
 }
