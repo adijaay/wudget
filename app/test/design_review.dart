@@ -32,6 +32,8 @@ import 'package:wudget/features/pantau/recap_card.dart';
 import 'package:wudget/features/settings/saya_screen.dart';
 import 'package:wudget/features/wallets/wallets_screen.dart';
 
+import 'accessibility/retention_surfaces.dart';
+
 /// Not a test: a design-review harness. Renders each screen at phone size
 /// with the bundled typeface actually loaded and realistic seeded data, and
 /// writes the images to `test/design_review/`, so the rebuilt UI can be
@@ -278,6 +280,15 @@ void main() {
       );
   testWidgets('recap', (t) => shoot(t, 'recap', recap()));
   testWidgets('recap dark', (t) => shoot(t, 'recap_dark', recap(), brightness: Brightness.dark));
+  // R5: screen 6, the comeback after a gap, and its backfill step.
+  final surfaces = retentionSurfaces();
+  testWidgets('comeback', (t) => shoot(t, 'comeback', surfaces['comeback screen']!()));
+  testWidgets('comeback dark',
+      (t) => shoot(t, 'comeback_dark', surfaces['comeback screen']!(), brightness: Brightness.dark));
+  testWidgets('backfill', (t) => shoot(t, 'backfill', surfaces['backfill screen']!()));
+  testWidgets('backfill dark',
+      (t) => shoot(t, 'backfill_dark', surfaces['backfill screen']!(), brightness: Brightness.dark));
+  testWidgets('saya dark', (t) => shoot(t, 'saya_dark', const SayaScreen(), brightness: Brightness.dark));
   testWidgets('set now', (t) => shoot(t, 'set_now', setNow()));
   testWidgets('set now dark', (t) => shoot(t, 'set_now_dark', setNow(), brightness: Brightness.dark));
 

@@ -31,13 +31,16 @@ class RecapCard extends StatelessWidget {
 
     Widget line(String label, String value) => Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Row(
-            children: [
-              Text(label, style: row),
-              const SizedBox(width: WudgetTokens.space2),
-              Expanded(child: Text(value, style: strong, textAlign: TextAlign.end)),
-            ],
-          ),
+          // Wraps the value under its label when large text leaves no room.
+          child: Row(children: [
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: WudgetTokens.space2,
+                children: [Text(label, style: row), Text(value, style: strong)],
+              ),
+            ),
+          ]),
         );
 
     return ClipRRect(

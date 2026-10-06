@@ -16,3 +16,16 @@ tz.TZDateTime reminderFireTime({
   final date = DateTime.utc(1970, 1, 1).add(Duration(days: dueDay));
   return tz.TZDateTime(location, date.year, date.month, date.day, hour, minute);
 }
+
+/// The hour the evening reminder fires: the most common local hour among
+/// [saves], later hour on a tie, kept in the evening (17 to 21) so it never
+/// nags before the day is mostly done. 20 with no history.
+int usualLoggingHour(Iterable<DateTime> saves) {
+  final counts = <int, int>{};
+  for (final s in saves) {
+    counts[s.hour] = (counts[s.hour] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return 20;
+  final hour = counts.entries.reduce((a, b) => b.value > a.value || (b.value == a.value && b.key > a.key) ? b : a).key;
+  return hour.clamp(17, 21);
+}

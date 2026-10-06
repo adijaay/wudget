@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../data/feature_flags_repository.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../categories/categories_screen.dart';
@@ -85,6 +86,28 @@ class SayaScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: WudgetTokens.space5),
+          const SectionLabel('Pengingat'),
+          const CardGroup(
+            dividerIndent: WudgetTokens.space3,
+            children: [
+              _ReminderRow(
+                flagKey: eveningReminderKey,
+                title: 'Pengingat malam',
+                subtitle: 'Di jam kamu biasa mencatat, hanya kalau hari itu belum ada catatan',
+              ),
+              _ReminderRow(
+                flagKey: paydayReminderKey,
+                title: 'Pengingat gajian',
+                subtitle: 'Tanggal gajian, menanyakan apakah gaji sudah masuk',
+              ),
+              _ReminderRow(
+                flagKey: weeklyRecapReminderKey,
+                title: 'Rekap mingguan',
+                subtitle: 'Setiap Minggu malam, tujuh hari terakhir di Pantau',
+              ),
+            ],
+          ),
+          const SizedBox(height: WudgetTokens.space5),
           const SectionLabel('Data'),
           CardGroup(
             dividerIndent: WudgetTokens.space3,
@@ -156,6 +179,35 @@ class SayaScreen extends ConsumerWidget {
     );
     if (picked == null) return;
     await ref.read(settingsRepositoryProvider).setPeriodStartDay(picked);
+  }
+}
+
+final _reminderFlagProvider = StreamProvider.family<bool, String>(
+  (ref, key) => ref.watch(featureFlagsRepositoryProvider).watchBool(key, defaultValue: true),
+);
+
+class _ReminderRow extends ConsumerWidget {
+  const _ReminderRow({required this.flagKey, required this.title, required this.subtitle});
+  final String flagKey;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(_reminderFlagProvider(flagKey)).valueOrNull;
+    void set(bool value) {
+      ref.read(featureFlagsRepositoryProvider).setBool(flagKey, value);
+      ref.read(analyticsRepositoryProvider).logEvent('reminder_toggle', props: {'key': flagKey, 'on': value});
+    }
+
+    return MergeSemantics(
+      child: CardRow(
+        title: title,
+        subtitle: subtitle,
+        trailing: Switch(value: on ?? true, onChanged: on == null ? null : set),
+        onTap: on == null ? null : () => set(!on),
+      ),
+    );
   }
 }
 

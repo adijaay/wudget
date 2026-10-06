@@ -845,7 +845,11 @@ class _QuickChips extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionLabel('Sering kamu catat jam segini'),
+          // Sentence case like the other home labels; SectionLabel shouts (R-06).
+          Padding(
+            padding: const EdgeInsets.only(bottom: WudgetTokens.space2),
+            child: Text('Sering kamu catat jam segini', style: Theme.of(context).textTheme.labelMedium),
+          ),
           Wrap(
             spacing: WudgetTokens.space2,
             runSpacing: WudgetTokens.space2,
@@ -853,6 +857,10 @@ class _QuickChips extends StatelessWidget {
               for (final chip in chips)
                 ActionChip(
                   key: Key('quickChip_${chip.note}'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(WudgetTokens.radiusChip),
+                    side: BorderSide(color: tokens.border),
+                  ),
                   avatar: CircleAvatar(radius: 5, backgroundColor: tokens.hueFor(chip.hueIndex)),
                   label: Text.rich(TextSpan(children: [
                     TextSpan(text: '${chip.note} '),

@@ -29,6 +29,7 @@ abstract final class CaptureSource {
   static const chip = 'chip';
   static const launch = 'launch';
   static const home = 'home';
+  static const backfill = 'backfill';
 }
 
 /// The capture sheet: the one screen the product lives or dies on. See
@@ -614,9 +615,11 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_rankedIds.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(WudgetTokens.space4, WudgetTokens.space3, WudgetTokens.space4, 0),
-                child: SectionLabel('Kategori, diurutkan dari kebiasaanmu jam segini'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    WudgetTokens.space4, WudgetTokens.space3, WudgetTokens.space4, WudgetTokens.space2),
+                child: Text('Kategori, diurutkan dari kebiasaanmu jam segini',
+                    style: Theme.of(context).textTheme.labelMedium),
               ),
             _CategoryRow(
               categories: categories,

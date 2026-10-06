@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -14,6 +15,8 @@ import 'data/notification_scheduler.dart';
 import 'data/recurrence_repository.dart';
 import 'data/reminder_orchestrator.dart';
 import 'design/tokens.dart';
+import 'domain/period.dart';
+import 'features/comeback/comeback_screen.dart';
 import 'domain/default_categories.dart';
 import 'features/capture/capture_sheet.dart';
 import 'features/ledger/ledger_screen.dart';
@@ -81,11 +84,25 @@ Future<void> main() async {
   // Cold start only: main() does not run again on resume.
   final context = navigatorKey.currentContext;
   if (!fromWidget && context != null && context.mounted) {
-    unawaited(showCaptureLaunch(
-      context,
-      const CaptureLaunch(kind: CaptureKind.expense),
-      source: CaptureSource.launch,
-    ));
+    // A failed check just means no welcome screen this time.
+    final comeback = await loadComeback(db, todayDayBucket()).catchError((_) => null);
+    if (comeback != null && context.mounted) {
+      unawaited(AnalyticsRepository(db).logEvent('comeback_shown', props: {'lastEntryDay': comeback.lastEntryDay}));
+      unawaited(Navigator.of(context)
+          .push<bool>(MaterialPageRoute(builder: (_) => ComebackScreen(data: comeback)))
+          .then((startToday) {
+        final ctx = navigatorKey.currentContext;
+        if (startToday == true && ctx != null && ctx.mounted) {
+          showCaptureLaunch(ctx, const CaptureLaunch(kind: CaptureKind.expense), source: CaptureSource.launch);
+        }
+      }));
+    } else if (context.mounted) {
+      unawaited(showCaptureLaunch(
+        context,
+        const CaptureLaunch(kind: CaptureKind.expense),
+        source: CaptureSource.launch,
+      ));
+    }
   }
 
   // Materialisation runs on every app open, per plan/03-architecture.md —
@@ -98,6 +115,12 @@ Future<void> main() async {
   final notificationScheduler = NotificationScheduler(navigatorKey);
   await notificationScheduler.init();
   await scheduleUpcomingReminders(db, notificationScheduler);
+  // Chained so two quick saves cannot interleave a cancel with a schedule.
+  var retention = scheduleRetentionReminders(db, notificationScheduler);
+  // A save today drops today's evening reminder; a Saya switch takes effect.
+  db
+      .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.featureFlags, db.appSettings]))
+      .listen((_) => retention = retention.catchError((_) {}).then((_) => scheduleRetentionReminders(db, notificationScheduler)));
 }
 
 class WudgetApp extends StatelessWidget {

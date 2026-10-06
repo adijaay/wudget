@@ -45,6 +45,22 @@ class AnalyticsRepository {
     ];
   }
 
+  /// Local times of capture saves since [since]; the reminder's usual hour.
+  Future<List<DateTime>> captureSaveTimesSince(DateTime since) async {
+    final rows = await (_db.select(_db.analyticsEvents)
+          ..where((e) =>
+              e.name.equals('capture_save') & e.occurredAt.isBiggerOrEqualValue(since.toUtc().millisecondsSinceEpoch)))
+        .get();
+    return [for (final r in rows) DateTime.fromMillisecondsSinceEpoch(r.occurredAt)];
+  }
+
+  /// Whether the comeback screen was already shown for the gap that began
+  /// after [lastEntryDay]; one gap, one welcome.
+  Future<bool> comebackShownFor(int lastEntryDay) async {
+    final rows = await (_db.select(_db.analyticsEvents)..where((e) => e.name.equals('comeback_shown'))).get();
+    return rows.any((r) => (jsonDecode(r.propsJson ?? '{}') as Map)['lastEntryDay'] == lastEntryDay);
+  }
+
   /// Open-to-save milliseconds of the last [count] captures, newest first.
   Future<List<int>> recentCaptureSaveMs({int count = 20}) async {
     final rows = await (_db.select(_db.analyticsEvents)

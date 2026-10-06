@@ -13,6 +13,8 @@ import 'package:wudget/features/capture/capture_sheet.dart';
 import 'package:wudget/features/ledger/ledger_screen.dart';
 import 'package:wudget/features/pantau/pantau_screen.dart';
 
+import 'retention_surfaces.dart';
+
 /// plan/05-sprints.md Sprint 18: "200 per cent text scale on the capture
 /// sheet, the ledger row, the pace card." A test here means what
 /// R-3/antislop-human means by resizable text: the layout must hold at
@@ -144,4 +146,35 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));
   });
+
+  // R5.5: every surface the retention round added, at 200%.
+  for (final MapEntry(key: name, value: build) in retentionSurfaces().entries) {
+    for (final brightness in Brightness.values) {
+      testWidgets('$name holds together at 200% text scale (${brightness.name})', (tester) async {
+        final db = WudgetDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        await seedDefaultsIfEmpty(db);
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [databaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              theme: buildWudgetTheme(
+                  brightness == Brightness.dark ? WudgetTokens.dark : WudgetTokens.light, brightness),
+              builder: (context, child) => _at200Percent(child!),
+              home: build(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 50));
+      });
+    }
+  }
 }

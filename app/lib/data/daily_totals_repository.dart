@@ -57,6 +57,17 @@ class DailyTotalsRepository {
     }..removeWhere((d) => d < startDay || d >= endDayExclusive);
   }
 
+  /// The day bucket of the latest actual entry on or before [day], or null.
+  Future<int?> lastEntryDayOnOrBefore(int day) async {
+    final rows = await (_db.select(_db.transactions)
+          ..where((t) => isActualTransaction(t) & t.occurredAt.isSmallerThanValue((day + 2) * _millisPerDay))
+          ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)])
+          ..limit(3))
+        .get();
+    final days = [for (final t in rows) dayBucketFor(t.occurredAt, t.tzOffsetMinutes)]..removeWhere((d) => d > day);
+    return days.isEmpty ? null : days.reduce((a, b) => a > b ? a : b);
+  }
+
   Future<void> recomputeAll() async {
     final transactions = await (_db.select(_db.transactions)
           ..where((t) => isActualTransaction(t)))

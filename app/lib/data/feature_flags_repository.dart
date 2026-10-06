@@ -30,3 +30,9 @@ class FeatureFlagsRepository {
         );
   }
 }
+
+/// Reminder switches in Saya (rule 7). These three default on; anything
+/// added later defaults off.
+const eveningReminderKey = 'reminder_evening';
+const paydayReminderKey = 'reminder_payday';
+const weeklyRecapReminderKey = 'reminder_weekly_recap';

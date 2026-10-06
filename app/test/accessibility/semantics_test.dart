@@ -12,6 +12,8 @@ import 'package:wudget/design/tokens.dart';
 import 'package:wudget/domain/default_categories.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
 
+import 'retention_surfaces.dart';
+
 const _formatter = MoneyFormatter();
 
 /// plan/05-sprints.md Sprint 18: "Semantics labels, screen reader
@@ -126,4 +128,52 @@ void main() {
 
     handle.dispose();
   });
+
+  // R5.5: every retention surface. Each tappable node carries a label, and
+  // the numbers a screen reader would otherwise read as fragments are one
+  // sentence.
+  String rp(int minor) => _formatter.format(Money.fromMinor(minor, 'IDR'));
+  final expected = <String, List<Pattern>>{
+    'home jatah, strip and insight': [
+      '11 dari 13 hari tercatat',
+      '${rp(48000)} dari jatah ${rp(133000)}',
+      'Makan minggu ini',
+    ],
+    'payday card': ['Sudah masuk', 'Beda jumlah'],
+    'budget review': ['Pakai anggaran ini'],
+    'set-now sheet': ['Hapus', 'Lanjut bagi ke kantong'],
+    'recap card': ['Bagikan', 'Paling terjaga'],
+    'pantau kantong list': [RegExp('^Belanja, ${RegExp.escape(rp(688000))} dari ${RegExp.escape(rp(800000))}, 86 persen')],
+    'comeback screen': ['11 dari 13 hari tercatat', 'Mulai dari hari ini', 'Isi 4 hari yang lewat'],
+    'backfill screen': ['Hari 1 dari 4', 'Lewati hari itu'],
+  };
+
+  for (final MapEntry(key: name, value: build) in retentionSurfaces().entries) {
+    testWidgets('$name: labelled tap targets and readable numbers', (tester) async {
+      final handle = tester.ensureSemantics();
+      final db = WudgetDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      await seedDefaultsIfEmpty(db);
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [databaseProvider.overrideWithValue(db)],
+          child: MaterialApp(theme: buildWudgetTheme(WudgetTokens.light, Brightness.light), home: build()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      for (final label in expected[name]!) {
+        expect(find.bySemanticsLabel(label is String ? RegExp(RegExp.escape(label)) : label), findsWidgets,
+            reason: '$name: no node reads "$label"');
+      }
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 50));
+      handle.dispose();
+    });
+  }
 }

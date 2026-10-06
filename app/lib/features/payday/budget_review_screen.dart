@@ -131,8 +131,9 @@ class _AmountSheetState extends State<AmountSheet> {
         );
     Widget digit(int d) => key('$d', () => _type((a) => a * 10 + d));
 
+    // Scrolls only when it has to: at 200% text the keypad outgrows a phone.
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(WudgetTokens.space4, WudgetTokens.space4, WudgetTokens.space4, WudgetTokens.space3),
         child: Column(
           mainAxisSize: MainAxisSize.min,

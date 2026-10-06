@@ -25,6 +25,19 @@ abstract interface class ReminderScheduler {
   });
 
   Future<void> cancelForInstance(String transactionId);
+
+  /// Evening, payday and weekly recap reminders: fixed small [id]s, so a
+  /// reschedule cancels and replaces them without a lookup table.
+  Future<void> scheduleReminder({
+    required int id,
+    required int day,
+    required int hour,
+    required String title,
+    required String body,
+    String? payload,
+  });
+
+  Future<void> cancelReminder(int id);
 }
 
 /// Schedules and cancels local bill-reminder notifications, and opens the
@@ -53,6 +66,10 @@ class NotificationScheduler implements ReminderScheduler {
       onDidReceiveNotificationResponse: (response) => _openFromPayload(response.payload),
     );
     _initialized = true;
+    // Android 13+ asks once; later calls return the stored answer.
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
   /// A stable notification id derived from the transaction id, so
@@ -91,6 +108,34 @@ class NotificationScheduler implements ReminderScheduler {
   Future<void> cancelForInstance(String transactionId) {
     return _plugin.cancel(_notificationId(transactionId));
   }
+
+  @override
+  Future<void> scheduleReminder({
+    required int id,
+    required int day,
+    required int hour,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      reminderFireTime(location: tz.local, dueDay: day, hour: hour, minute: 0),
+      const NotificationDetails(
+        android: AndroidNotificationDetails('reminders', 'Pengingat'),
+        iOS: DarwinNotificationDetails(),
+      ),
+      // Inexact is fine for "this evening" and needs no exact-alarm grant.
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
+    );
+  }
+
+  @override
+  Future<void> cancelReminder(int id) => _plugin.cancel(id);
 
   void _openFromPayload(String? payload) {
     final context = _navigatorKey.currentContext;
