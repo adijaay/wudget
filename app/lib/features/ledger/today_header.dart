@@ -1,52 +1,126 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncValue, AsyncData, AsyncError;
 import 'package:intl/intl.dart';
 
 import '../../core/money.dart';
 import '../../core/money_formatter.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
+import '../../domain/insight.dart';
 import '../../domain/pola.dart';
-import '../pantau/week_bar_chart.dart';
 
 const _formatter = MoneyFormatter();
 final _fullDate = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
+String _rp(int minor) => _formatter.format(Money.fromMinor(minor, 'IDR'));
 
-/// What the Catat header needs, loaded once by the ledger screen.
+/// The jatah card's numbers, loaded by the ledger screen.
 class TodayHeaderData {
   const TodayHeaderData({
     required this.todayDay,
     required this.todaySpendMinor,
     required this.allowance,
-    required this.weekDays,
-    required this.weekExpense,
   });
 
   final int todayDay;
   final int todaySpendMinor;
 
-  /// Null when no budget is set for the period, or on its last day — both
-  /// cases print the reason instead of a number.
+  /// Null when no budget is set for the period; the card then explains
+  /// what fills it instead of printing a number.
   final DailyAllowance? allowance;
-  final List<int> weekDays;
-  final Map<int, int> weekExpense;
 }
 
-/// The head of the Catat tab: today framed as a day, then the week behind
-/// it. Built to design/CatatHariIni.dc.html.
-///
-/// This is deliberately a day-sized figure and not the period's remaining
-/// balance. research/05-behavioral-research.md section 11 found a live
-/// remaining-balance display raises late-period spending, because
-/// certainty about the remainder licenses using it — the same finding that
-/// keeps Pantau's hero on pace rather than on what is left.
-///
-/// No frequent-item chips here: the capture sheet already offers them at
-/// the moment they are useful, and a second copy on this screen would be
-/// two controls doing one job.
-class TodayHeader extends StatelessWidget {
-  const TodayHeader({super.key, required this.data});
+/// The logged-days strip: one square per day of the period.
+class LoggedStripData {
+  const LoggedStripData({
+    required this.startDay,
+    required this.endDayExclusive,
+    required this.todayDay,
+    required this.entryDays,
+  });
 
+  final int startDay;
+  final int endDayExclusive;
+  final int todayDay;
+  final Set<int> entryDays;
+
+  int get daysSoFar => todayDay - startDay + 1;
+  int get logged => entryDays.where((d) => d >= startDay && d <= todayDay).length;
+}
+
+/// Home, top to bottom: today's jatah, the logged-days strip, one new
+/// sentence. Built to design/Retention.html screens 1 and 7. Each block
+/// loads and fails on its own, so one broken query never blanks home.
+class TodayHeader extends StatelessWidget {
+  const TodayHeader({
+    super.key,
+    required this.todayDay,
+    required this.jatah,
+    required this.strip,
+    required this.insight,
+    this.firstRun = false,
+    this.onOpenKantong,
+    this.onCapture,
+    this.onRetry,
+  });
+
+  final int todayDay;
+  final AsyncValue<TodayHeaderData> jatah;
+  final AsyncValue<LoggedStripData> strip;
+  final AsyncValue<Insight?> insight;
+
+  /// No entries yet: the strip and insight give way to one task.
+  final bool firstRun;
+  final VoidCallback? onOpenKantong;
+  final VoidCallback? onCapture;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+    const gap = SizedBox(height: WudgetTokens.space3);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _fullDate.format(DateTime.utc(1970, 1, 1).add(Duration(days: todayDay))),
+          style: text.labelMedium?.copyWith(color: tokens.ink2),
+        ),
+        gap,
+        switch (jatah) {
+          AsyncData(:final value) => _JatahCard(data: value, onOpenKantong: onOpenKantong),
+          AsyncError() => _BlockError('Jatah hari ini belum bisa dihitung.', onRetry: onRetry),
+          _ => const _BlockLoading(height: 132, label: 'Menghitung jatah hari ini'),
+        },
+        if (firstRun) ...[
+          gap,
+          _FirstTaskCard(onCapture: onCapture),
+        ] else ...[
+          gap,
+          switch (strip) {
+            AsyncData(:final value) => LoggedDaysStrip(data: value),
+            AsyncError() => _BlockError('Hari tercatat belum bisa dimuat.', onRetry: onRetry),
+            _ => const _BlockLoading(height: 64, label: 'Memuat hari tercatat'),
+          },
+          switch (insight) {
+            AsyncData(value: final Insight value) => Padding(
+                padding: const EdgeInsets.only(top: WudgetTokens.space3),
+                child: WudgetCard(child: Text(value.text, style: text.bodyLarge)),
+              ),
+            // A missing sentence is not worth an error card; home just says less.
+            _ => const SizedBox.shrink(),
+          },
+        ],
+      ],
+    );
+  }
+}
+
+class _JatahCard extends StatelessWidget {
+  const _JatahCard({required this.data, this.onOpenKantong});
   final TodayHeaderData data;
+  final VoidCallback? onOpenKantong;
 
   @override
   Widget build(BuildContext context) {
@@ -54,137 +128,258 @@ class TodayHeader extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final allowance = data.allowance;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    Widget link(String label) => Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: onOpenKantong,
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 44),
+              foregroundColor: tokens.accent,
+            ),
+            child: Text(label, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: tokens.accent)),
+          ),
+        );
+
+    final List<Widget> body;
+    if (allowance == null) {
+      body = [
+        const SizedBox(height: WudgetTokens.space2),
+        Text('Jatah muncul setelah kamu isi gaji atau anggaran per kategori.', style: text.bodyLarge),
+        link('Atur anggaran sekarang'),
+      ];
+    } else if (allowance.isOverBudget) {
+      body = [
+        const SizedBox(height: WudgetTokens.space1),
+        AmountText(minor: 0, style: text.headlineMedium?.copyWith(fontSize: 34)),
+        const SizedBox(height: WudgetTokens.space1),
         Text(
-          _fullDate.format(DateTime.utc(1970, 1, 1).add(Duration(days: data.todayDay))),
-          style: text.labelMedium?.copyWith(color: tokens.ink2),
+          'Anggaran periode ini sudah lewat ${_rp(-allowance.remainingMinor)}.',
+          style: text.bodyMedium?.copyWith(color: tokens.warning, fontWeight: FontWeight.w600),
         ),
+        link('Lihat anggaran di Kantong'),
+      ];
+    } else {
+      final per = allowance.perDayMinor;
+      final spent = data.todaySpendMinor;
+      final over = spent > per;
+      body = [
+        const SizedBox(height: WudgetTokens.space1),
+        AmountText(minor: per, style: text.headlineMedium?.copyWith(fontSize: 34)),
         const SizedBox(height: WudgetTokens.space3),
-        WudgetCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (allowance == null) ...[
-                Text('Belum ada anggaran periode ini', style: text.titleSmall),
-                const SizedBox(height: WudgetTokens.space2),
-                Text(
-                  'Jatah per hari dihitung dari anggaran dibagi sisa hari. '
-                  'Tanpa anggaran tidak ada angka yang jujur untuk dibagi.',
-                  style: text.bodyMedium?.copyWith(color: tokens.ink2),
-                ),
-              ] else if (allowance.isOverBudget) ...[
-                Text('SUDAH LEWAT ANGGARAN', style: text.labelMedium),
-                const SizedBox(height: WudgetTokens.space1),
-                AmountText(
-                  minor: -allowance.remainingMinor,
-                  style: text.headlineMedium?.copyWith(fontSize: 30),
-                  color: tokens.warning,
-                ),
-                const SizedBox(height: WudgetTokens.space2),
-                Text(
-                  'Lewat sebanyak itu dengan ${allowance.daysRemaining} hari tersisa. '
-                  'Tidak ada jatah harian yang tersisa untuk dibagi.',
-                  style: text.bodyMedium?.copyWith(color: tokens.ink2),
-                ),
-              ] else ...[
-                Text('JATAH PER HARI', style: text.labelMedium),
-                const SizedBox(height: WudgetTokens.space1),
-                AmountText(
-                  minor: allowance.perDayMinor,
-                  style: text.headlineMedium?.copyWith(fontSize: 30),
-                ),
-                const SizedBox(height: WudgetTokens.space1),
-                Text(
-                  'Sisa ${_formatter.format(Money.fromMinor(allowance.remainingMinor, 'IDR'))} '
-                  'dibagi ${allowance.daysRemaining} hari yang tersisa',
-                  style: text.bodyMedium?.copyWith(color: tokens.ink2),
-                ),
-                const SizedBox(height: WudgetTokens.space3),
-                Divider(height: 1, color: tokens.hairline),
-                const SizedBox(height: WudgetTokens.space3),
-                _TodayAgainstAllowance(
-                  spentMinor: data.todaySpendMinor,
-                  perDayMinor: allowance.perDayMinor,
-                ),
-              ],
-            ],
+        Row(
+          children: [
+            Expanded(child: Text('Sudah keluar', style: text.bodyMedium?.copyWith(color: tokens.ink2))),
+            AmountText(minor: spent, style: text.titleSmall, color: over ? tokens.warning : null),
+          ],
+        ),
+        const SizedBox(height: WudgetTokens.space2),
+        Semantics(
+          label: '${_rp(spent)} dari jatah ${_rp(per)}',
+          excludeSemantics: true,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              value: per == 0 ? 1.0 : (spent / per).clamp(0.0, 1.0),
+              minHeight: 10,
+              backgroundColor: tokens.surfaceMuted,
+              valueColor: AlwaysStoppedAnimation(over ? tokens.warning : tokens.accent),
+            ),
           ),
         ),
-        const SizedBox(height: WudgetTokens.space4),
-        const SectionLabel('Tujuh hari terakhir'),
-        WudgetCard(
-          child: WeekBarChart(days: data.weekDays, dailyExpenseMinor: data.weekExpense),
+        link('Sisa periode ${_rp(allowance.remainingMinor)} untuk ${allowance.daysRemaining} hari'),
+      ];
+    }
+
+    return WudgetCard(
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 46,
+              child: IgnorePointer(child: CustomPaint(painter: _FlapPainter(tokens.accent.withValues(alpha: 0.16)))),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  WudgetTokens.space4, WudgetTokens.space4, WudgetTokens.space4, WudgetTokens.space2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Jatah hari ini', style: text.labelMedium?.copyWith(color: tokens.ink2)),
+                  ...body,
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-/// Today's spend against today's allowance: one bar, one meaning. The
-/// verdict carries an icon as well as a colour, so over-allowance reads
-/// without seeing hue (chart rule 7).
-class _TodayAgainstAllowance extends StatelessWidget {
-  const _TodayAgainstAllowance({required this.spentMinor, required this.perDayMinor});
+/// The amplop flap from DESIGN.md, on the one card that holds money.
+class _FlapPainter extends CustomPainter {
+  const _FlapPainter(this.color);
+  final Color color;
 
-  final int spentMinor;
-  final int perDayMinor;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height * 40 / 46)
+      ..lineTo(size.width, 0);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FlapPainter old) => old.color != color;
+}
+
+/// Logged days filled, missed days hollow, today outlined, future muted.
+/// Missed days are just hollow: no streak to break.
+class LoggedDaysStrip extends StatelessWidget {
+  const LoggedDaysStrip({super.key, required this.data});
+  final LoggedStripData data;
 
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     final text = Theme.of(context).textTheme;
+    final summary = '${data.logged} dari ${data.daysSoFar}';
 
-    final over = spentMinor > perDayMinor;
-    final fraction = perDayMinor == 0 ? 1.0 : (spentMinor / perDayMinor).clamp(0.0, 1.0);
-    final difference = (perDayMinor - spentMinor).abs();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
+    return Semantics(
+      container: true,
+      label: '$summary hari tercatat',
+      excludeSemantics: true,
+      child: WudgetCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Text('Keluar hari ini',
-                  style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-            ),
-            AmountText(minor: spentMinor, style: text.titleSmall),
-          ],
-        ),
-        const SizedBox(height: WudgetTokens.space2),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: fraction,
-            minHeight: 12,
-            backgroundColor: tokens.surfaceMuted,
-            valueColor: AlwaysStoppedAnimation(over ? tokens.warning : tokens.accent),
-          ),
-        ),
-        const SizedBox(height: WudgetTokens.space2),
-        Row(
-          children: [
-            Icon(
-              over ? Icons.trending_up : Icons.check,
-              size: 16,
-              color: over ? tokens.warning : tokens.positive,
-            ),
-            const SizedBox(width: WudgetTokens.space2),
-            Expanded(
-              child: Text(
-                over
-                    ? 'Lewat ${_formatter.format(Money.fromMinor(difference, 'IDR'))} dari jatah hari ini'
-                    : 'Masih ${_formatter.format(Money.fromMinor(difference, 'IDR'))} di bawah jatah',
-                style: text.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: over ? tokens.warning : tokens.positive,
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Hari tercatat periode ini', style: text.labelMedium?.copyWith(color: tokens.ink2)),
                 ),
-              ),
+                Text(summary, style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+              ],
+            ),
+            const SizedBox(height: WudgetTokens.space2),
+            Wrap(
+              spacing: 5,
+              runSpacing: 5,
+              children: [
+                for (var day = data.startDay; day < data.endDayExclusive; day++)
+                  _DaySquare(
+                    logged: data.entryDays.contains(day),
+                    today: day == data.todayDay,
+                    future: day > data.todayDay,
+                  ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _DaySquare extends StatelessWidget {
+  const _DaySquare({required this.logged, required this.today, required this.future});
+  final bool logged;
+  final bool today;
+  final bool future;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final square = Container(
+      width: 14,
+      height: 14,
+      decoration: BoxDecoration(
+        color: future ? tokens.surfaceMuted : (logged ? tokens.accent : null),
+        borderRadius: BorderRadius.circular(4),
+        border: !future && !logged ? Border.all(color: tokens.borderStrong, width: 1.5) : null,
+      ),
+    );
+    if (!today) return square;
+    return Container(
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: tokens.ink1, width: 2),
+      ),
+      child: square,
+    );
+  }
+}
+
+class _FirstTaskCard extends StatelessWidget {
+  const _FirstTaskCard({this.onCapture});
+  final VoidCallback? onCapture;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+    return WudgetCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Catat satu pengeluaran hari ini', style: text.titleSmall),
+          const SizedBox(height: WudgetTokens.space1),
+          Text('Yang paling gampang diingat dulu, misalnya makan siang tadi.',
+              style: text.bodyMedium?.copyWith(color: tokens.ink2)),
+          const SizedBox(height: WudgetTokens.space3),
+          FilledButton(onPressed: onCapture, child: const Text('Catat pengeluaran')),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlockLoading extends StatelessWidget {
+  const _BlockLoading({required this.height, required this.label});
+  final int height;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      child: WudgetCard(
+        child: SizedBox(height: (height - 32).toDouble(), child: const Center(child: CircularProgressIndicator())),
+      ),
+    );
+  }
+}
+
+class _BlockError extends StatelessWidget {
+  const _BlockError(this.message, {this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+    return WudgetCard(
+      child: Row(
+        children: [
+          Expanded(child: Text(message, style: text.bodyMedium?.copyWith(color: tokens.ink2))),
+          if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Muat ulang')),
+        ],
+      ),
     );
   }
 }

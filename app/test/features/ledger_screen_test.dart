@@ -57,7 +57,7 @@ void main() {
     await tester.drag(find.text('Makan'), const Offset(-500, 0));
     await tester.pumpAndSettle();
     expect(find.text('Makan'), findsNothing);
-    expect(find.text('Catat pengeluaran pertama'), findsOneWidget); // first-run state
+    expect(find.text('Catat satu pengeluaran hari ini'), findsOneWidget); // first-run state
 
     await tester.tap(find.text('Batalkan'));
     await tester.pumpAndSettle();
@@ -240,7 +240,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Catat pengeluaran pertama'), findsOneWidget); // first-run state
+    expect(find.text('Catat satu pengeluaran hari ini'), findsOneWidget); // first-run state
 
     await PostingsRepository(db).insertTransaction(
       transaction: TransactionsCompanion.insert(
@@ -261,7 +261,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Makan'), findsOneWidget);
-    expect(find.text('Catat pengeluaran pertama'), findsNothing);
+    expect(find.text('Catat satu pengeluaran hari ini'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

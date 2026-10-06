@@ -28,6 +28,7 @@ abstract final class CaptureSource {
   static const widget = 'widget';
   static const chip = 'chip';
   static const launch = 'launch';
+  static const home = 'home';
 }
 
 /// The capture sheet: the one screen the product lives or dies on. See

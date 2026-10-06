@@ -145,11 +145,16 @@ class _HomeShellState extends State<HomeShell> {
     NavDestination(label: 'Saya', icon: Icons.person_outline, selectedIcon: Icons.person),
   ];
 
+  void _select(int i) => setState(() {
+        if (i == 2 && _index != 2) _kantongVisits++;
+        _index = i;
+      });
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: [
-        const LedgerScreen(),
+        LedgerScreen(onOpenKantong: () => _select(2)),
         const PantauScreen(),
         BudgetScreen(key: ValueKey(_kantongVisits)),
         const SayaScreen(),
@@ -165,10 +170,7 @@ class _HomeShellState extends State<HomeShell> {
       bottomNavigationBar: WudgetNavBar(
         currentIndex: _index,
         destinations: _destinations,
-        onSelected: (i) => setState(() {
-          if (i == 2 && _index != 2) _kantongVisits++;
-          _index = i;
-        }),
+        onSelected: _select,
       ),
     );
   }

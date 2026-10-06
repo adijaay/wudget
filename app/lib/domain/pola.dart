@@ -123,7 +123,7 @@ class DailyAllowance {
   /// Budget minus spend. Negative once the period is over budget.
   final int remainingMinor;
 
-  /// Days left in the period, today excluded.
+  /// Days left in the period; home passes them with today included.
   final int daysRemaining;
 
   /// [remainingMinor] spread over [daysRemaining], rounded *down* to a

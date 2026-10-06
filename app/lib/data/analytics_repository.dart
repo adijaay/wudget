@@ -31,6 +31,20 @@ class AnalyticsRepository {
         .get();
   }
 
+  /// The last [count] home insights shown, newest first; the picker's memory.
+  Future<List<({int day, String key})>> recentInsights({int count = 7}) async {
+    final rows = await (_db.select(_db.analyticsEvents)
+          ..where((e) => e.name.equals('insight_shown'))
+          ..orderBy([(e) => OrderingTerm.desc(e.occurredAt)])
+          ..limit(count))
+        .get();
+    return [
+      for (final r in rows)
+        if (jsonDecode(r.propsJson ?? '{}') case {'day': final int day, 'key': final String key})
+          (day: day, key: key),
+    ];
+  }
+
   /// Open-to-save milliseconds of the last [count] captures, newest first.
   Future<List<int>> recentCaptureSaveMs({int count = 20}) async {
     final rows = await (_db.select(_db.analyticsEvents)

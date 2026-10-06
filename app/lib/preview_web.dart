@@ -144,8 +144,6 @@ final _header = TodayHeaderData(
     spentMinor: 2430000,
     daysRemaining: 19,
   ),
-  weekDays: List<int>.generate(7, (i) => _today - 6 + i),
-  weekExpense: _daily,
 );
 
 Future<void> main() async {
@@ -232,7 +230,14 @@ class _PreviewAppState extends State<_PreviewApp> {
                   2 => AliranView(data: _aliran(_deficit)),
                   _ => ListView(
                       padding: const EdgeInsets.all(WudgetTokens.space4),
-                      children: [TodayHeader(data: _header)],
+                      children: [
+                        TodayHeader(
+                          todayDay: _today,
+                          jatah: AsyncData(_header),
+                          strip: const AsyncLoading(),
+                          insight: const AsyncData(null),
+                        ),
+                      ],
                     ),
                 },
               ),

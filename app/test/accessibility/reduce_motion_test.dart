@@ -44,7 +44,7 @@ void main() {
 
     // Capture lives on the shell's docked centre button now, so a Catat
     // rendered on its own opens the sheet from its empty-state action.
-    await tester.tap(find.text('Catat pengeluaran pertama'));
+    await tester.tap(find.text('Catat pengeluaran'));
     await tester.pumpAndSettle();
 
     // The save key, fully rendered.

@@ -35,7 +35,7 @@ void main() {
     expect(find.byType(BudgetScreen, skipOffstage: false), findsOneWidget); // the Kantong tab
     // Catat's first-run state shows the shape of the row that will exist,
     // and the one action that creates it.
-    expect(find.text('Catat pengeluaran pertama'), findsOneWidget);
+    expect(find.text('Catat satu pengeluaran hari ini'), findsOneWidget);
 
     // The capture button is docked in the middle of the bar, reachable from
     // every tab rather than living in one screen's corner.

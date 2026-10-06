@@ -16,6 +16,9 @@ import '../../data/ledger_queries.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/period.dart';
+import '../../data/category_rank_queries.dart';
+import '../../domain/flow.dart';
+import '../../domain/insight.dart';
 import '../../domain/pola.dart';
 import '../capture/capture_sheet.dart';
 import '../widget/capture_deeplink.dart';
@@ -31,7 +34,10 @@ const _pageSize = 50;
 /// editing is a full recapture, not a one-field dialog. Delete is a soft
 /// delete with undo.
 class LedgerScreen extends ConsumerStatefulWidget {
-  const LedgerScreen({super.key});
+  const LedgerScreen({super.key, this.onOpenKantong});
+
+  /// Switches the shell to Kantong; null where there is no shell (tests).
+  final VoidCallback? onOpenKantong;
 
   @override
   ConsumerState<LedgerScreen> createState() => _LedgerScreenState();
@@ -58,7 +64,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   // to _entries: a page fetch started under an older generation is
   // discarded once a newer one has started.
   int _loadGeneration = 0;
-  TodayHeaderData? _todayHeader;
+  int _today = todayDayBucket();
+  AsyncValue<TodayHeaderData> _jatah = const AsyncLoading();
+  AsyncValue<LoggedStripData> _strip = const AsyncLoading();
+  AsyncValue<Insight?> _insight = const AsyncLoading();
   List<QuickChip> _quickChips = const [];
 
   LedgerFilter get _filter => LedgerFilter(
@@ -126,39 +135,89 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     await _loadTodayHeader(generation);
   }
 
-  /// Today framed as a day, above the ledger. Loaded alongside the first
-  /// page rather than in its own listener, so the header and the rows can
-  /// never disagree about what happened today.
+  /// Home's three blocks, loaded alongside the first page so the header and
+  /// the rows agree about today. Each block is guarded on its own (R2.6).
   Future<void> _loadTodayHeader(int generation) async {
     final today = todayDayBucket();
     final period = ref.read(currentPeriodProvider);
     final queries = ref.read(periodAggregateQueriesProvider);
+    bool stale() => !mounted || generation != _loadGeneration;
 
-    final budgets = await ref.read(budgetsRepositoryProvider).getAll();
-    final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
-    final totals = await queries.totalsFor(period);
-
-    final weekDays = List<int>.generate(7, (i) => today - 6 + i);
-    final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
     final chips = await ref.read(captureQueriesProvider).quickChips(DateTime.now());
-
-    if (!mounted || generation != _loadGeneration) return;
+    if (stale()) return;
     setState(() {
+      _today = today;
       _quickChips = chips;
-      _todayHeader = TodayHeaderData(
+    });
+
+    final jatah = await AsyncValue.guard(() async {
+      final budgets = await ref.read(budgetsRepositoryProvider).getAll();
+      final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
+      final totals = await queries.totalsFor(period);
+      final todaySpend = await queries.dailyExpenseMinorInRange(today, today + 1);
+      return TodayHeaderData(
         todayDay: today,
-        todaySpendMinor: weekExpense[today] ?? 0,
+        todaySpendMinor: todaySpend[today] ?? 0,
+        // Today counts as a day left: its jatah is what today may still spend.
         allowance: computeDailyAllowance(
           budgetTotalMinor: budgetTotal,
           spentMinor: totals.expenseMinor,
-          // Today is already spent, so the allowance spreads what is left
-          // over the days after it, not including it.
-          daysRemaining: period.endDayExclusive - today - 1,
+          daysRemaining: period.endDayExclusive - today,
         ),
-        weekDays: weekDays,
-        weekExpense: weekExpense,
       );
     });
+    if (stale()) return;
+    setState(() => _jatah = jatah);
+
+    final strip = await AsyncValue.guard(() async => LoggedStripData(
+          startDay: period.startDay,
+          endDayExclusive: period.endDayExclusive,
+          todayDay: today,
+          entryDays: await DailyTotalsRepository(ref.read(databaseProvider))
+              .entryDays(period.startDay, period.endDayExclusive),
+        ));
+    if (stale()) return;
+    setState(() => _strip = strip);
+
+    final insight = await AsyncValue.guard(() => _pickInsight(today, period));
+    if (stale()) return;
+    setState(() => _insight = insight);
+  }
+
+  Future<Insight?> _pickInsight(int today, Period period) async {
+    final queries = ref.read(periodAggregateQueriesProvider);
+    final ranks = ref.read(categoryRankQueriesProvider);
+    final analytics = ref.read(analyticsRepositoryProvider);
+
+    List<({String key, String name, int amountMinor, int hueIndex})> rows(List<CategoryRank> r) => [
+          for (final c in r) (key: c.key, name: c.name, amountMinor: c.amountMinor, hueIndex: c.hueIndex)
+        ];
+    final thisWeek = await ranks.rankedSpend(today - 6, today + 1);
+    final lastWeek = await ranks.rankedSpend(today - 13, today - 6);
+    final patternStart = today - 55;
+    final last = period.previous;
+    final lastTotals = await queries.totalsFor(last);
+    final lastRanks = await ranks.rankedSpend(last.startDay, last.endDayExclusive);
+
+    final candidates = insightCandidates(
+      weekDeltas: lastWeek.isEmpty ? const [] : buildCategoryDeltas(current: rows(thisWeek), previous: rows(lastWeek)),
+      pattern: computeWeekdayPattern(
+        dailyExpenseMinor: await queries.dailyExpenseMinorInRange(patternStart, today + 1),
+        sinceDayInclusive: patternStart,
+        untilDayExclusive: today + 1,
+      ),
+      lastPeriodFlow: buildFlowBreakdown(
+        incomeMinor: lastTotals.incomeMinor,
+        expenseMinor: lastTotals.expenseMinor,
+        ranks: [for (final r in lastRanks) (name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)],
+      ),
+    );
+    final recent = await analytics.recentInsights();
+    final picked = pickDailyInsight(candidates: candidates, recent: recent, today: today);
+    if (picked != null && !recent.any((r) => r.day == today && r.key == picked.key)) {
+      await analytics.logEvent('insight_shown', props: {'day': today, 'key': picked.key});
+    }
+    return picked;
   }
 
   Future<void> _loadNextPage([int? generation]) async {
@@ -228,14 +287,6 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         initialPhotoPath: entry.photoPath,
         editingTransactionId: entry.transactionId,
       ),
-    );
-  }
-
-  void _openCaptureSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const CaptureSheet(),
     );
   }
 
@@ -327,6 +378,47 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     );
   }
 
+  /// Home above the ledger: jatah, strip, insight, quick chips.
+  Widget _homeHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: WudgetTokens.space5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TodayHeader(
+            todayDay: _today,
+            jatah: _jatah,
+            strip: _strip,
+            insight: _insight,
+            firstRun: _entries.isEmpty,
+            onOpenKantong: widget.onOpenKantong == null
+                ? null
+                : () {
+                    ref.read(analyticsRepositoryProvider).logEvent('home_open_kantong',
+                        props: {'budgetSet': _jatah.valueOrNull?.allowance != null});
+                    widget.onOpenKantong!();
+                  },
+            onCapture: () => showCaptureLaunch(
+              context,
+              const CaptureLaunch(kind: CaptureKind.expense),
+              source: CaptureSource.home,
+            ),
+            onRetry: () => _loadTodayHeader(_loadGeneration),
+          ),
+          if (_quickChips.isNotEmpty)
+            _QuickChips(
+              chips: _quickChips,
+              onTap: (chip) => showCaptureLaunch(
+                context,
+                CaptureLaunch.fromChip(chip),
+                source: CaptureSource.chip,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _body() {
     if (_entries.isEmpty && _loading) {
       return const Center(child: CircularProgressIndicator());
@@ -347,7 +439,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                 _loadFirstPage();
               }),
             )
-          : _FirstRunEmpty(onCreate: _openCaptureSheet);
+          : ListView(
+              padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+              children: [_homeHeader()],
+            );
     }
 
     // One card per day, so the day header and its net total belong to the
@@ -372,26 +467,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       itemCount: days.length + 2,
       itemBuilder: (context, index) {
         if (index == 0) {
-          final header = _todayHeader;
-          if (_hasActiveFilter || header == null) return const SizedBox.shrink();
-          return Padding(
-            padding: const EdgeInsets.only(bottom: WudgetTokens.space5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TodayHeader(data: header),
-                if (_quickChips.isNotEmpty)
-                  _QuickChips(
-                    chips: _quickChips,
-                    onTap: (chip) => showCaptureLaunch(
-                      context,
-                      CaptureLaunch.fromChip(chip),
-                      source: CaptureSource.chip,
-                    ),
-                  ),
-              ],
-            ),
-          );
+          if (_hasActiveFilter) return const SizedBox.shrink();
+          return _homeHeader();
         }
         index -= 1;
         if (index == days.length) {
@@ -692,83 +769,6 @@ class _ActiveFilterChips extends StatelessWidget {
             InputChip(label: const Text('rentang nominal'), onDeleted: onClearAmount),
         ],
       ),
-    );
-  }
-}
-
-class _FirstRunEmpty extends StatelessWidget {
-  const _FirstRunEmpty({required this.onCreate});
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<WudgetTokens>()!;
-    final text = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        WudgetTokens.space4,
-        0,
-        WudgetTokens.space4,
-        WudgetTokens.space6,
-      ),
-      children: [
-        WudgetCard(
-          dashed: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Opacity(
-                opacity: 0.45,
-                child: Row(
-                  children: [
-                    IconChip(
-                      icon: Icons.restaurant_outlined,
-                      background: tokens.tintFor(0),
-                      foreground: tokens.inkFor(0),
-                    ),
-                    const SizedBox(width: WudgetTokens.space3),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(height: 11, width: 96, color: tokens.surfaceMuted),
-                          const SizedBox(height: 6),
-                          Container(height: 8, width: 62, color: tokens.surfaceMuted),
-                        ],
-                      ),
-                    ),
-                    Container(height: 11, width: 58, color: tokens.surfaceMuted),
-                  ],
-                ),
-              ),
-              const SizedBox(height: WudgetTokens.space4),
-              Text(
-                'Nanti tiap yang kamu catat muncul begini: kategorinya, '
-                'kantongnya, jamnya, dan nominalnya. Total per hari ada di '
-                'atas tiap kelompok.',
-                style: text.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: WudgetTokens.space5),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space1),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Mulai dari satu saja', style: text.titleLarge),
-              const SizedBox(height: WudgetTokens.space2),
-              Text(
-                'Kopi tadi pagi juga boleh. Yang penting jalan dulu, anggaran belakangan.',
-                style: text.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: WudgetTokens.space4),
-        FilledButton(onPressed: onCreate, child: const Text('Catat pengeluaran pertama')),
-      ],
     );
   }
 }
