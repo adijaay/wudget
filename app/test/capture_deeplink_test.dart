@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wudget/data/capture_queries.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
 import 'package:wudget/features/widget/capture_deeplink.dart';
 
@@ -38,5 +39,22 @@ void main() {
     expect(launch.amountMinor, 150000);
     expect(launch.note, 'Listrik');
     expect(launch.confirmingTransactionId, 'rec1_20123');
+  });
+
+  test('a home chip pre-fills note, category, subcategory and amount, and survives a widget uri', () {
+    const chip = QuickChip(
+      note: 'Warung',
+      categoryId: 'cat_makan_siang',
+      topCategoryId: 'cat_makan',
+      categoryName: 'Makan siang',
+      hueIndex: 0,
+      amountMinor: 18000,
+    );
+    final launch = parseCaptureDeepLink(CaptureLaunch.fromChip(chip).toUri());
+    expect(launch.kind, CaptureKind.expense);
+    expect(launch.categoryId, 'cat_makan');
+    expect(launch.subcategoryId, 'cat_makan_siang');
+    expect(launch.amountMinor, 18000);
+    expect(launch.note, 'Warung');
   });
 }

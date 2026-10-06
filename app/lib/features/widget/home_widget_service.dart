@@ -13,28 +13,18 @@ class HomeWidgetService {
 
   final GlobalKey<NavigatorState> _navigatorKey;
 
-  Future<void> init() async {
+  /// True when the app was cold-launched from the widget, so the caller
+  /// does not open a second sheet on top.
+  Future<bool> init() async {
     HomeWidget.widgetClicked.listen(_openCaptureSheet);
     final initialUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
     if (initialUri != null) _openCaptureSheet(initialUri);
+    return initialUri != null;
   }
 
   void _openCaptureSheet(Uri? uri) {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
-    final launch = parseCaptureDeepLink(uri);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => CaptureSheet(
-        initialKind: launch.kind,
-        initialCategoryId: launch.categoryId,
-        initialAccountId: launch.accountId,
-        initialAmountMinor: launch.amountMinor,
-        initialNote: launch.note,
-        confirmingTransactionId: launch.confirmingTransactionId,
-        source: CaptureSource.widget,
-      ),
-    );
+    showCaptureLaunch(context, parseCaptureDeepLink(uri), source: CaptureSource.widget);
   }
 }

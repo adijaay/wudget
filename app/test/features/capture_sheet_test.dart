@@ -9,9 +9,13 @@ import 'package:wudget/data/database.dart';
 import 'package:wudget/data/postings_repository.dart';
 import 'package:wudget/design/tokens.dart';
 import 'package:wudget/domain/default_categories.dart';
+import 'package:wudget/data/capture_queries.dart';
+import 'package:wudget/domain/period.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
+import 'package:wudget/features/widget/capture_deeplink.dart';
 
-Future<void> _openSheet(WidgetTester tester, WudgetDatabase db) async {
+Future<void> _openSheet(WidgetTester tester, WudgetDatabase db,
+    [CaptureSheet sheet = const CaptureSheet()]) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
@@ -23,7 +27,7 @@ Future<void> _openSheet(WidgetTester tester, WudgetDatabase db) async {
               onPressed: () => showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) => const CaptureSheet(),
+                builder: (_) => sheet,
               ),
               child: const Text('open'),
             ),
@@ -60,6 +64,7 @@ void main() {
 
     expect(_amountText(tester), contains('15.000'));
 
+    await tester.ensureVisible(find.text('Makan'));
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
 
@@ -104,6 +109,7 @@ void main() {
     }
     await tester.pump();
 
+    await tester.ensureVisible(find.text('Makan'));
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('numpadKey_save')));
@@ -114,36 +120,111 @@ void main() {
     expect(accountLeg.amountMinor, -15000); // 10000 + 5000
   });
 
-  testWidgets('a saved expense becomes a one-tap template on the next open', (tester) async {
+  testWidgets('no wallet picker; typing needs no tap first; the save button says what it will do',
+      (tester) async {
     final db = WudgetDatabase(NativeDatabase.memory());
     await seedDefaultsIfEmpty(db);
     addTearDown(db.close);
 
     await _openSheet(tester, db);
+    expect(find.byType(PopupMenuButton<String>), findsNothing);
+    expect(find.byTooltip('Pilih kantong'), findsNothing);
+    expect(find.text('Transfer'), findsNothing);
+
     await tester.tap(find.byKey(const Key('numpadKey_2')));
-    await tester.tap(find.byKey(const Key('numpadKey_0')));
     await tester.tap(find.byKey(const Key('numpadKey_000')));
+    await tester.ensureVisible(find.text('Makan'));
+    await tester.tap(find.text('Makan'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('2.000 ke Makan'), findsOneWidget);
+
+    // The note is left empty.
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
+    await tester.pumpAndSettle();
+    final tx = (await db.select(db.transactions).get()).single;
+    expect(tx.note, isNull);
+    expect((await db.select(db.postings).get()).firstWhere((p) => p.accountId != null).accountId, 'acc_cash');
+  });
+
+  testWidgets('income on a normal day saves with "Simpan saja"', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db);
+    addTearDown(db.close);
+
+    await _openSheet(tester, db);
+    await tester.tap(find.text('Pemasukan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('numpadKey_5')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
+    final incomeCategory = (await (db.select(db.categories)
+              ..where((c) => c.kind.equals('income'))
+              ..where((c) => c.parentId.isNull()))
+            .get())
+        .first;
+    await tester.ensureVisible(find.text(incomeCategory.name));
+    await tester.tap(find.text(incomeCategory.name));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('captureNote')), 'Refund');
+
+    expect(find.text('Simpan saja'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
+    await tester.pumpAndSettle();
+    final tx = (await db.select(db.transactions).get()).single;
+    expect(tx.kind, 'income');
+    expect(tx.note, 'Refund');
+  });
+
+  testWidgets('the toast names what is left in the kantong, and undo removes the entry and postings',
+      (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db);
+    addTearDown(db.close);
+    await db.into(db.budgets).insert(BudgetsCompanion.insert(key: 'cat_makan', amountMinor: 500000, updatedAt: 0));
+
+    await _openSheet(tester, db);
+    await tester.tap(find.byKey(const Key('numpadKey_1')));
+    await tester.tap(find.byKey(const Key('numpadKey_8')));
+    await tester.tap(find.byKey(const Key('numpadKey_000')));
+    await tester.ensureVisible(find.text('Makan'));
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
-    // Reopen: the template row should now offer "Makan" as a one-tap chip.
-    await _openSheet(tester, db);
+    final period = Period.containing(todayDayBucket(), monthStartDay: 1);
+    final remaining = await tester.runAsync(() => CaptureQueries(db).kantongRemaining('cat_makan', period));
+    expect(remaining, 500000 - 18000);
+    expect(find.textContaining(RegExp(r'Kantong Makan sisa Rp.482.000')), findsOneWidget);
+
+    await tester.tap(find.text('Batalkan'));
     await tester.pumpAndSettle();
+    expect(await db.select(db.transactions).get(), isEmpty);
+    expect(await db.select(db.postings).get(), isEmpty);
+  });
 
-    final templateChip = find.widgetWithText(ActionChip, 'Makan');
-    expect(templateChip, findsOneWidget);
-    await tester.tap(templateChip);
-    await tester.pump();
+  testWidgets('a home chip opens the sheet pre-filled with note, category and amount', (tester) async {
+    final db = WudgetDatabase(NativeDatabase.memory());
+    await seedDefaultsIfEmpty(db);
+    addTearDown(db.close);
 
-    expect(_amountText(tester), contains('20.000'));
-
+    const launch = CaptureLaunch(kind: CaptureKind.expense, categoryId: 'cat_makan', amountMinor: 18000, note: 'Warung');
+    await _openSheet(
+      tester,
+      db,
+      CaptureSheet(
+        initialCategoryId: launch.categoryId,
+        initialAmountMinor: launch.amountMinor,
+        initialNote: launch.note,
+        source: CaptureSource.chip,
+      ),
+    );
+    expect(find.textContaining('18.000 ke Makan'), findsOneWidget);
     await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
-
-    final transactions = await db.select(db.transactions).get();
-    expect(transactions.length, 2);
+    final tx = (await db.select(db.transactions).get()).single;
+    expect(tx.note, 'Warung');
+    final events = await db.select(db.analyticsEvents).get();
+    expect(events.map((e) => e.propsJson).join(), contains('chip'));
   });
 
   testWidgets('a transfer moves money between two wallets with no category leg', (tester) async {
@@ -154,9 +235,7 @@ void main() {
         ));
     addTearDown(db.close);
 
-    await _openSheet(tester, db);
-    await tester.tap(find.text('Transfer'));
-    await tester.pumpAndSettle();
+    await _openSheet(tester, db, const CaptureSheet(initialKind: CaptureKind.transfer));
 
     await tester.tap(find.byKey(const Key('numpadKey_1')));
     await tester.tap(find.byKey(const Key('numpadKey_0')));

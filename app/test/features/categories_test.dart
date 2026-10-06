@@ -103,10 +103,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // The "+ Baru" tile sits at the end of the category row.
+    await tester.ensureVisible(find.text('Baru'));
     await tester.tap(find.text('Baru'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).first, 'Kos');
+    await tester.enterText(find.byType(TextField).last, 'Kos');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Tambah kategori'));
     await tester.pumpAndSettle();

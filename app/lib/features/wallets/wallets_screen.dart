@@ -28,10 +28,10 @@ class WalletsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kantong'),
+        title: const Text('Dompet'),
         actions: [
           IconButton(
-            tooltip: 'Kantong baru',
+            tooltip: 'Dompet baru',
             icon: const Icon(Icons.add),
             onPressed: () => _showCreateWalletSheet(context, repo),
           ),

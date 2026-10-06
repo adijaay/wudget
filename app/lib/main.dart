@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -20,7 +21,8 @@ import 'features/pantau/pantau_screen.dart';
 import 'features/settings/backup_screen.dart';
 import 'features/settings/saya_screen.dart';
 import 'features/shell/nav_bar.dart';
-import 'features/wallets/wallets_screen.dart';
+import 'features/budget/budget_screen.dart';
+import 'features/widget/capture_deeplink.dart';
 import 'features/widget/home_widget_service.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -75,7 +77,16 @@ Future<void> main() async {
   );
 
   await AnalyticsRepository(db).logEvent('app_open');
-  await HomeWidgetService(navigatorKey).init();
+  final fromWidget = await HomeWidgetService(navigatorKey).init();
+  // Cold start only: main() does not run again on resume.
+  final context = navigatorKey.currentContext;
+  if (!fromWidget && context != null && context.mounted) {
+    unawaited(showCaptureLaunch(
+      context,
+      const CaptureLaunch(kind: CaptureKind.expense),
+      source: CaptureSource.launch,
+    ));
+  }
 
   // Materialisation runs on every app open, per plan/03-architecture.md —
   // idempotent by watermark (RecurrenceRepository), so this is safe to
@@ -116,17 +127,12 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  /// Kantong: what a returning user opens the app to check. Capture itself
-  /// is a button, not a tab, so the landing screen does not need to be the
-  /// one you type into.
-  int _index = 2;
+  /// Catat is home; cold launch puts the capture sheet over it (main()).
+  int _index = 0;
 
-  static const _screens = [
-    LedgerScreen(),
-    PantauScreen(),
-    WalletsScreen(),
-    SayaScreen(),
-  ];
+  /// BudgetScreen reads once on load; a fresh key per visit keeps the
+  /// Kantong tab current inside the IndexedStack.
+  int _kantongVisits = 0;
 
   static const _destinations = [
     NavDestination(label: 'Catat', icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long),
@@ -142,19 +148,27 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: IndexedStack(index: _index, children: [
+        const LedgerScreen(),
+        const PantauScreen(),
+        BudgetScreen(key: ValueKey(_kantongVisits)),
+        const SayaScreen(),
+      ]),
       floatingActionButton: CaptureButton(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => const CaptureSheet(),
+        onPressed: () => showCaptureLaunch(
+          context,
+          const CaptureLaunch(kind: CaptureKind.expense),
+          source: CaptureSource.nav,
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: WudgetNavBar(
         currentIndex: _index,
         destinations: _destinations,
-        onSelected: (i) => setState(() => _index = i),
+        onSelected: (i) => setState(() {
+          if (i == 2 && _index != 2) _kantongVisits++;
+          _index = i;
+        }),
       ),
     );
   }

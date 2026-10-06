@@ -52,7 +52,7 @@ void main() {
     await tester.tap(find.text('Makan').first);
     await tester.pumpAndSettle();
     expect(find.text('Pilih kategorinya dulu.'), findsNothing);
-    expect(find.bySemanticsLabel('Simpan'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Simpan Rp.1.000 ke Makan$')), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 50));

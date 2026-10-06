@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+
+import '../../data/capture_queries.dart';
 import '../capture/capture_sheet.dart';
 
 /// Everything a `wudget://capture?...` URI can prefill the capture sheet
@@ -9,6 +12,7 @@ class CaptureLaunch {
   const CaptureLaunch({
     required this.kind,
     this.categoryId,
+    this.subcategoryId,
     this.accountId,
     this.amountMinor,
     this.note,
@@ -17,6 +21,7 @@ class CaptureLaunch {
 
   final CaptureKind kind;
   final String? categoryId;
+  final String? subcategoryId;
   final String? accountId;
   final int? amountMinor;
   final String? note;
@@ -24,6 +29,43 @@ class CaptureLaunch {
   /// The recurrence engine's projected placeholder this launch confirms —
   /// see `CaptureSheet.confirmingTransactionId`.
   final String? confirmingTransactionId;
+
+  factory CaptureLaunch.fromChip(QuickChip chip) => CaptureLaunch(
+        kind: CaptureKind.expense,
+        categoryId: chip.topCategoryId,
+        subcategoryId: chip.subcategoryId,
+        amountMinor: chip.amountMinor,
+        note: chip.note,
+      );
+
+  /// The `wudget://capture` URI that parses back to this launch, so a home
+  /// widget can carry the same pre-fill a home chip does.
+  Uri toUri() => Uri(scheme: 'wudget', host: 'capture', queryParameters: {
+        'kind': kind.name,
+        if (categoryId != null) 'categoryId': categoryId!,
+        if (subcategoryId != null) 'subcategoryId': subcategoryId!,
+        if (accountId != null) 'accountId': accountId!,
+        if (amountMinor != null) 'amountMinor': '$amountMinor',
+        if (note != null) 'note': note!,
+        if (confirmingTransactionId != null) 'confirmTxId': confirmingTransactionId!,
+      });
+}
+
+Future<void> showCaptureLaunch(BuildContext context, CaptureLaunch launch, {required String source}) {
+  return showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => CaptureSheet(
+      initialKind: launch.kind,
+      initialCategoryId: launch.categoryId,
+      initialSubcategoryId: launch.subcategoryId,
+      initialAccountId: launch.accountId,
+      initialAmountMinor: launch.amountMinor,
+      initialNote: launch.note,
+      confirmingTransactionId: launch.confirmingTransactionId,
+      source: source,
+    ),
+  );
 }
 
 /// Parses the `wudget://capture` URI used by the home widget tap, the
@@ -45,6 +87,7 @@ CaptureLaunch parseCaptureDeepLink(Uri? uri) {
   return CaptureLaunch(
     kind: kind,
     categoryId: params['categoryId'],
+    subcategoryId: params['subcategoryId'],
     accountId: params['accountId'],
     amountMinor: amountMinor,
     note: params['note'],

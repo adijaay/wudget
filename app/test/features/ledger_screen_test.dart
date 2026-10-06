@@ -154,7 +154,7 @@ void main() {
     // 15.000 is already on screen from the prefill; append two more digits
     // to make it 15.00099, then hit save.
     await tester.tap(find.text('9'));
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     final original = await (db.select(db.transactions)..where((t) => t.id.equals('tx1'))).getSingle();
@@ -204,7 +204,7 @@ void main() {
     await tester.tap(find.text('Makan'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('9'));
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byKey(const Key('numpadKey_save')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Batalkan'));

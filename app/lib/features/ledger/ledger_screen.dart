@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../core/perf.dart';
 import '../../core/money_formatter.dart';
 import '../../core/providers.dart';
+import '../../core/money.dart';
+import '../../data/capture_queries.dart';
 import '../../data/daily_totals_repository.dart';
 import '../../data/database.dart';
 import '../../data/ledger_queries.dart';
@@ -16,6 +18,7 @@ import '../../design/tokens.dart';
 import '../../domain/period.dart';
 import '../../domain/pola.dart';
 import '../capture/capture_sheet.dart';
+import '../widget/capture_deeplink.dart';
 import 'today_header.dart';
 
 const _pageSize = 50;
@@ -56,6 +59,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   // discarded once a newer one has started.
   int _loadGeneration = 0;
   TodayHeaderData? _todayHeader;
+  List<QuickChip> _quickChips = const [];
 
   LedgerFilter get _filter => LedgerFilter(
         categoryId: _categoryId,
@@ -136,9 +140,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
 
     final weekDays = List<int>.generate(7, (i) => today - 6 + i);
     final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
+    final chips = await ref.read(captureQueriesProvider).quickChips(DateTime.now());
 
     if (!mounted || generation != _loadGeneration) return;
     setState(() {
+      _quickChips = chips;
       _todayHeader = TodayHeaderData(
         todayDay: today,
         todaySpendMinor: weekExpense[today] ?? 0,
@@ -370,7 +376,21 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
           if (_hasActiveFilter || header == null) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: WudgetTokens.space5),
-            child: TodayHeader(data: header),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TodayHeader(data: header),
+                if (_quickChips.isNotEmpty)
+                  _QuickChips(
+                    chips: _quickChips,
+                    onTap: (chip) => showCaptureLaunch(
+                      context,
+                      CaptureLaunch.fromChip(chip),
+                      source: CaptureSource.chip,
+                    ),
+                  ),
+              ],
+            ),
           );
         }
         index -= 1;
@@ -791,6 +811,48 @@ class _FilteredEmpty extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "Warung 18.000": a past entry repeated in one tap, ranked for this hour.
+class _QuickChips extends StatelessWidget {
+  const _QuickChips({required this.chips, required this.onTap});
+  final List<QuickChip> chips;
+  final ValueChanged<QuickChip> onTap;
+
+  static const _formatter = MoneyFormatter();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    return Padding(
+      padding: const EdgeInsets.only(top: WudgetTokens.space4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionLabel('Sering kamu catat jam segini'),
+          Wrap(
+            spacing: WudgetTokens.space2,
+            runSpacing: WudgetTokens.space2,
+            children: [
+              for (final chip in chips)
+                ActionChip(
+                  key: Key('quickChip_${chip.note}'),
+                  avatar: CircleAvatar(radius: 5, backgroundColor: tokens.hueFor(chip.hueIndex)),
+                  label: Text.rich(TextSpan(children: [
+                    TextSpan(text: '${chip.note} '),
+                    TextSpan(
+                      text: _formatter.format(Money.fromMinor(chip.amountMinor, 'IDR'), showSymbol: false),
+                      style: TextStyle(color: tokens.ink2),
+                    ),
+                  ])),
+                  onPressed: () => onTap(chip),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

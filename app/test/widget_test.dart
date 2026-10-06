@@ -6,6 +6,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:wudget/core/providers.dart';
 import 'package:wudget/data/database.dart';
 import 'package:wudget/features/shell/nav_bar.dart';
+import 'package:wudget/features/budget/budget_screen.dart';
+import 'package:wudget/features/settings/saya_screen.dart';
 import 'package:wudget/features/wallets/wallets_screen.dart';
 import 'package:wudget/main.dart';
 
@@ -17,7 +19,7 @@ void main() {
     await initializeDateFormatting('id_ID');
   });
 
-  testWidgets('app boots to Kantong, with the four tabs and the capture button', (WidgetTester tester) async {
+  testWidgets('app boots to Catat, wallets live in Saya, with the four tabs and the capture button', (WidgetTester tester) async {
     final db = WudgetDatabase(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -29,10 +31,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(WalletsScreen), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('navTab_Catat')));
-    await tester.pumpAndSettle();
+    expect(find.byType(WalletsScreen, skipOffstage: false), findsNothing);
+    expect(find.byType(BudgetScreen, skipOffstage: false), findsOneWidget); // the Kantong tab
     // Catat's first-run state shows the shape of the row that will exist,
     // and the one action that creates it.
     expect(find.text('Catat pengeluaran pertama'), findsOneWidget);
@@ -40,7 +40,11 @@ void main() {
     // The capture button is docked in the middle of the bar, reachable from
     // every tab rather than living in one screen's corner.
     expect(find.byType(CaptureButton), findsOneWidget);
-    expect(find.byKey(const Key('navTab_Saya')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('navTab_Saya')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(SayaScreen), matching: find.text('Dompet')));
+    await tester.pumpAndSettle();
+    expect(find.byType(WalletsScreen), findsOneWidget);
 
     // Unmount explicitly, with a pump still under our control, so drift's
     // stream-query cleanup (which schedules its own Timer.run — see

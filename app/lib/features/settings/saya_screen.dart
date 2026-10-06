@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
-import '../budget/budget_screen.dart';
 import '../categories/categories_screen.dart';
 import '../import/import_screen.dart';
 import '../recurring/recurring_screen.dart';
+import '../wallets/wallets_screen.dart';
 import 'backup_screen.dart';
 import 'capture_debug_screen.dart';
 
@@ -34,16 +34,17 @@ class SayaScreen extends ConsumerWidget {
           WudgetTokens.space6,
         ),
         children: [
-          const SectionLabel('Anggaran & tagihan'),
+          const SectionLabel('Dompet & tagihan'),
           CardGroup(
             dividerIndent: WudgetTokens.space3,
             children: [
+              // Out of capture since R1; kept here for people who already use them.
               CardRow(
-                title: 'Anggaran',
-                subtitle: 'Batas per kategori untuk periode ini',
+                title: 'Dompet',
+                subtitle: 'Tunai, rekening dan e-wallet yang sudah kamu catat',
                 trailing: Icon(Icons.chevron_right, color: tokens.ink2),
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const BudgetScreen()),
+                  MaterialPageRoute(builder: (_) => const WalletsScreen()),
                 ),
               ),
               CardRow(
