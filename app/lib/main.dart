@@ -82,8 +82,30 @@ Future<void> main() async {
   await AnalyticsRepository(db).logEvent('app_open');
   final fromWidget = await HomeWidgetService(navigatorKey).init();
   // Cold start only: main() does not run again on resume.
+  if (!fromWidget) await showLaunchSurface(db);
+
+  // Materialisation runs on every app open, per plan/03-architecture.md —
+  // idempotent by watermark (RecurrenceRepository), so this is safe to
+  // call unconditionally rather than tracking "did we already run today".
+  final today = DateTime.now();
+  final todayBucket = DateTime.utc(today.year, today.month, today.day).difference(DateTime.utc(1970, 1, 1)).inDays;
+  await RecurrenceRepository(db).materializeAll(toDayInclusive: todayBucket + _materializeLookaheadDays);
+
+  final notificationScheduler = NotificationScheduler(navigatorKey);
+  await notificationScheduler.init();
+  await scheduleUpcomingReminders(db, notificationScheduler);
+  // Chained so two quick saves cannot interleave a cancel with a schedule.
+  var retention = scheduleRetentionReminders(db, notificationScheduler);
+  // A save today drops today's evening reminder; a Saya switch takes effect.
+  db
+      .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.featureFlags, db.appSettings]))
+      .listen((_) => retention = retention.catchError((_) {}).then((_) => scheduleRetentionReminders(db, notificationScheduler)));
+}
+
+/// Cold launch: the comeback screen after a gap, else the capture sheet.
+Future<void> showLaunchSurface(WudgetDatabase db) async {
   final context = navigatorKey.currentContext;
-  if (!fromWidget && context != null && context.mounted) {
+  if (context != null && context.mounted) {
     // A failed check just means no welcome screen this time.
     final comeback = await loadComeback(db, todayDayBucket()).catchError((_) => null);
     if (comeback != null && context.mounted) {
@@ -104,23 +126,6 @@ Future<void> main() async {
       ));
     }
   }
-
-  // Materialisation runs on every app open, per plan/03-architecture.md —
-  // idempotent by watermark (RecurrenceRepository), so this is safe to
-  // call unconditionally rather than tracking "did we already run today".
-  final today = DateTime.now();
-  final todayBucket = DateTime.utc(today.year, today.month, today.day).difference(DateTime.utc(1970, 1, 1)).inDays;
-  await RecurrenceRepository(db).materializeAll(toDayInclusive: todayBucket + _materializeLookaheadDays);
-
-  final notificationScheduler = NotificationScheduler(navigatorKey);
-  await notificationScheduler.init();
-  await scheduleUpcomingReminders(db, notificationScheduler);
-  // Chained so two quick saves cannot interleave a cancel with a schedule.
-  var retention = scheduleRetentionReminders(db, notificationScheduler);
-  // A save today drops today's evening reminder; a Saya switch takes effect.
-  db
-      .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.featureFlags, db.appSettings]))
-      .listen((_) => retention = retention.catchError((_) {}).then((_) => scheduleRetentionReminders(db, notificationScheduler)));
 }
 
 class WudgetApp extends StatelessWidget {
@@ -168,7 +173,11 @@ class _HomeShellState extends State<HomeShell> {
     NavDestination(label: 'Saya', icon: Icons.person_outline, selectedIcon: Icons.person),
   ];
 
+  /// Pantau is built on first visit: its period-close sheet must not pop over home at launch.
+  bool _pantauVisited = false;
+
   void _select(int i) => setState(() {
+        if (i == 1) _pantauVisited = true;
         if (i == 2 && _index != 2) _kantongVisits++;
         _index = i;
       });
@@ -178,7 +187,7 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: IndexedStack(index: _index, children: [
         LedgerScreen(onOpenKantong: () => _select(2)),
-        const PantauScreen(),
+        _pantauVisited ? const PantauScreen() : const SizedBox.shrink(),
         BudgetScreen(key: ValueKey(_kantongVisits)),
         const SayaScreen(),
       ]),

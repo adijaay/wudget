@@ -160,7 +160,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
 
     final jatah = await AsyncValue.guard(() async {
       // Tabungan is set aside, not spendable today.
-      final budgets = {...await ref.read(budgetsRepositoryProvider).getAll()}..remove(tabunganCategoryId);
+      final all = await ref.read(budgetsRepositoryProvider).getAll();
+      final kantong = {...all}..remove(tabunganCategoryId);
+      // First run has no history to propose kantong from, so the review puts
+      // everything in Tabungan; until kantong exist, that is the spendable money.
+      final budgets = kantong.values.any((v) => v > 0) ? kantong : all;
       final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
       final totals = await queries.totalsFor(period);
       final todaySpend = await queries.dailyExpenseMinorInRange(today, today + 1);
@@ -856,7 +860,7 @@ class _QuickChips extends StatelessWidget {
             children: [
               for (final chip in chips)
                 ActionChip(
-                  key: Key('quickChip_${chip.note}'),
+                  key: Key('quickChip_${chip.note}_${chip.categoryId}_${chip.amountMinor}'),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(WudgetTokens.radiusChip),
                     side: BorderSide(color: tokens.border),
