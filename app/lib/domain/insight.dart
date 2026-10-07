@@ -38,7 +38,11 @@ List<Insight> insightCandidates({
           '${less ? 'lebih sedikit' : 'lebih banyak'} dari minggu lalu.',
     ));
   }
-  final weekend = pattern?.weekendAverageMinor;
+  // "Biasanya" needs a pattern: two of every weekday, spend on four of them.
+  final enough = pattern != null &&
+      pattern.dayCount.every((c) => c >= 2) &&
+      pattern.totalMinor.where((t) => t > 0).length >= 4;
+  final weekend = enough ? pattern.weekendAverageMinor : null;
   final workday = pattern?.workdayAverageMinor;
   if (weekend != null && workday != null && weekend > 0 && workday > 0 && weekend != workday) {
     out.add(Insight(
@@ -46,7 +50,7 @@ List<Insight> insightCandidates({
       text: 'Akhir pekan rata-rata ${_rp(weekend)} per hari, hari kerja ${_rp(workday)}.',
     ));
   }
-  final peak = pattern?.peakWeekdayIndex;
+  final peak = enough ? pattern.peakWeekdayIndex : null;
   if (peak != null) {
     out.add(Insight(
       key: 'peak:$peak',

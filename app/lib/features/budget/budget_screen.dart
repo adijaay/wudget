@@ -337,11 +337,12 @@ class _ProposalBody extends StatelessWidget {
             color: tokens.surfaceCard,
             border: Border(top: BorderSide(color: tokens.border)),
           ),
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             WudgetTokens.space4,
             WudgetTokens.space3,
             WudgetTokens.space4,
-            WudgetTokens.space3,
+            // As the Kantong tab, the docked capture button overhangs this bar.
+            WudgetTokens.space3 + (Navigator.of(context).canPop() ? 0 : 40),
           ),
           child: SafeArea(
             top: false,
@@ -370,7 +371,7 @@ class _ProposalBody extends StatelessWidget {
                 const SizedBox(height: WudgetTokens.space3),
                 Row(
                   children: [
-                    if (!anySaved) ...[
+                    if (!anySaved && Navigator.of(context).canPop()) ...[
                       OutlinedButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         child: const Text('Nanti saja'),

@@ -38,18 +38,25 @@ void main() {
     final candidates = insightCandidates(
       weekDeltas: const [CategoryDelta(name: 'Makan', deltaMinor: -84000, hueIndex: 0)],
       pattern: computeWeekdayPattern(
-        // Day 4 is a Monday; most spend lands on the Saturday, day 9.
-        dailyExpenseMinor: {4: 10000, 9: 50000},
+        // Day 4 is a Monday; two full weeks, spend on four weekdays, Saturday the peak.
+        dailyExpenseMinor: {4: 10000, 6: 10000, 9: 50000, 10: 30000, 13: 10000},
         sinceDayInclusive: 4,
-        untilDayExclusive: 11,
+        untilDayExclusive: 18,
       ),
       lastPeriodFlow: buildFlowBreakdown(incomeMinor: 1000000, expenseMinor: 800000, ranks: const []),
     );
     expect(candidates.map((c) => c.text.replaceAll(' ', ' ')), [
       'Makan minggu ini Rp 84.000 lebih sedikit dari minggu lalu.',
-      'Akhir pekan rata-rata Rp 25.000 per hari, hari kerja Rp 2.000.',
+      'Akhir pekan rata-rata Rp 20.000 per hari, hari kerja Rp 3.000.',
       'Pengeluaranmu paling besar biasanya di hari Sabtu.',
       'Periode lalu, dari tiap Rp 100.000 yang masuk, Rp 20.000 tersisa.',
     ]);
+  });
+
+  test('one entry is not a pattern: no weekday or weekend sentence', () {
+    final candidates = insightCandidates(
+      pattern: computeWeekdayPattern(dailyExpenseMinor: {6: 25000}, sinceDayInclusive: 4, untilDayExclusive: 18),
+    );
+    expect(candidates, isEmpty);
   });
 }

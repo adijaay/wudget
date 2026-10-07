@@ -139,7 +139,7 @@ class PaydayCard extends ConsumerWidget {
               Text(todayDay == data.period.startDay ? 'Hari ini gajian' : 'Gajian',
                   style: text.labelMedium?.copyWith(color: tokens.ink2)),
               const SizedBox(height: WudgetTokens.space1),
-              Text(salary == null ? 'Gaji sudah masuk?' : 'Gaji ${_rp(salary)} sudah masuk?', style: text.titleMedium),
+              Text(salary == null ? 'Gaji periode ini sudah masuk?' : 'Gaji ${_rp(salary)} sudah masuk?', style: text.titleMedium),
               const SizedBox(height: WudgetTokens.space3),
               FilledButton(
                 onPressed: () async {
@@ -147,13 +147,16 @@ class PaydayCard extends ConsumerWidget {
                   await confirmSalary(context, ref, data, salary);
                   onChanged();
                 },
-                child: const Text('Sudah masuk'),
+                child: Text(salary == null ? 'Isi jumlah gaji' : 'Sudah masuk'),
               ),
               const SizedBox(height: WudgetTokens.space2),
               Row(
                 children: [
-                  Expanded(child: OutlinedButton(onPressed: otherAmount, child: const Text('Beda jumlah'))),
-                  const SizedBox(width: WudgetTokens.space2),
+                  // With no salary on record there is no amount to differ from.
+                  if (salary != null) ...[
+                    Expanded(child: OutlinedButton(onPressed: otherAmount, child: const Text('Beda jumlah'))),
+                    const SizedBox(width: WudgetTokens.space2),
+                  ],
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () async {
