@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The amplop from the home screen's jatah card: wudget's one motif. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FCFAF6"
+        android:pathData="M37,38 h34 a5,5 0 0 1 5,5 v22 a5,5 0 0 1 -5,5 h-34 a5,5 0 0 1 -5,-5 v-22 a5,5 0 0 1 5,-5 z" />
+    <path android:strokeColor="#007781" android:strokeWidth="2.5"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M33,41 L54,50 L75,41" />
+</vector>

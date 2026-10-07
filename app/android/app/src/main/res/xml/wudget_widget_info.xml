@@ -6,6 +6,7 @@
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/wudget_widget"
+    android:previewLayout="@layout/wudget_widget"
     android:description="@string/widget_description"
     android:widgetCategory="home_screen"
     android:resizeMode="horizontal|vertical" />
