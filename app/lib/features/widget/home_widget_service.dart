@@ -25,6 +25,8 @@ class HomeWidgetService {
   void _openCaptureSheet(Uri? uri) {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
-    showCaptureLaunch(context, parseCaptureDeepLink(uri), source: CaptureSource.widget);
+    // A payment-notification suggestion arrives on the same deep link, tagged src=payment.
+    final source = uri?.queryParameters['src'] == 'payment' ? CaptureSource.payment : CaptureSource.widget;
+    showCaptureLaunch(context, parseCaptureDeepLink(uri), source: source);
   }
 }

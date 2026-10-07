@@ -30,6 +30,7 @@ abstract final class CaptureSource {
   static const launch = 'launch';
   static const home = 'home';
   static const backfill = 'backfill';
+  static const payment = 'payment';
 }
 
 /// The capture sheet: the one screen the product lives or dies on. See

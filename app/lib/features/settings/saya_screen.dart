@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
@@ -105,6 +106,7 @@ class SayaScreen extends ConsumerWidget {
                 title: 'Rekap mingguan',
                 subtitle: 'Setiap Minggu malam, tujuh hari terakhir di Pantau',
               ),
+              _PaymentNotificationsRow(),
             ],
           ),
           const SizedBox(height: WudgetTokens.space5),
@@ -206,6 +208,80 @@ class _ReminderRow extends ConsumerWidget {
         subtitle: subtitle,
         trailing: Switch(value: on ?? true, onChanged: on == null ? null : set),
         onTap: on == null ? null : () => set(!on),
+      ),
+    );
+  }
+}
+
+const _payments = MethodChannel('wudget/payments');
+
+/// Notification access lives in system settings, not in a flag here, so the
+/// row re-reads it whenever the owner comes back from that screen.
+class _PaymentNotificationsRow extends StatefulWidget {
+  const _PaymentNotificationsRow();
+
+  @override
+  State<_PaymentNotificationsRow> createState() => _PaymentNotificationsRowState();
+}
+
+class _PaymentNotificationsRowState extends State<_PaymentNotificationsRow> with WidgetsBindingObserver {
+  bool? _on;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final on = await _payments.invokeMethod<bool>('isEnabled').catchError((_) => false);
+    if (mounted) setState(() => _on = on ?? false);
+  }
+
+  Future<void> _change() async {
+    if (_on == false) {
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Baca notifikasi pembayaran?'),
+          content: const Text(
+            'Android akan memberi wudget akses ke semua notifikasi. wudget hanya membaca '
+            'notifikasi dari GoPay, Livin’ by Mandiri, Jago dan ShopeePay, lalu menawarkan '
+            'catatan yang kamu simpan sendiri. Notifikasi lain diabaikan, dan tidak ada yang '
+            'dikirim keluar dari HP ini.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Nanti saja')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Buka pengaturan')),
+          ],
+        ),
+      );
+      if (go != true) return;
+    }
+    await _payments.invokeMethod<void>('openSettings').catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = _on;
+    return MergeSemantics(
+      child: CardRow(
+        title: 'Catat dari notifikasi pembayaran',
+        subtitle: 'GoPay, Livin’, Jago dan ShopeePay. Setiap bayar, wudget menawarkan catatannya',
+        trailing: Switch(value: on ?? false, onChanged: on == null ? null : (_) => _change()),
+        onTap: on == null ? null : _change,
       ),
     );
   }
