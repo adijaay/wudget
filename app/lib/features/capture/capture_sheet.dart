@@ -14,6 +14,7 @@ import '../../core/money.dart';
 import '../../core/money_formatter.dart';
 import '../../core/providers.dart';
 import '../../data/database.dart';
+import '../../data/payment_log_repository.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../../domain/period.dart';
@@ -51,8 +52,12 @@ class CaptureSheet extends ConsumerStatefulWidget {
     this.initialPhotoPath,
     this.confirmingTransactionId,
     this.editingTransactionId,
+    this.paymentLogId,
     this.source = CaptureSource.nav,
   });
+
+  /// The payment-notification log entry this sheet records, marked done on save.
+  final String? paymentLogId;
 
   /// Where the sheet was opened from, logged with the capture timing events.
   final String source;
@@ -438,6 +443,7 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         'capture_save',
         props: {'source': widget.source, 'ms': _sinceOpen.elapsedMilliseconds},
       ));
+      if (widget.paymentLogId != null) unawaited(PaymentLogRepository.setInputted(widget.paymentLogId!, true));
     }
 
     if (widget.confirmingTransactionId != null) {

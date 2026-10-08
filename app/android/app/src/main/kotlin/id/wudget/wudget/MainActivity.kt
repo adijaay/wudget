@@ -23,14 +23,9 @@ class MainActivity : FlutterActivity() {
                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                     result.success(null)
                 }
-                "getPendingPayments" -> {
-                    val prefs = getSharedPreferences("pending_payments", MODE_PRIVATE)
-                    val payments = prefs.getStringSet("payments", mutableSetOf()) ?: mutableSetOf()
-                    result.success("[${payments.joinToString(",")}]")
-                }
-                "clearPendingPayments" -> {
-                    val prefs = getSharedPreferences("pending_payments", MODE_PRIVATE)
-                    prefs.edit().remove("payments").apply()
+                "getLog" -> result.success(PaymentLog.json(this))
+                "setInputted" -> {
+                    PaymentLog.setInputted(this, call.argument<String>("id")!!, call.argument<Boolean>("inputted")!!)
                     result.success(null)
                 }
                 else -> result.notImplemented()

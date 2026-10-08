@@ -14,7 +14,6 @@ import 'data/database.dart';
 import 'data/feature_flags_repository.dart';
 import 'data/goals_repository.dart';
 import 'data/notification_scheduler.dart';
-import 'data/payment_auto_save_repository.dart';
 import 'data/recurrence_repository.dart';
 import 'data/reminder_orchestrator.dart';
 import 'design/tokens.dart';
@@ -77,9 +76,6 @@ Future<void> main() async {
   }
 
   await FeatureFlagsRepository(db).assignPaceFirstVariant();
-
-  // Process any auto-saved payments from the notification listener
-  await PaymentAutoSaveRepository(db).processPendingPayments();
 
   runApp(
     ProviderScope(

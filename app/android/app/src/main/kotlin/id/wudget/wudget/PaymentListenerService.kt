@@ -12,8 +12,9 @@ import es.antonborri.home_widget.HomeWidgetLaunchIntent
 
 /**
  * Turns a payment notification from GoPay, Livin', Jago or ShopeePay into a
- * queued payment in SharedPreferences, which Flutter saves on next launch.
- * Every other notification is ignored and nothing leaves the phone.
+ * suggestion: one entry in [PaymentLog], plus a notification that opens
+ * capture pre-filled. Nothing is saved without a tap. Every other
+ * notification is ignored and nothing leaves the phone.
  */
 class PaymentListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -21,16 +22,17 @@ class PaymentListenerService : NotificationListenerService() {
         val n = sbn.notification
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         val extras = n.extras
-        val text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT)
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString()
         val payment = PaymentParser.parse(
             sbn.packageName,
-            extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
-            text?.toString(),
+            title,
+            text,
             // Debug builds also accept `adb shell cmd notification post`, so the flow is testable without paying.
             if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) mapOf("com.android.shell" to "Tes") else emptyMap(),
         ) ?: return
         if (isDuplicate(payment.amountMinor)) return
-        autoSave(payment)
+        suggest(payment, PaymentLog.add(this, payment, title, text))
     }
 
     // One payment often posts twice: the wallet and the bank, or an update of the same notification.
@@ -42,13 +44,32 @@ class PaymentListenerService : NotificationListenerService() {
         return dup
     }
 
-    private fun autoSave(p: Payment) {
-        // Write to SharedPreferences for Flutter to read on next app launch
-        val prefs = getSharedPreferences("pending_payments", MODE_PRIVATE)
-        val existing = prefs.getStringSet("payments", mutableSetOf()) ?: mutableSetOf()
-        val paymentJson = """{"amountMinor":${p.amountMinor},"merchant":"${p.merchant?.replace("\"", "\\\"") ?: ""}","appLabel":"${p.appLabel}","timestamp":${System.currentTimeMillis()}}"""
-        existing.add(paymentJson)
-        prefs.edit().putStringSet("payments", existing).apply()
+    private fun suggest(p: Payment, logId: String) {
+        val manager = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL, "Pembayaran terbaca", NotificationManager.IMPORTANCE_DEFAULT),
+            )
+        }
+        val note = p.merchant ?: p.appLabel
+        val uri = Uri.Builder().scheme("wudget").authority("capture")
+            .appendQueryParameter("kind", "expense")
+            .appendQueryParameter("amountMinor", p.amountMinor.toString())
+            .appendQueryParameter("note", note)
+            .appendQueryParameter("src", "payment")
+            .appendQueryParameter("logId", logId)
+            .build()
+        val rupiah = "%,d".format(p.amountMinor).replace(',', '.')
+        @Suppress("DEPRECATION")
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
+        val notification = builder
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            .setContentTitle("Catat Rp $rupiah?")
+            .setContentText("$note, dari ${p.appLabel}. Ketuk untuk menyimpan.")
+            .setContentIntent(HomeWidgetLaunchIntent.getActivity(this, MainActivity::class.java, uri))
+            .setAutoCancel(true)
+            .build()
+        manager.notify(logId.hashCode(), notification)
     }
 
     companion object {

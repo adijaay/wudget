@@ -12,6 +12,7 @@ import '../recurring/recurring_screen.dart';
 import '../wallets/wallets_screen.dart';
 import 'backup_screen.dart';
 import 'capture_debug_screen.dart';
+import 'payment_log_screen.dart';
 import 'household_screen.dart';
 
 /// Saya: the fourth tab in the mockups' bottom bar. Everything here already
@@ -89,25 +90,33 @@ class SayaScreen extends ConsumerWidget {
           ),
           const SizedBox(height: WudgetTokens.space5),
           const SectionLabel('Pengingat'),
-          const CardGroup(
+          CardGroup(
             dividerIndent: WudgetTokens.space3,
             children: [
-              _ReminderRow(
+              const _ReminderRow(
                 flagKey: eveningReminderKey,
                 title: 'Pengingat malam',
                 subtitle: 'Di jam kamu biasa mencatat, hanya kalau hari itu belum ada catatan',
               ),
-              _ReminderRow(
+              const _ReminderRow(
                 flagKey: paydayReminderKey,
                 title: 'Pengingat gajian',
                 subtitle: 'Tanggal gajian, menanyakan apakah gaji sudah masuk',
               ),
-              _ReminderRow(
+              const _ReminderRow(
                 flagKey: weeklyRecapReminderKey,
                 title: 'Rekap mingguan',
                 subtitle: 'Setiap Minggu malam, tujuh hari terakhir di Pantau',
               ),
-              _PaymentNotificationsRow(),
+              const _PaymentNotificationsRow(),
+              CardRow(
+                title: 'Log notifikasi pembayaran',
+                subtitle: 'Mana yang sudah dicatat, mana yang belum',
+                trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PaymentLogScreen()),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: WudgetTokens.space5),

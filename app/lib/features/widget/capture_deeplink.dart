@@ -17,6 +17,7 @@ class CaptureLaunch {
     this.amountMinor,
     this.note,
     this.confirmingTransactionId,
+    this.paymentLogId,
   });
 
   final CaptureKind kind;
@@ -29,6 +30,9 @@ class CaptureLaunch {
   /// The recurrence engine's projected placeholder this launch confirms —
   /// see `CaptureSheet.confirmingTransactionId`.
   final String? confirmingTransactionId;
+
+  /// The payment-notification log entry this launch records, marked done on save.
+  final String? paymentLogId;
 
   factory CaptureLaunch.fromChip(QuickChip chip) => CaptureLaunch(
         kind: CaptureKind.expense,
@@ -48,6 +52,7 @@ class CaptureLaunch {
         if (amountMinor != null) 'amountMinor': '$amountMinor',
         if (note != null) 'note': note!,
         if (confirmingTransactionId != null) 'confirmTxId': confirmingTransactionId!,
+        if (paymentLogId != null) 'logId': paymentLogId!,
       });
 }
 
@@ -63,6 +68,7 @@ Future<void> showCaptureLaunch(BuildContext context, CaptureLaunch launch, {requ
       initialAmountMinor: launch.amountMinor,
       initialNote: launch.note,
       confirmingTransactionId: launch.confirmingTransactionId,
+      paymentLogId: launch.paymentLogId,
       source: source,
     ),
   );
@@ -92,5 +98,6 @@ CaptureLaunch parseCaptureDeepLink(Uri? uri) {
     amountMinor: amountMinor,
     note: params['note'],
     confirmingTransactionId: params['confirmTxId'],
+    paymentLogId: params['logId'],
   );
 }
