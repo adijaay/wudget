@@ -11,10 +11,10 @@ import android.service.notification.StatusBarNotification
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 
 /**
- * Turns a payment notification from GoPay, Livin', Jago or ShopeePay into a
- * suggestion: one entry in [PaymentLog], plus a notification that opens
- * capture pre-filled. Nothing is saved without a tap. Every other
- * notification is ignored and nothing leaves the phone.
+ * Turns a payment notification from GoPay, Livin', Jago or ShopeePay into an
+ * entry in [PaymentLog], which Flutter records in the ledger the next time
+ * the app opens or resumes, plus a notification whose tap opens that entry
+ * for editing. Every other notification is ignored and nothing leaves the phone.
  */
 class PaymentListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -64,8 +64,8 @@ class PaymentListenerService : NotificationListenerService() {
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
         val notification = builder
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle("Catat Rp $rupiah?")
-            .setContentText("$note, dari ${p.appLabel}. Ketuk untuk menyimpan.")
+            .setContentTitle("Rp $rupiah tercatat")
+            .setContentText("$note, dari ${p.appLabel}. Ketuk untuk ubah kategori.")
             .setContentIntent(HomeWidgetLaunchIntent.getActivity(this, MainActivity::class.java, uri))
             .setAutoCancel(true)
             .build()

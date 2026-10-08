@@ -1,28 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers.dart';
+import '../../data/database.dart';
 import '../../data/payment_log_repository.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../capture/capture_sheet.dart';
 import '../widget/capture_deeplink.dart';
 
+/// Opens what a payment notification became: the saved entry for editing,
+/// or, when it was never recorded or has since been deleted, a fresh
+/// capture pre-filled from the notification.
+Future<void> openPaymentEntry(BuildContext context, WudgetDatabase db, String logId) async {
+  final repo = PaymentLogRepository(db);
+  final saved = await repo.savedFor(logId);
+  if (!context.mounted) return;
+  if (saved != null) {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CaptureSheet(
+        initialAmountMinor: saved.entry.amountMinor,
+        initialCategoryId: saved.categoryId,
+        initialAccountId: saved.accountId,
+        initialNote: saved.entry.note,
+        initialOccurredAt: saved.entry.at,
+        editingTransactionId: saved.entry.txId,
+        paymentLogId: logId,
+        source: CaptureSource.payment,
+      ),
+    );
+    return;
+  }
+  final entry = (await PaymentLogRepository.all()).where((e) => e.id == logId).firstOrNull;
+  if (entry == null || !context.mounted) return;
+  await showCaptureLaunch(
+    context,
+    CaptureLaunch(kind: CaptureKind.expense, amountMinor: entry.amountMinor, note: entry.note, paymentLogId: entry.id),
+    source: CaptureSource.payment,
+  );
+}
+
 enum _Filter { pending, all, done }
 
-/// Every payment notification wudget read, and whether it made it into the
-/// ledger. Tap one to record it; the box marks it done by hand, for a
-/// payment recorded some other way.
-class PaymentLogScreen extends StatefulWidget {
+/// Every payment notification wudget read, and whether it is in Catat.
+/// New ones are recorded automatically; the box adds one by hand, or takes
+/// out the entry wudget wrote, and a tap opens it to change the category.
+class PaymentLogScreen extends ConsumerStatefulWidget {
   const PaymentLogScreen({super.key});
 
   @override
-  State<PaymentLogScreen> createState() => _PaymentLogScreenState();
+  ConsumerState<PaymentLogScreen> createState() => _PaymentLogScreenState();
 }
 
-class _PaymentLogScreenState extends State<PaymentLogScreen> {
+class _PaymentLogScreenState extends ConsumerState<PaymentLogScreen> {
   static final _when = DateFormat('d MMM, HH:mm', 'id_ID');
   List<PaymentLogEntry>? _entries;
-  _Filter _filter = _Filter.pending;
+  _Filter _filter = _Filter.all;
+
+  PaymentLogRepository get _repo => PaymentLogRepository(ref.read(databaseProvider));
 
   @override
   void initState() {
@@ -31,26 +69,18 @@ class _PaymentLogScreenState extends State<PaymentLogScreen> {
   }
 
   Future<void> _load() async {
+    await _repo.recordNew();
     final entries = await PaymentLogRepository.all();
     if (mounted) setState(() => _entries = entries);
   }
 
   Future<void> _toggle(PaymentLogEntry e) async {
-    await PaymentLogRepository.setInputted(e.id, !e.inputted);
+    await _repo.setRecorded(e, !e.inputted);
     await _load();
   }
 
-  Future<void> _record(PaymentLogEntry e) async {
-    await showCaptureLaunch(
-      context,
-      CaptureLaunch(
-        kind: CaptureKind.expense,
-        amountMinor: e.amountMinor,
-        note: e.merchant ?? e.app,
-        paymentLogId: e.id,
-      ),
-      source: CaptureSource.payment,
-    );
+  Future<void> _open(PaymentLogEntry e) async {
+    await openPaymentEntry(context, ref.read(databaseProvider), e.id);
     await _load();
   }
 
@@ -76,9 +106,9 @@ class _PaymentLogScreenState extends State<PaymentLogScreen> {
           children: [
             SegmentedTray<_Filter>(
               segments: {
-                _Filter.pending: 'Belum dicatat ($pending)',
                 _Filter.all: 'Semua',
-                _Filter.done: 'Sudah',
+                _Filter.pending: 'Belum dicatat ($pending)',
+                _Filter.done: 'Tercatat',
               },
               value: _filter,
               onChanged: (f) => setState(() => _filter = f),
@@ -92,7 +122,7 @@ class _PaymentLogScreenState extends State<PaymentLogScreen> {
                 child: Text(
                   switch (_filter) {
                     _Filter.pending when entries!.isNotEmpty => 'Semua pembayaran sudah tercatat.',
-                    _Filter.done => 'Belum ada yang ditandai tercatat.',
+                    _Filter.done when entries!.isNotEmpty => 'Belum ada yang tercatat.',
                     _ => 'Belum ada notifikasi pembayaran. Yang terbaca dari GoPay, Livin’, Jago dan ShopeePay muncul di sini.',
                   },
                   style: text.bodyMedium?.copyWith(color: tokens.ink2),
@@ -108,12 +138,12 @@ class _PaymentLogScreenState extends State<PaymentLogScreen> {
                       leading: Checkbox(
                         value: e.inputted,
                         onChanged: (_) => _toggle(e),
-                        semanticLabel: e.inputted ? 'Tandai belum dicatat' : 'Tandai sudah dicatat',
+                        semanticLabel: e.inputted ? 'Hapus dari Catat' : 'Masukkan ke Catat',
                       ),
-                      title: e.merchant ?? e.app,
-                      subtitle: '${e.app} · ${_when.format(e.at)}${e.inputted ? ' · tercatat' : ''}',
+                      title: e.note,
+                      subtitle: '${e.app} · ${_when.format(e.at)}${e.inputted ? ' · di Catat' : ''}',
                       trailing: AmountText(minor: e.amountMinor),
-                      onTap: () => _record(e),
+                      onTap: () => _open(e),
                     ),
                 ],
               ),

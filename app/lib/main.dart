@@ -16,6 +16,7 @@ import 'data/goals_repository.dart';
 import 'data/notification_scheduler.dart';
 import 'data/recurrence_repository.dart';
 import 'data/reminder_orchestrator.dart';
+import 'data/payment_log_repository.dart';
 import 'design/tokens.dart';
 import 'domain/period.dart';
 import 'features/comeback/comeback_screen.dart';
@@ -77,6 +78,11 @@ Future<void> main() async {
 
   await FeatureFlagsRepository(db).assignPaceFirstVariant();
 
+  // Payments the listener logged while wudget was closed or in the background go into Catat.
+  final paymentLog = PaymentLogRepository(db);
+  await paymentLog.recordNew();
+  AppLifecycleListener(onResume: () => paymentLog.recordNew());
+
   runApp(
     ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
@@ -85,7 +91,7 @@ Future<void> main() async {
   );
 
   await AnalyticsRepository(db).logEvent('app_open');
-  final fromWidget = await HomeWidgetService(navigatorKey).init();
+  final fromWidget = await HomeWidgetService(navigatorKey, db).init();
   // Cold start only: main() does not run again on resume.
   if (!fromWidget) await showLaunchSurface(db);
 

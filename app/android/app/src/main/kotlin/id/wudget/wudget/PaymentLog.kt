@@ -33,11 +33,13 @@ object PaymentLog {
         return id
     }
 
-    fun setInputted(context: Context, id: String, inputted: Boolean) {
+    /** Overwrites the given fields of one entry; Flutter owns inputted, txId and processed. */
+    fun patch(context: Context, id: String, fields: JSONObject) {
         val all = read(context)
         for (i in 0 until all.length()) {
             val e = all.getJSONObject(i)
-            if (e.getString("id") == id) e.put("inputted", inputted)
+            if (e.getString("id") != id) continue
+            for (k in fields.keys()) e.put(k, fields.get(k))
         }
         write(context, all)
     }

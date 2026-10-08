@@ -56,7 +56,7 @@ class CaptureSheet extends ConsumerStatefulWidget {
     this.source = CaptureSource.nav,
   });
 
-  /// The payment-notification log entry this sheet records, marked done on save.
+  /// The payment-notification log entry this sheet records; a save points the log at the new transaction.
   final String? paymentLogId;
 
   /// Where the sheet was opened from, logged with the capture timing events.
@@ -443,8 +443,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         'capture_save',
         props: {'source': widget.source, 'ms': _sinceOpen.elapsedMilliseconds},
       ));
-      if (widget.paymentLogId != null) unawaited(PaymentLogRepository.setInputted(widget.paymentLogId!, true));
     }
+    if (widget.paymentLogId != null) await PaymentLogRepository.relink(widget.paymentLogId!, txId);
 
     if (widget.confirmingTransactionId != null) {
       await postings.undoInsert(widget.confirmingTransactionId!);

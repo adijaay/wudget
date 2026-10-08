@@ -24,8 +24,8 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "getLog" -> result.success(PaymentLog.json(this))
-                "setInputted" -> {
-                    PaymentLog.setInputted(this, call.argument<String>("id")!!, call.argument<Boolean>("inputted")!!)
+                "patchLog" -> {
+                    PaymentLog.patch(this, call.argument<String>("id")!!, org.json.JSONObject(call.argument<String>("fields")!!))
                     result.success(null)
                 }
                 else -> result.notImplemented()
