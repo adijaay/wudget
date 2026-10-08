@@ -38,12 +38,17 @@ Future<void> openPaymentEntry(BuildContext context, WudgetDatabase db, String lo
   if (entry == null || !context.mounted) return;
   await showCaptureLaunch(
     context,
-    CaptureLaunch(kind: CaptureKind.expense, amountMinor: entry.amountMinor, note: entry.note, paymentLogId: entry.id),
+    CaptureLaunch(
+      kind: CaptureKind.expense,
+      amountMinor: entry.unread ? null : entry.amountMinor,
+      note: entry.note,
+      paymentLogId: entry.id,
+    ),
     source: CaptureSource.payment,
   );
 }
 
-enum _Filter { pending, all, done }
+enum _Filter { all, pending, done, unread }
 
 /// Every payment notification wudget read, and whether it is in Catat.
 /// New ones are recorded automatically; the box adds one by hand, or takes
@@ -89,12 +94,14 @@ class _PaymentLogScreenState extends ConsumerState<PaymentLogScreen> {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     final text = Theme.of(context).textTheme;
     final entries = _entries;
-    final pending = entries?.where((e) => !e.inputted).length ?? 0;
+    final pending = entries?.where((e) => !e.unread && !e.inputted).length ?? 0;
+    final unread = entries?.where((e) => e.unread && !e.inputted).length ?? 0;
     final shown = entries
         ?.where((e) => switch (_filter) {
-              _Filter.pending => !e.inputted,
+              _Filter.pending => !e.unread && !e.inputted,
               _Filter.done => e.inputted,
-              _Filter.all => true,
+              _Filter.all => !e.unread,
+              _Filter.unread => e.unread,
             })
         .toList();
     return Scaffold(
@@ -107,8 +114,9 @@ class _PaymentLogScreenState extends ConsumerState<PaymentLogScreen> {
             SegmentedTray<_Filter>(
               segments: {
                 _Filter.all: 'Semua',
-                _Filter.pending: 'Belum dicatat ($pending)',
+                _Filter.pending: 'Belum ($pending)',
                 _Filter.done: 'Tercatat',
+                _Filter.unread: 'Lainnya ($unread)',
               },
               value: _filter,
               onChanged: (f) => setState(() => _filter = f),
@@ -123,7 +131,8 @@ class _PaymentLogScreenState extends ConsumerState<PaymentLogScreen> {
                   switch (_filter) {
                     _Filter.pending when entries!.isNotEmpty => 'Semua pembayaran sudah tercatat.',
                     _Filter.done when entries!.isNotEmpty => 'Belum ada yang tercatat.',
-                    _ => 'Belum ada notifikasi pembayaran. Yang terbaca dari GoPay, Livin’, Jago dan ShopeePay muncul di sini.',
+                    _Filter.unread => 'Notifikasi lain dari aplikasi pembayaranmu yang tidak terbaca sebagai pembayaran muncul di sini. Kalau ternyata pembayaran, ketuk untuk mencatatnya.',
+                    _ => 'Belum ada notifikasi pembayaran. Bayar seperti biasa, pembayarannya muncul di sini.',
                   },
                   style: text.bodyMedium?.copyWith(color: tokens.ink2),
                   textAlign: TextAlign.center,
@@ -134,14 +143,26 @@ class _PaymentLogScreenState extends ConsumerState<PaymentLogScreen> {
                 dividerIndent: WudgetTokens.space3,
                 children: [
                   for (final e in shown)
-                    CardRow(
+                    if (e.unread)
+                      CardRow(
+                        leading: Icon(e.inputted ? Icons.check_circle_outline : Icons.help_outline, color: tokens.ink2),
+                        title: e.note,
+                        subtitle: [
+                          '${e.app} · ${_when.format(e.at)}${e.inputted ? ' · di Catat' : ''}',
+                          if (e.text?.trim().isNotEmpty == true) e.text!.trim(),
+                        ].join('\n'),
+                        onTap: () => _open(e),
+                      )
+                    else
+                      CardRow(
                       leading: Checkbox(
                         value: e.inputted,
                         onChanged: (_) => _toggle(e),
                         semanticLabel: e.inputted ? 'Hapus dari Catat' : 'Masukkan ke Catat',
                       ),
                       title: e.note,
-                      subtitle: '${e.app} · ${_when.format(e.at)}${e.inputted ? ' · di Catat' : ''}',
+                      subtitle: '${e.app} · ${_when.format(e.at)}'
+                          '${e.inputted ? ' · di Catat' : e.pending ? ' · menunggu jawaban' : ''}',
                       trailing: AmountText(minor: e.amountMinor),
                       onTap: () => _open(e),
                     ),

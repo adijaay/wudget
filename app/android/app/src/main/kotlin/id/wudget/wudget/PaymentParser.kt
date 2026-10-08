@@ -4,18 +4,28 @@ package id.wudget.wudget
 data class Payment(val amountMinor: Long, val merchant: String?, val appLabel: String)
 
 /**
- * Reads payment notifications from the apps the owner pays with. Pure, so
- * PaymentParserTest covers it without a device. Wording varies by app and
- * changes without notice, so this matches loosely and the owner confirms
- * every suggestion before anything is saved.
+ * Reads payment notifications from any app, so a bank wudget has never heard
+ * of is still found. Pure, so PaymentParserTest covers it without a device.
+ * Wording varies by app and changes without notice, so this matches loosely;
+ * the owner decides per app whether its payments are recorded (PaymentApps).
  */
 object PaymentParser {
-    val apps = mapOf(
+    // Display names for when the package manager cannot give one.
+    val names = mapOf(
         "com.gojek.app" to "GoPay",
         "com.gojek.gopay" to "GoPay",
         "id.bmri.livin" to "Livin' by Mandiri",
         "com.jago.digitalBanking" to "Jago",
         "com.shopee.id" to "ShopeePay",
+    )
+
+    // People type amounts to each other here; "sudah bayar Rp25.000?" is not the owner's payment.
+    private val neverRead = setOf(
+        "com.whatsapp", "com.whatsapp.w4b", "org.telegram.messenger", "jp.naver.line.android",
+        "com.facebook.orca", "com.facebook.katana", "com.instagram.android", "org.thoughtcrime.securesms",
+        "com.discord", "com.twitter.android", "com.zhiliaoapp.musically", "com.ss.android.ugc.trill",
+        "com.google.android.gm", "com.microsoft.office.outlook", "com.google.android.apps.messaging",
+        "com.samsung.android.messaging", "com.android.mms", "com.google.android.youtube",
     )
 
     // Promos, money coming in, and wallet transfers also carry "Rp" amounts; they are not spending.
@@ -43,14 +53,31 @@ object PaymentParser {
         packageName: String,
         title: String?,
         text: String?,
-        extraApps: Map<String, String> = emptyMap(),
+        appName: String? = null,
     ): Payment? {
-        val label = apps[packageName] ?: extraApps[packageName] ?: return null
+        if (packageName in neverRead) return null
+        val label = appName ?: names[packageName] ?: packageName
         val all = listOfNotNull(title, text).joinToString(" ").trim()
         if (all.isEmpty() || skip.containsMatchIn(all) || !paid.containsMatchIn(all)) return null
         val digits = amount.find(all)?.groupValues?.get(1)?.replace(Regex("[.,]"), "") ?: return null
         val value = digits.toLongOrNull()?.takeIf { it in 1..9_999_999_999 } ?: return null
         val shop = merchant.find(all)?.groupValues?.get(1)?.trim()
         return Payment(value, shop, label)
+    }
+}
+
+/**
+ * One payment often posts twice within seconds: the wallet and the bank, or
+ * an update of the same notification. Two payments of the same amount to
+ * two named merchants are two payments, though.
+ */
+object PaymentDedup {
+    const val WINDOW_MS = 3 * 60_000L
+
+    fun isDuplicate(p: Payment, lastAmount: Long, lastMerchant: String?, sinceLastMs: Long): Boolean {
+        if (lastAmount != p.amountMinor || sinceLastMs !in 0 until WINDOW_MS) return false
+        val a = p.merchant?.trim()?.lowercase()
+        val b = lastMerchant?.trim()?.lowercase()
+        return a == null || b == null || a == b
     }
 }

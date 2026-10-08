@@ -43,7 +43,7 @@
 
         <!-- flutter_local_notifications: scheduled reminders fire through
              these, and are restored after a reboot or an app update. -->
-        <!-- Reads payment notifications from GoPay, Livin', Jago and ShopeePay
+        <!-- Reads payment notifications from bank and e-wallet apps
              only after the owner grants notification access in Saya. -->
         <service
             android:name=".PaymentListenerService"
@@ -54,6 +54,7 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        <receiver android:exported="false" android:name=".PaymentAppChoiceReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
@@ -80,6 +81,10 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

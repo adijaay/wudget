@@ -3,6 +3,7 @@ import 'package:home_widget/home_widget.dart';
 
 import '../../data/database.dart';
 import '../capture/capture_sheet.dart';
+import '../settings/payment_apps_screen.dart';
 import '../settings/payment_log_screen.dart';
 import 'capture_deeplink.dart';
 
@@ -29,6 +30,10 @@ class HomeWidgetService {
     final context = _navigatorKey.currentContext;
     if (context == null) return;
     // A payment notification arrives on the same deep link, tagged src=payment, and opens what it was saved as.
+    if (uri?.host == 'payment-apps') {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaymentAppsScreen()));
+      return;
+    }
     final logId = uri?.queryParameters['logId'];
     if (uri?.queryParameters['src'] == 'payment' && logId != null) {
       openPaymentEntry(context, _db, logId);

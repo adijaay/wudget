@@ -12,6 +12,7 @@ import '../recurring/recurring_screen.dart';
 import '../wallets/wallets_screen.dart';
 import 'backup_screen.dart';
 import 'capture_debug_screen.dart';
+import 'payment_apps_screen.dart';
 import 'payment_log_screen.dart';
 import 'household_screen.dart';
 
@@ -109,6 +110,14 @@ class SayaScreen extends ConsumerWidget {
                 subtitle: 'Setiap Minggu malam, tujuh hari terakhir di Pantau',
               ),
               const _PaymentNotificationsRow(),
+              CardRow(
+                title: 'Aplikasi pembayaran',
+                subtitle: 'Pilih aplikasi yang pembayarannya dicatat',
+                trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PaymentAppsScreen()),
+                ),
+              ),
               CardRow(
                 title: 'Log notifikasi pembayaran',
                 subtitle: 'Mana yang sudah dicatat, mana yang belum',
@@ -245,6 +254,9 @@ class _PaymentNotificationsRow extends StatefulWidget {
 class _PaymentNotificationsRowState extends State<_PaymentNotificationsRow> with WidgetsBindingObserver {
   bool? _on;
 
+  /// Access is on but Android has stopped the listener, or can stop it to save battery.
+  bool _atRisk = false;
+
   @override
   void initState() {
     super.initState();
@@ -264,8 +276,10 @@ class _PaymentNotificationsRowState extends State<_PaymentNotificationsRow> with
   }
 
   Future<void> _refresh() async {
-    final on = await _payments.invokeMethod<bool>('isEnabled').catchError((_) => false);
-    if (mounted) setState(() => _on = on ?? false);
+    final status = await _payments.invokeMapMethod<String, bool>('status').catchError((_) => null);
+    final on = status?['enabled'] ?? false;
+    final atRisk = on && (status?['connected'] == false || status?['batteryFree'] == false);
+    if (mounted) setState(() => (_on = on, _atRisk = atRisk));
   }
 
   Future<void> _change() async {
@@ -275,10 +289,10 @@ class _PaymentNotificationsRowState extends State<_PaymentNotificationsRow> with
         builder: (context) => AlertDialog(
           title: const Text('Baca notifikasi pembayaran?'),
           content: const Text(
-            'Android akan memberi wudget akses ke semua notifikasi. wudget hanya membaca '
-            'notifikasi dari GoPay, Livin’ by Mandiri, Jago dan ShopeePay, lalu menawarkan '
-            'catatan yang kamu simpan sendiri. Notifikasi lain diabaikan, dan tidak ada yang '
-            'dikirim keluar dari HP ini.',
+            'Android akan memberi wudget akses ke semua notifikasi. wudget hanya mencari '
+            'notifikasi pembayaran. Saat sebuah aplikasi pertama kali mengirimnya, wudget '
+            'bertanya apakah pembayaran dari aplikasi itu dicatat. Notifikasi lain tidak '
+            'disimpan, dan tidak ada yang dikirim keluar dari HP ini.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Nanti saja')),
@@ -294,13 +308,32 @@ class _PaymentNotificationsRowState extends State<_PaymentNotificationsRow> with
   @override
   Widget build(BuildContext context) {
     final on = _on;
-    return MergeSemantics(
+    final row = MergeSemantics(
       child: CardRow(
         title: 'Catat dari notifikasi pembayaran',
-        subtitle: 'GoPay, Livin’, Jago dan ShopeePay. Setiap bayar, wudget menawarkan catatannya',
+        subtitle: 'Setiap bayar dari aplikasi pilihanmu, langsung tercatat',
         trailing: Switch(value: on ?? false, onChanged: on == null ? null : (_) => _change()),
         onTap: on == null ? null : _change,
       ),
+    );
+    if (!_atRisk) return row;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        row,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(WudgetTokens.space3, 0, WudgetTokens.space3, WudgetTokens.space3),
+          child: InsetNotice(
+            icon: Icons.battery_alert_outlined,
+            tone: NoticeTone.warning,
+            message: 'Penghemat baterai bisa menghentikan wudget, lalu pembayaran terlewat. '
+                'Izinkan wudget berjalan tanpa batasan baterai. Pastikan juga notifikasi '
+                'aplikasi bank dan dompetmu tidak dimatikan.',
+            action: 'Atur baterai',
+            onAction: () => _payments.invokeMethod<void>('openBatterySettings').catchError((_) {}),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,9 @@
 package id.wudget.wudget
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // ponytail: sample wording is typical, not captured from the real apps; add each real notification here as a case.
@@ -45,5 +47,30 @@ class PaymentParserTest {
     @Test fun otherAppsAndAmountlessTextAreIgnored() {
         assertNull(parse("com.whatsapp", "Ibu", "Sudah bayar Rp25.000 ke warung?"))
         assertNull(parse("com.gojek.app", "Pembayaran berhasil", "Driver kamu sedang menuju lokasi"))
+    }
+
+    @Test fun walletAndBankPostingTheSamePaymentIsOne() {
+        val gopay = Payment(25000, "Kopi Kenangan", "GoPay")
+        assertTrue(PaymentDedup.isDuplicate(gopay, 25000, null, 10_000))
+        assertTrue(PaymentDedup.isDuplicate(gopay, 25000, "kopi kenangan", 10_000))
+    }
+
+    @Test fun sameAmountToTwoMerchantsIsTwoPayments() {
+        assertFalse(PaymentDedup.isDuplicate(Payment(25000, "Kopi Kenangan", "GoPay"), 25000, "Indomaret", 10_000))
+    }
+
+    @Test fun sameAmountLaterIsANewPayment() {
+        assertFalse(PaymentDedup.isDuplicate(Payment(25000, null, "Jago"), 25000, null, PaymentDedup.WINDOW_MS))
+        assertFalse(PaymentDedup.isDuplicate(Payment(25000, null, "Jago"), 30000, null, 10_000))
+    }
+
+    @Test fun anyAppCanBeReadUnderItsOwnName() {
+        val p = PaymentParser.parse("co.id.bankbsi.superapp", "Transaksi berhasil", "Pembayaran Rp45.000 ke Alfamart berhasil", appName = "BYOND")!!
+        assertEquals(45000L, p.amountMinor)
+        assertEquals("BYOND", p.appLabel)
+    }
+
+    @Test fun chatAppsAreNeverRead() {
+        assertNull(parse("org.telegram.messenger", "Budi", "Pembayaran Rp25.000 ke Warung berhasil"))
     }
 }

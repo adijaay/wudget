@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wudget/data/database.dart';
+import 'package:wudget/data/payment_apps_repository.dart';
 import 'package:wudget/data/payment_log_repository.dart';
 import 'package:wudget/domain/default_categories.dart';
 import 'package:wudget/features/widget/capture_deeplink.dart';
@@ -66,6 +67,38 @@ void main() {
     expect(await live(), isEmpty);
     await repo.setRecorded((await PaymentLogRepository.all()).single, true);
     expect((await live()).single.id, log.single['txId']);
+  });
+
+  test('a notification not read as a payment is listed but never recorded on its own', () async {
+    log.insert(0, {'id': 'u', 'kind': 'unread', 'at': 1760000100000, 'app': 'Jago', 'title': 'Kartu dipakai', 'text': 'Debit kartu', 'inputted': false, 'processed': true});
+    final repo = PaymentLogRepository(db);
+    await repo.recordNew();
+    final unread = (await PaymentLogRepository.all()).first;
+    expect(unread.unread, isTrue);
+    expect(unread.note, 'Kartu dipakai');
+    await repo.setRecorded(unread, true);
+    expect((await live()).length, 1);
+  });
+
+  test('a payment from an app not yet answered waits; the answer releases it', () async {
+    log.single['pending'] = true;
+    final repo = PaymentLogRepository(db);
+    await repo.recordNew();
+    expect(await live(), isEmpty);
+    log.single['pending'] = false; // what PaymentApps.set(on) does natively
+    await repo.recordNew();
+    expect((await live()).length, 1);
+  });
+
+  test('apps come back most active first, unknown states as ask', () {
+    final apps = parsePaymentApps(
+      '{"id.dana":{"label":"DANA","state":"on","count":2},'
+      '"co.id.bankbsi.superapp":{"label":"BYOND","state":"ask","count":5},'
+      '"x":{"state":"weird"}}',
+    );
+    expect(apps.map((a) => a.label), ['BYOND', 'DANA', 'x']);
+    expect(apps.first.state, PaymentAppState.ask);
+    expect(apps.last.state, PaymentAppState.ask);
   });
 
   test('the notification tap finds the saved entry', () async {

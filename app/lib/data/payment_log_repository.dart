@@ -16,6 +16,9 @@ class PaymentLogEntry {
     required this.app,
     required this.amountMinor,
     required this.inputted,
+    this.unread = false,
+    this.pending = false,
+    this.pkg,
     this.processed = false,
     this.txId,
     this.merchant,
@@ -27,7 +30,10 @@ class PaymentLogEntry {
         id: j['id'] as String,
         at: DateTime.fromMillisecondsSinceEpoch(j['at'] as int),
         app: j['app'] as String,
-        amountMinor: j['amountMinor'] as int,
+        amountMinor: j['amountMinor'] as int? ?? 0,
+        unread: j['kind'] == 'unread',
+        pending: j['pending'] as bool? ?? false,
+        pkg: j['pkg'] as String?,
         inputted: j['inputted'] as bool? ?? false,
         processed: j['processed'] as bool? ?? false,
         txId: j['txId'] as String?,
@@ -41,6 +47,15 @@ class PaymentLogEntry {
   final String app;
   final int amountMinor;
 
+  /// From a watched app but not read as a payment, so it has no amount and is never recorded on its own.
+  final bool unread;
+
+  /// From an app the owner has not answered about yet, so held out of the ledger.
+  final bool pending;
+
+  /// The posting app's package; missing on entries from before per-app choices.
+  final String? pkg;
+
   /// In the ledger: as [txId] when wudget wrote it, or ticked by hand.
   final bool inputted;
 
@@ -51,7 +66,7 @@ class PaymentLogEntry {
   final String? title;
   final String? text;
 
-  String get note => merchant ?? app;
+  String get note => unread ? (title?.trim().isNotEmpty == true ? title! : app) : merchant ?? app;
 }
 
 /// The phone-only log of payment notifications, kept natively so the
@@ -87,7 +102,7 @@ class PaymentLogRepository {
   Future<int> recordNew() => _serial(() async {
         var saved = 0;
         for (final e in await all()) {
-          if (e.processed) continue;
+          if (e.processed || e.unread || e.pending) continue;
           if (e.inputted) {
             await _patch(e.id, {'processed': true});
             continue;
@@ -102,11 +117,12 @@ class PaymentLogRepository {
   /// The log's checkbox: ticking writes the entry, unticking removes the one wudget wrote.
   Future<void> setRecorded(PaymentLogEntry e, bool recorded) => _serial(() async {
         if (recorded) {
+          if (e.unread) return;
           final txId = await _write(e);
-          await _patch(e.id, {'inputted': true, 'processed': true, 'txId': txId});
+          await _patch(e.id, {'inputted': true, 'processed': true, 'pending': false, 'txId': txId});
         } else {
           if (e.txId != null) await PostingsRepository(_db).deleteTransaction(e.txId!);
-          await _patch(e.id, {'inputted': false, 'processed': true, 'txId': null});
+          await _patch(e.id, {'inputted': false, 'processed': true, 'pending': false, 'txId': null});
         }
       });
 
