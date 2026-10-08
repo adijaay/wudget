@@ -12,6 +12,7 @@ import '../recurring/recurring_screen.dart';
 import '../wallets/wallets_screen.dart';
 import 'backup_screen.dart';
 import 'capture_debug_screen.dart';
+import 'household_screen.dart';
 
 /// Saya: the fourth tab in the mockups' bottom bar. Everything here already
 /// existed but was only reachable from an icon in another screen's app bar
@@ -128,6 +129,14 @@ class SayaScreen extends ConsumerWidget {
                 trailing: Icon(Icons.chevron_right, color: tokens.ink2),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const ImportScreen()),
+                ),
+              ),
+              CardRow(
+                title: 'Berbagi dengan keluarga',
+                subtitle: 'Belum tersedia. Beri tahu kami kalau kamu mau',
+                trailing: Icon(Icons.chevron_right, color: tokens.ink2),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const HouseholdScreen()),
                 ),
               ),
             ],

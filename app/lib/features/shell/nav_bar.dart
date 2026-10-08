@@ -30,13 +30,14 @@ class WudgetNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: WudgetTokens.navBarHeight,
+          height: WudgetTokens.navBarContentHeight,
           child: Row(
             children: [
               for (var i = 0; i < destinations.length; i++) ...[
                 // The docked capture button's footprint. Left empty so a
                 // mis-hit near it does nothing rather than switching tabs.
-                if (i == half) const SizedBox(width: 76),
+                if (i == half)
+                  const SizedBox(width: WudgetTokens.navBarCaptureGap),
                 Expanded(
                   child: _NavTab(
                     // Keyed because each tab's label also appears as the
@@ -58,7 +59,8 @@ class WudgetNavBar extends StatelessWidget {
 }
 
 class NavDestination {
-  const NavDestination({required this.label, required this.icon, required this.selectedIcon});
+  const NavDestination(
+      {required this.label, required this.icon, required this.selectedIcon});
   final String label;
   final IconData icon;
   final IconData selectedIcon;
@@ -91,7 +93,8 @@ class _NavTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(selected ? destination.selectedIcon : destination.icon, size: 24, color: color),
+            Icon(selected ? destination.selectedIcon : destination.icon,
+                size: 24, color: color),
             const SizedBox(height: 3),
             Text(
               destination.label,

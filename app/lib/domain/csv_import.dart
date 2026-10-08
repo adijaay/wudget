@@ -11,6 +11,7 @@ class ColumnMapping {
     required this.amountColumn,
     this.categoryColumn,
     this.accountColumn,
+    this.toAccountColumn,
     this.noteColumn,
     this.kindColumn,
     this.expenseValue = 'Expense',
@@ -22,6 +23,10 @@ class ColumnMapping {
   final String amountColumn;
   final String? categoryColumn;
   final String? accountColumn;
+
+  /// The destination account. A row with both account columns filled and
+  /// no category is a transfer between them.
+  final String? toAccountColumn;
   final String? noteColumn;
 
   /// A column whose value says expense/income directly. When null, the
@@ -45,6 +50,7 @@ class ParsedImportRow {
     required this.kind,
     this.categoryName,
     this.accountName,
+    this.toAccountName,
     this.note,
   });
 
@@ -52,11 +58,13 @@ class ParsedImportRow {
   final int rowNumber;
   final int occurredAtUtcMillis;
 
-  /// Signed: negative for an expense, positive for income.
+  /// Signed: negative for an expense, positive for income. A transfer
+  /// carries the positive amount moved.
   final int amountMinor;
-  final String kind; // expense|income
+  final String kind; // expense|income|transfer
   final String? categoryName;
   final String? accountName;
+  final String? toAccountName;
   final String? note;
 }
 
@@ -131,7 +139,12 @@ ImportParseResult parseImportRows({
     String kind;
     int amountMinor;
     final kindText = valueOf(row, mapping.kindColumn);
-    if (kindText != null) {
+    final from = valueOf(row, mapping.accountColumn);
+    final to = valueOf(row, mapping.toAccountColumn);
+    if (from != null && to != null && valueOf(row, mapping.categoryColumn) == null) {
+      kind = 'transfer';
+      amountMinor = amountValue.abs().round();
+    } else if (kindText != null) {
       if (kindText == mapping.expenseValue) {
         kind = 'expense';
         amountMinor = -amountValue.abs().round();
@@ -153,7 +166,8 @@ ImportParseResult parseImportRows({
       amountMinor: amountMinor,
       kind: kind,
       categoryName: valueOf(row, mapping.categoryColumn),
-      accountName: valueOf(row, mapping.accountColumn),
+      accountName: from,
+      toAccountName: to,
       note: valueOf(row, mapping.noteColumn),
     ));
   }

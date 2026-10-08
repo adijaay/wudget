@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Capture Flow Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --ink-tertiary: #9CA3AF;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --border: #E5E7EB;
+    --positive: #10B981;
+    --negative: #EF4444;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--surface);
+    position: relative;
+  }
+  
+  /* Header */
+  .capture-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .header-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .close-button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    color: var(--ink-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  
+  .close-button:hover {
+    background: var(--surface-elevated);
+  }
+  
+  /* Amount Display */
+  .amount-display {
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--surface-elevated);
+  }
+  
+  .amount-label {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    margin-bottom: 8px;
+  }
+  
+  .amount-value {
+    font-size: 48px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+  
+  .amount-currency {
+    font-size: 24px;
+    color: var(--ink-secondary);
+    margin-right: 8px;
+  }
+  
+  /* Wallet Selector */
+  .wallet-selector {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .wallet-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .wallet-chip:hover {
+    border-color: var(--accent);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .wallet-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .wallet-name {
+    font-weight: 600;
+  }
+  
+  .wallet-balance {
+    color: var(--ink-secondary);
+    font-size: 13px;
+  }
+  
+  /* Frequent Templates */
+  .frequent-section {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .section-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .frequent-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  
+  .frequent-item {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .frequent-item:hover {
+    border-color: var(--accent);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .frequent-category {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  
+  .frequent-amount {
+    font-size: 12px;
+    color: var(--ink-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  /* Category Grid */
+  .category-section {
+    padding: 16px 20px;
+    flex: 1;
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  
+  .category-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .category-item:hover {
+    border-color: var(--accent);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .category-item.selected {
+    border-color: var(--accent);
+    background: rgba(37, 99, 235, 0.1);
+  }
+  
+  .category-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  
+  .category-name {
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.3;
+  }
+  
+  /* Note Field */
+  .note-section {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+  
+  .note-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink-secondary);
+    width: 100%;
+    text-align: left;
+  }
+  
+  .note-toggle:hover {
+    background: var(--surface);
+    border-color: var(--accent);
+  }
+  
+  .note-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+  }
+  
+  .note-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  /* Save Button */
+  .save-button {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .save-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  .save-button:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+  }
+  
+  /* Numpad */
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+  
+  .numpad-key {
+    padding: 20px;
+    background: var(--surface);
+    border: none;
+    font-size: 24px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .numpad-key:hover {
+    background: var(--surface-elevated);
+  }
+  
+  .numpad-key:active {
+    background: var(--border);
+  }
+  
+  .numpad-key.delete {
+    font-size: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Header -->
+  <div class="capture-header">
+    <div class="header-title">Catat pengeluaran</div>
+    <button class="close-button">×</button>
+  </div>
+  
+  <!-- Amount Display -->
+  <div class="amount-display">
+    <div class="amount-label">Jumlah</div>
+    <div class="amount-value">
+      <span class="amount-currency">Rp</span>25.000
+    </div>
+  </div>
+  
+  <!-- Wallet Selector (NEW) -->
+  <div class="wallet-selector">
+    <div class="wallet-chip" onclick="toggleWalletSelector()">
+      <div class="wallet-icon">G</div>
+      <span class="wallet-name">GoPay</span>
+      <span class="wallet-balance">• Rp 450.000</span>
+      <span style="color: var(--ink-tertiary); font-size: 12px;">▼</span>
+    </div>
+  </div>
+  
+  <!-- Frequent Templates (NEW) -->
+  <div class="frequent-section">
+    <div class="section-label">Sering</div>
+    <div class="frequent-list">
+      <div class="frequent-item" onclick="selectFrequent('Makan siang', 25000)">
+        <div class="frequent-category">Makan siang</div>
+        <div class="frequent-amount">Rp 25.000</div>
+      </div>
+      <div class="frequent-item" onclick="selectFrequent('Transport', 15000)">
+        <div class="frequent-category">Transport</div>
+        <div class="frequent-amount">Rp 15.000</div>
+      </div>
+      <div class="frequent-item" onclick="selectFrequent('Kopi', 18000)">
+        <div class="frequent-category">Kopi</div>
+        <div class="frequent-amount">Rp 18.000</div>
+      </div>
+      <div class="frequent-item" onclick="selectFrequent('Belanja', 50000)">
+        <div class="frequent-category">Belanja</div>
+        <div class="frequent-amount">Rp 50.000</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Category Grid -->
+  <div class="category-section">
+    <div class="category-grid">
+      <div class="category-item selected" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #FEF3C7;">🍜</div>
+        <div class="category-name">Makanan</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #DBEAFE;">🚗</div>
+        <div class="category-name">Transport</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #FCE7F3;">🛍️</div>
+        <div class="category-name">Belanja</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #D1FAE5;">☕</div>
+        <div class="category-name">Minuman</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #E0E7FF;">📱</div>
+        <div class="category-name">Pulsa</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #FEE2E2;">💊</div>
+        <div class="category-name">Kesehatan</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #F3E8FF;">🎬</div>
+        <div class="category-name">Hiburan</div>
+      </div>
+      <div class="category-item" onclick="selectCategory(this)">
+        <div class="category-icon" style="background: #F1F5F9;">📦</div>
+        <div class="category-name">Lainnya</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Note Field (COLLAPSIBLE) -->
+  <div class="note-section">
+    <button class="note-toggle" onclick="toggleNote()">
+      <span>📝</span>
+      <span>Tambah catatan (opsional)</span>
+    </button>
+  </div>
+  
+  <!-- Numpad -->
+  <div class="numpad">
+    <button class="numpad-key" onclick="pressKey('1')">1</button>
+    <button class="numpad-key" onclick="pressKey('2')">2</button>
+    <button class="numpad-key" onclick="pressKey('3')">3</button>
+    <button class="numpad-key" onclick="pressKey('4')">4</button>
+    <button class="numpad-key" onclick="pressKey('5')">5</button>
+    <button class="numpad-key" onclick="pressKey('6')">6</button>
+    <button class="numpad-key" onclick="pressKey('7')">7</button>
+    <button class="numpad-key" onclick="pressKey('8')">8</button>
+    <button class="numpad-key" onclick="pressKey('9')">9</button>
+    <button class="numpad-key" onclick="pressKey('00')">00</button>
+    <button class="numpad-key" onclick="pressKey('0')">0</button>
+    <button class="numpad-key delete" onclick="pressKey('delete')">⌫</button>
+  </div>
+  
+  <!-- Save Button -->
+  <button class="save-button">Simpan</button>
+  
+</div>
+
+<script>
+  let currentAmount = 25000;
+  
+  function pressKey(key) {
+    if (key === 'delete') {
+      currentAmount = Math.floor(currentAmount / 10);
+    } else if (key === '00') {
+      currentAmount = currentAmount * 100;
+    } else {
+      currentAmount = currentAmount * 10 + parseInt(key);
+    }
+    updateAmount();
+  }
+  
+  function updateAmount() {
+    document.querySelector('.amount-value').innerHTML = 
+      `<span class="amount-currency">Rp</span>${currentAmount.toLocaleString('id-ID')}`;
+  }
+  
+  function selectFrequent(category, amount) {
+    currentAmount = amount;
+    updateAmount();
+    // Visual feedback
+    event.target.closest('.frequent-item').style.borderColor = 'var(--accent)';
+    setTimeout(() => {
+      event.target.closest('.frequent-item').style.borderColor = '';
+    }, 300);
+  }
+  
+  function selectCategory(element) {
+    document.querySelectorAll('.category-item').forEach(item => {
+      item.classList.remove('selected');
+    });
+    element.classList.add('selected');
+  }
+  
+  function toggleNote() {
+    const noteSection = document.querySelector('.note-section');
+    const toggle = noteSection.querySelector('.note-toggle');
+    
+    if (noteSection.querySelector('.note-input')) {
+      // Hide note
+      noteSection.querySelector('.note-input').remove();
+      toggle.style.display = 'flex';
+    } else {
+      // Show note
+      toggle.style.display = 'none';
+      const input = document.createElement('textarea');
+      input.className = 'note-input';
+      input.placeholder = 'Tambah catatan...';
+      input.rows = 2;
+      noteSection.insertBefore(input, toggle);
+      input.focus();
+    }
+  }
+  
+  function toggleWalletSelector() {
+    alert('Wallet selector dropdown would appear here');
+  }
+</script>
+</body>
+</html>

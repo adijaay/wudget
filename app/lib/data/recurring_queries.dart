@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import 'database.dart';
+import 'recurrence_repository.dart';
 
 /// A materialised, not-yet-confirmed instance — Sprint 13's "upcoming"
 /// half of the recurring/bills screen.
@@ -79,4 +82,22 @@ class RecurringQueries {
     }
     return null;
   }
+}
+
+/// What the subscription rules cost per month. A varying amount counts at its
+/// expected maximum; weekly, daily and yearly rules are scaled to a month.
+int subscriptionMonthlyMinor(List<Recurrence> rules) {
+  var total = 0;
+  for (final r in rules.where((r) => r.isSubscription)) {
+    final template = RecurrenceTemplate.fromJson(jsonDecode(r.templateJson) as Map<String, Object?>);
+    final amount = (r.amountMode == 'varies' ? r.expectedMaxMinor : template.fixedAmountMinor) ?? 0;
+    final n = r.intervalN < 1 ? 1 : r.intervalN;
+    total += switch (r.freq) {
+      'daily' => amount * 365 ~/ (12 * n),
+      'weekly' => amount * 52 ~/ (12 * n),
+      'yearly' => amount ~/ (12 * n),
+      _ => amount ~/ n,
+    };
+  }
+  return total;
 }

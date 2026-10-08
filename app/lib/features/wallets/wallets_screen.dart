@@ -10,9 +10,18 @@ import '../../data/wallets_repository.dart';
 import '../../design/components.dart';
 import '../../design/tokens.dart';
 import '../capture/capture_sheet.dart';
+import '../goals/goals_section.dart';
 
 const _uuid = Uuid();
-const _walletTypes = ['cash', 'bank', 'ewallet', 'card', 'savings', 'debt', 'other'];
+const _walletTypes = [
+  'cash',
+  'bank',
+  'ewallet',
+  'card',
+  'savings',
+  'debt',
+  'other'
+];
 const _formatter = MoneyFormatter();
 
 /// Kantong: wallets grouped by what they are for, under one total. Built to
@@ -42,7 +51,8 @@ class WalletsScreen extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _BalancesUnavailable(error: error),
             data: (wallets) => wallets.isEmpty
-                ? _EmptyKantong(onCreate: () => _showCreateWalletSheet(context, repo))
+                ? _EmptyKantong(
+                    onCreate: () => _showCreateWalletSheet(context, repo))
                 : _WalletList(wallets: wallets, repo: repo),
           ),
     );
@@ -83,27 +93,76 @@ class _WalletList extends StatelessWidget {
       children: [
         _TotalCard(wallets: wallets),
         const SizedBox(height: WudgetTokens.space5),
+        GoalsSection(wallets: wallets),
         // Only groups that hold a wallet get a heading: a "KARTU" label over
         // nothing would be a section filling a template (C-3).
         for (final group in walletGroupOrder)
-          if (group == 'Kartu')
-            ...[
-              if (cards.isNotEmpty) ...[
-                const SectionLabel('Kartu'),
-                for (final card in cards) _CardDetail(card: card, repo: repo),
-              ],
-            ]
-          else if (grouped[group] != null) ...[
+          if (group == 'Kartu') ...[
+            if (cards.isNotEmpty) ...[
+              const SectionLabel('Kartu'),
+              for (final card in cards) _CardDetail(card: card, repo: repo),
+            ],
+          ] else if (grouped[group] != null) ...[
             SectionLabel(group),
             CardGroup(
               children: [
                 for (final w in grouped[group]!)
                   _WalletRow(wallet: w, repo: repo),
+                // Same currency only: a group holding two currencies has no
+                // total wudget can honestly compute (see _TotalCard).
+                if (_singleCurrency(grouped[group]!))
+                  _GroupTotalRow(
+                    label: 'Total $group',
+                    minor: grouped[group]!
+                        .fold<int>(0, (sum, w) => sum + w.balanceMinor),
+                    currency: grouped[group]!.first.account.currency,
+                  ),
               ],
             ),
             const SizedBox(height: WudgetTokens.space4),
           ],
       ],
+    );
+  }
+
+  bool _singleCurrency(List<WalletWithBalance> group) =>
+      group.map((w) => w.account.currency).toSet().length == 1;
+}
+
+/// The sum of one group, as a row inside that group rather than a heading
+/// over it: the label comes first so the number cannot be misread as one
+/// wallet's balance.
+class _GroupTotalRow extends StatelessWidget {
+  const _GroupTotalRow(
+      {required this.label, required this.minor, required this.currency});
+  final String label;
+  final int minor;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<WudgetTokens>()!;
+    final text = Theme.of(context).textTheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: WudgetTokens.minTapTarget),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: WudgetTokens.space3,
+          vertical: WudgetTokens.space3,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+                child: Text(label,
+                    style: text.bodySmall?.copyWith(color: tokens.ink2))),
+            AmountText(
+              minor: minor,
+              currency: currency,
+              color: tokens.ink1,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -170,7 +229,8 @@ class _TotalCard extends StatelessWidget {
                   children: [
                     Text(
                       entry.key,
-                      style: text.bodySmall?.copyWith(color: tokens.inkInverse2),
+                      style:
+                          text.bodySmall?.copyWith(color: tokens.inkInverse2),
                     ),
                     AmountText(
                       minor: entry.value,
@@ -207,8 +267,11 @@ class _WalletRow extends StatelessWidget {
       title: account.name,
       // A wallet literally named "Tunai" does not need "Tunai" printed
       // under it as well.
-      subtitle: account.name.toLowerCase() == typeLabel.toLowerCase() ? null : typeLabel,
-      trailing: AmountText(minor: wallet.balanceMinor, currency: account.currency),
+      subtitle: account.name.toLowerCase() == typeLabel.toLowerCase()
+          ? null
+          : typeLabel,
+      trailing:
+          AmountText(minor: wallet.balanceMinor, currency: account.currency),
       onTap: () => _showWalletActions(context),
     );
   }
@@ -232,7 +295,8 @@ void showWalletActions(
       builder: (_) => CaptureSheet(
         initialKind: CaptureKind.transfer,
         initialToAccountId: wallet.account.id,
-        initialAmountMinor: -wallet.balanceMinor, // owed amount, as a positive payment
+        initialAmountMinor:
+            -wallet.balanceMinor, // owed amount, as a positive payment
       ),
     );
   }
@@ -245,7 +309,9 @@ void showWalletActions(
         title: const Text('Ubah nama kantong'),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal')),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text),
             child: const Text('Simpan'),
@@ -269,7 +335,8 @@ void showWalletActions(
           children: [
             Padding(
               padding: const EdgeInsets.all(WudgetTokens.space4),
-              child: Text(account.name, style: Theme.of(context).textTheme.titleLarge),
+              child: Text(account.name,
+                  style: Theme.of(context).textTheme.titleLarge),
             ),
             if (canPay)
               ListTile(
@@ -291,7 +358,8 @@ void showWalletActions(
             ListTile(
               leading: const Icon(Icons.archive_outlined),
               title: const Text('Arsipkan'),
-              subtitle: const Text('Disembunyikan dari daftar, catatannya tetap ada'),
+              subtitle:
+                  const Text('Disembunyikan dari daftar, catatannya tetap ada'),
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 repo.archive(account.id);
@@ -329,64 +397,64 @@ class _CardDetail extends StatelessWidget {
         onTap: () => showWalletActions(context, card, repo),
         borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
         child: WudgetCard(
-        padding: const EdgeInsets.all(WudgetTokens.space3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(account.name, style: text.titleSmall),
-                ),
-                if (account.creditLimitMinor != null)
-                  Text(
-                    'limit ${_formatter.formatCompact(Money.fromMinor(account.creditLimitMinor!, account.currency))}',
-                    style: text.bodySmall,
-                  ),
-              ],
-            ),
-            if (owed > 0) ...[
-              const SizedBox(height: WudgetTokens.space1),
+          padding: const EdgeInsets.all(WudgetTokens.space3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Text('Terpakai ', style: text.bodySmall),
-                  AmountText(
-                    minor: owed,
-                    currency: account.currency,
-                    style: text.bodySmall,
-                    color: tokens.ink1,
+                  Expanded(
+                    child: Text(account.name, style: text.titleSmall),
                   ),
+                  if (account.creditLimitMinor != null)
+                    Text(
+                      'limit ${_formatter.formatCompact(Money.fromMinor(account.creditLimitMinor!, account.currency))}',
+                      style: text.bodySmall,
+                    ),
                 ],
               ),
-            ],
-            if (dueLabel != null) ...[
-              const SizedBox(height: WudgetTokens.space3),
-              InsetNotice(
-                icon: Icons.schedule_outlined,
-                message: dueLabel,
-                tone: NoticeTone.neutral,
-                action: owed > 0 ? 'Bayar' : null,
-                onAction: owed > 0
-                    ? () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => CaptureSheet(
-                            initialKind: CaptureKind.transfer,
-                            initialToAccountId: account.id,
-                            initialAmountMinor: owed,
-                          ),
-                        )
-                    : null,
+              if (owed > 0) ...[
+                const SizedBox(height: WudgetTokens.space1),
+                Row(
+                  children: [
+                    Text('Terpakai ', style: text.bodySmall),
+                    AmountText(
+                      minor: owed,
+                      currency: account.currency,
+                      style: text.bodySmall,
+                      color: tokens.ink1,
+                    ),
+                  ],
+                ),
+              ],
+              if (dueLabel != null) ...[
+                const SizedBox(height: WudgetTokens.space3),
+                InsetNotice(
+                  icon: Icons.schedule_outlined,
+                  message: dueLabel,
+                  tone: NoticeTone.neutral,
+                  action: owed > 0 ? 'Bayar' : null,
+                  onAction: owed > 0
+                      ? () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => CaptureSheet(
+                              initialKind: CaptureKind.transfer,
+                              initialToAccountId: account.id,
+                              initialAmountMinor: owed,
+                            ),
+                          )
+                      : null,
+                ),
+              ],
+              const SizedBox(height: WudgetTokens.space2),
+              Text(
+                'Bayar kartu dicatat sebagai transfer, jadi tidak ikut terhitung '
+                'sebagai belanja bulan ini.',
+                style: text.bodySmall,
               ),
             ],
-            const SizedBox(height: WudgetTokens.space2),
-            Text(
-              'Bayar kartu dicatat sebagai transfer, jadi tidak ikut terhitung '
-              'sebagai belanja bulan ini.',
-              style: text.bodySmall,
-            ),
-          ],
-        ),
+          ),
         ),
       ),
     );
@@ -448,13 +516,18 @@ class _EmptyKantong extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(height: 11, width: 96, color: tokens.surfaceMuted),
+                          Container(
+                              height: 11,
+                              width: 96,
+                              color: tokens.surfaceMuted),
                           const SizedBox(height: 6),
-                          Container(height: 8, width: 62, color: tokens.surfaceMuted),
+                          Container(
+                              height: 8, width: 62, color: tokens.surfaceMuted),
                         ],
                       ),
                     ),
-                    Container(height: 11, width: 58, color: tokens.surfaceMuted),
+                    Container(
+                        height: 11, width: 58, color: tokens.surfaceMuted),
                   ],
                 ),
               ),
@@ -463,6 +536,15 @@ class _EmptyKantong extends StatelessWidget {
                 'Tiap kantong muncul begini: namanya, jenisnya, dan saldonya. '
                 'Totalnya ada di kartu paling atas.',
                 style: text.bodyMedium,
+              ),
+              const SizedBox(height: WudgetTokens.space4),
+              // The way out sits inside the card that explains the shape,
+              // not after a second block of prose: on a short screen the
+              // button used to land below the fold, leaving the explanation
+              // as the only thing visible.
+              FilledButton(
+                onPressed: onCreate,
+                child: const Text('Tambah kantong pertama'),
               ),
             ],
           ),
@@ -483,8 +565,6 @@ class _EmptyKantong extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: WudgetTokens.space4),
-        FilledButton(onPressed: onCreate, child: const Text('Tambah kantong pertama')),
       ],
     );
   }
@@ -535,7 +615,8 @@ class _CreateWalletSheetState extends State<_CreateWalletSheet> {
               controller: _nameController,
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Nama kantong, misal GoPay'),
+              decoration:
+                  const InputDecoration(hintText: 'Nama kantong, misal GoPay'),
             ),
             const SizedBox(height: WudgetTokens.space3),
             const SectionLabel('Jenis'),
@@ -556,7 +637,8 @@ class _CreateWalletSheetState extends State<_CreateWalletSheet> {
             TextField(
               controller: _openingController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'Saldo awal, boleh dikosongkan'),
+              decoration: const InputDecoration(
+                  hintText: 'Saldo awal, boleh dikosongkan'),
             ),
             // Only a card has a statement cycle and a limit, so only a card
             // is asked for them. Left blank they stay null, and Kantong
@@ -566,16 +648,22 @@ class _CreateWalletSheetState extends State<_CreateWalletSheet> {
               const SectionLabel('Siklus tagihan'),
               Row(
                 children: [
-                  Expanded(child: _DayField(label: 'Tanggal cetak', onChanged: (v) => _statementDay = v)),
+                  Expanded(
+                      child: _DayField(
+                          label: 'Tanggal cetak',
+                          onChanged: (v) => _statementDay = v)),
                   const SizedBox(width: WudgetTokens.space3),
-                  Expanded(child: _DayField(label: 'Jatuh tempo', onChanged: (v) => _dueDay = v)),
+                  Expanded(
+                      child: _DayField(
+                          label: 'Jatuh tempo', onChanged: (v) => _dueDay = v)),
                 ],
               ),
               const SizedBox(height: WudgetTokens.space3),
               TextField(
                 controller: _limitController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(hintText: 'Limit kartu, boleh dikosongkan'),
+                decoration: const InputDecoration(
+                    hintText: 'Limit kartu, boleh dikosongkan'),
               ),
             ],
             const SizedBox(height: WudgetTokens.space4),
@@ -589,8 +677,11 @@ class _CreateWalletSheetState extends State<_CreateWalletSheet> {
 
   void _save() {
     if (_nameController.text.isEmpty) return;
-    final opening = int.tryParse(_openingController.text.replaceAll(RegExp(r'[^0-9-]'), '')) ?? 0;
-    final limit = int.tryParse(_limitController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    final opening = int.tryParse(
+            _openingController.text.replaceAll(RegExp(r'[^0-9-]'), '')) ??
+        0;
+    final limit =
+        int.tryParse(_limitController.text.replaceAll(RegExp(r'[^0-9]'), ''));
     widget.repo.create(
       id: _uuid.v4(),
       name: _nameController.text,
@@ -653,7 +744,8 @@ class _BalancesUnavailable extends StatelessWidget {
           const SizedBox(height: WudgetTokens.space3),
           // First line only: a drift exception carries the entire generated
           // SELECT after it, which filled the screen and buried the cause.
-          SelectableText('$error'.split(_lineBreak).first, style: text.bodySmall),
+          SelectableText('$error'.split(_lineBreak).first,
+              style: text.bodySmall),
         ],
       ),
     );

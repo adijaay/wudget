@@ -71,6 +71,7 @@ class RecurrenceRepository {
     String amountMode = 'fixed',
     int? expectedMinMinor,
     int? expectedMaxMinor,
+    bool isSubscription = false,
   }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc().millisecondsSinceEpoch;
@@ -91,6 +92,7 @@ class RecurrenceRepository {
           // after this watermark.
           generatedUntil: rule.startsOn - 1,
           updatedAt: now,
+          isSubscription: Value(isSubscription),
         ));
     return id;
   }

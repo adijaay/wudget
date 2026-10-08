@@ -4067,6 +4067,16 @@ class $RecurrencesTable extends Recurrences
   late final GeneratedColumn<String> lastGenerationError =
       GeneratedColumn<String>('last_generation_error', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isSubscriptionMeta =
+      const VerificationMeta('isSubscription');
+  @override
+  late final GeneratedColumn<bool> isSubscription = GeneratedColumn<bool>(
+      'is_subscription', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_subscription" IN (0, 1))'),
+      defaultValue: const Constant(false));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -4084,7 +4094,8 @@ class $RecurrencesTable extends Recurrences
         generatedUntil,
         updatedAt,
         deletedAt,
-        lastGenerationError
+        lastGenerationError,
+        isSubscription
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4187,6 +4198,12 @@ class $RecurrencesTable extends Recurrences
           lastGenerationError.isAcceptableOrUnknown(
               data['last_generation_error']!, _lastGenerationErrorMeta));
     }
+    if (data.containsKey('is_subscription')) {
+      context.handle(
+          _isSubscriptionMeta,
+          isSubscription.isAcceptableOrUnknown(
+              data['is_subscription']!, _isSubscriptionMeta));
+    }
     return context;
   }
 
@@ -4228,6 +4245,8 @@ class $RecurrencesTable extends Recurrences
           .read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
       lastGenerationError: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}last_generation_error']),
+      isSubscription: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_subscription'])!,
     );
   }
 
@@ -4259,6 +4278,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
   /// states table: "Recurring... Failed generation flagged in the row
   /// with the reason."
   final String? lastGenerationError;
+
+  /// Shown in the Langganan section of Berulang & tagihan.
+  final bool isSubscription;
   const Recurrence(
       {required this.id,
       required this.templateJson,
@@ -4275,7 +4297,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       required this.generatedUntil,
       required this.updatedAt,
       this.deletedAt,
-      this.lastGenerationError});
+      this.lastGenerationError,
+      required this.isSubscription});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4309,6 +4332,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
     if (!nullToAbsent || lastGenerationError != null) {
       map['last_generation_error'] = Variable<String>(lastGenerationError);
     }
+    map['is_subscription'] = Variable<bool>(isSubscription);
     return map;
   }
 
@@ -4343,6 +4367,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       lastGenerationError: lastGenerationError == null && nullToAbsent
           ? const Value.absent()
           : Value(lastGenerationError),
+      isSubscription: Value(isSubscription),
     );
   }
 
@@ -4367,6 +4392,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       deletedAt: serializer.fromJson<int?>(json['deletedAt']),
       lastGenerationError:
           serializer.fromJson<String?>(json['lastGenerationError']),
+      isSubscription: serializer.fromJson<bool>(json['isSubscription']),
     );
   }
   @override
@@ -4389,6 +4415,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       'updatedAt': serializer.toJson<int>(updatedAt),
       'deletedAt': serializer.toJson<int?>(deletedAt),
       'lastGenerationError': serializer.toJson<String?>(lastGenerationError),
+      'isSubscription': serializer.toJson<bool>(isSubscription),
     };
   }
 
@@ -4408,7 +4435,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           int? generatedUntil,
           int? updatedAt,
           Value<int?> deletedAt = const Value.absent(),
-          Value<String?> lastGenerationError = const Value.absent()}) =>
+          Value<String?> lastGenerationError = const Value.absent(),
+          bool? isSubscription}) =>
       Recurrence(
         id: id ?? this.id,
         templateJson: templateJson ?? this.templateJson,
@@ -4432,6 +4460,7 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
         lastGenerationError: lastGenerationError.present
             ? lastGenerationError.value
             : this.lastGenerationError,
+        isSubscription: isSubscription ?? this.isSubscription,
       );
   Recurrence copyWithCompanion(RecurrencesCompanion data) {
     return Recurrence(
@@ -4464,6 +4493,9 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       lastGenerationError: data.lastGenerationError.present
           ? data.lastGenerationError.value
           : this.lastGenerationError,
+      isSubscription: data.isSubscription.present
+          ? data.isSubscription.value
+          : this.isSubscription,
     );
   }
 
@@ -4485,7 +4517,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           ..write('generatedUntil: $generatedUntil, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
-          ..write('lastGenerationError: $lastGenerationError')
+          ..write('lastGenerationError: $lastGenerationError, ')
+          ..write('isSubscription: $isSubscription')
           ..write(')'))
         .toString();
   }
@@ -4507,7 +4540,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
       generatedUntil,
       updatedAt,
       deletedAt,
-      lastGenerationError);
+      lastGenerationError,
+      isSubscription);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4527,7 +4561,8 @@ class Recurrence extends DataClass implements Insertable<Recurrence> {
           other.generatedUntil == this.generatedUntil &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
-          other.lastGenerationError == this.lastGenerationError);
+          other.lastGenerationError == this.lastGenerationError &&
+          other.isSubscription == this.isSubscription);
 }
 
 class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
@@ -4547,6 +4582,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
   final Value<int> updatedAt;
   final Value<int?> deletedAt;
   final Value<String?> lastGenerationError;
+  final Value<bool> isSubscription;
   final Value<int> rowid;
   const RecurrencesCompanion({
     this.id = const Value.absent(),
@@ -4565,6 +4601,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.lastGenerationError = const Value.absent(),
+    this.isSubscription = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RecurrencesCompanion.insert({
@@ -4584,6 +4621,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     required int updatedAt,
     this.deletedAt = const Value.absent(),
     this.lastGenerationError = const Value.absent(),
+    this.isSubscription = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         templateJson = Value(templateJson),
@@ -4608,6 +4646,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
     Expression<String>? lastGenerationError,
+    Expression<bool>? isSubscription,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4628,6 +4667,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (lastGenerationError != null)
         'last_generation_error': lastGenerationError,
+      if (isSubscription != null) 'is_subscription': isSubscription,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4649,6 +4689,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       Value<int>? updatedAt,
       Value<int?>? deletedAt,
       Value<String?>? lastGenerationError,
+      Value<bool>? isSubscription,
       Value<int>? rowid}) {
     return RecurrencesCompanion(
       id: id ?? this.id,
@@ -4667,6 +4708,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       lastGenerationError: lastGenerationError ?? this.lastGenerationError,
+      isSubscription: isSubscription ?? this.isSubscription,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4723,6 +4765,9 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
       map['last_generation_error'] =
           Variable<String>(lastGenerationError.value);
     }
+    if (isSubscription.present) {
+      map['is_subscription'] = Variable<bool>(isSubscription.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4748,6 +4793,7 @@ class RecurrencesCompanion extends UpdateCompanion<Recurrence> {
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('lastGenerationError: $lastGenerationError, ')
+          ..write('isSubscription: $isSubscription, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5081,6 +5127,405 @@ class RecurrenceOverridesCompanion extends UpdateCompanion<RecurrenceOverride> {
   }
 }
 
+class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GoalsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _targetMinorMeta =
+      const VerificationMeta('targetMinor');
+  @override
+  late final GeneratedColumn<int> targetMinor = GeneratedColumn<int>(
+      'target_minor', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _accountIdMeta =
+      const VerificationMeta('accountId');
+  @override
+  late final GeneratedColumn<String> accountId = GeneratedColumn<String>(
+      'account_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('REFERENCES accounts (id)'));
+  static const VerificationMeta _notifiedMilestoneMeta =
+      const VerificationMeta('notifiedMilestone');
+  @override
+  late final GeneratedColumn<int> notifiedMilestone = GeneratedColumn<int>(
+      'notified_milestone', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        name,
+        targetMinor,
+        accountId,
+        notifiedMilestone,
+        updatedAt,
+        deletedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'goals';
+  @override
+  VerificationContext validateIntegrity(Insertable<Goal> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('target_minor')) {
+      context.handle(
+          _targetMinorMeta,
+          targetMinor.isAcceptableOrUnknown(
+              data['target_minor']!, _targetMinorMeta));
+    } else if (isInserting) {
+      context.missing(_targetMinorMeta);
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(_accountIdMeta,
+          accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta));
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('notified_milestone')) {
+      context.handle(
+          _notifiedMilestoneMeta,
+          notifiedMilestone.isAcceptableOrUnknown(
+              data['notified_milestone']!, _notifiedMilestoneMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Goal map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Goal(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      targetMinor: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}target_minor'])!,
+      accountId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}account_id'])!,
+      notifiedMilestone: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}notified_milestone'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!,
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}deleted_at']),
+    );
+  }
+
+  @override
+  $GoalsTable createAlias(String alias) {
+    return $GoalsTable(attachedDatabase, alias);
+  }
+}
+
+class Goal extends DataClass implements Insertable<Goal> {
+  final String id;
+  final String name;
+  final int targetMinor;
+  final String accountId;
+  final int notifiedMilestone;
+  final int updatedAt;
+  final int? deletedAt;
+  const Goal(
+      {required this.id,
+      required this.name,
+      required this.targetMinor,
+      required this.accountId,
+      required this.notifiedMilestone,
+      required this.updatedAt,
+      this.deletedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['target_minor'] = Variable<int>(targetMinor);
+    map['account_id'] = Variable<String>(accountId);
+    map['notified_milestone'] = Variable<int>(notifiedMilestone);
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  GoalsCompanion toCompanion(bool nullToAbsent) {
+    return GoalsCompanion(
+      id: Value(id),
+      name: Value(name),
+      targetMinor: Value(targetMinor),
+      accountId: Value(accountId),
+      notifiedMilestone: Value(notifiedMilestone),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory Goal.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Goal(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      targetMinor: serializer.fromJson<int>(json['targetMinor']),
+      accountId: serializer.fromJson<String>(json['accountId']),
+      notifiedMilestone: serializer.fromJson<int>(json['notifiedMilestone']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      deletedAt: serializer.fromJson<int?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'targetMinor': serializer.toJson<int>(targetMinor),
+      'accountId': serializer.toJson<String>(accountId),
+      'notifiedMilestone': serializer.toJson<int>(notifiedMilestone),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'deletedAt': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  Goal copyWith(
+          {String? id,
+          String? name,
+          int? targetMinor,
+          String? accountId,
+          int? notifiedMilestone,
+          int? updatedAt,
+          Value<int?> deletedAt = const Value.absent()}) =>
+      Goal(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        targetMinor: targetMinor ?? this.targetMinor,
+        accountId: accountId ?? this.accountId,
+        notifiedMilestone: notifiedMilestone ?? this.notifiedMilestone,
+        updatedAt: updatedAt ?? this.updatedAt,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+      );
+  Goal copyWithCompanion(GoalsCompanion data) {
+    return Goal(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      targetMinor:
+          data.targetMinor.present ? data.targetMinor.value : this.targetMinor,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      notifiedMilestone: data.notifiedMilestone.present
+          ? data.notifiedMilestone.value
+          : this.notifiedMilestone,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Goal(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('targetMinor: $targetMinor, ')
+          ..write('accountId: $accountId, ')
+          ..write('notifiedMilestone: $notifiedMilestone, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, targetMinor, accountId,
+      notifiedMilestone, updatedAt, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Goal &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.targetMinor == this.targetMinor &&
+          other.accountId == this.accountId &&
+          other.notifiedMilestone == this.notifiedMilestone &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class GoalsCompanion extends UpdateCompanion<Goal> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<int> targetMinor;
+  final Value<String> accountId;
+  final Value<int> notifiedMilestone;
+  final Value<int> updatedAt;
+  final Value<int?> deletedAt;
+  final Value<int> rowid;
+  const GoalsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.targetMinor = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.notifiedMilestone = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GoalsCompanion.insert({
+    required String id,
+    required String name,
+    required int targetMinor,
+    required String accountId,
+    this.notifiedMilestone = const Value.absent(),
+    required int updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        name = Value(name),
+        targetMinor = Value(targetMinor),
+        accountId = Value(accountId),
+        updatedAt = Value(updatedAt);
+  static Insertable<Goal> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<int>? targetMinor,
+    Expression<String>? accountId,
+    Expression<int>? notifiedMilestone,
+    Expression<int>? updatedAt,
+    Expression<int>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (targetMinor != null) 'target_minor': targetMinor,
+      if (accountId != null) 'account_id': accountId,
+      if (notifiedMilestone != null) 'notified_milestone': notifiedMilestone,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GoalsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? name,
+      Value<int>? targetMinor,
+      Value<String>? accountId,
+      Value<int>? notifiedMilestone,
+      Value<int>? updatedAt,
+      Value<int?>? deletedAt,
+      Value<int>? rowid}) {
+    return GoalsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      targetMinor: targetMinor ?? this.targetMinor,
+      accountId: accountId ?? this.accountId,
+      notifiedMilestone: notifiedMilestone ?? this.notifiedMilestone,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (targetMinor.present) {
+      map['target_minor'] = Variable<int>(targetMinor.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<String>(accountId.value);
+    }
+    if (notifiedMilestone.present) {
+      map['notified_milestone'] = Variable<int>(notifiedMilestone.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GoalsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('targetMinor: $targetMinor, ')
+          ..write('accountId: $accountId, ')
+          ..write('notifiedMilestone: $notifiedMilestone, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$WudgetDatabase extends GeneratedDatabase {
   _$WudgetDatabase(QueryExecutor e) : super(e);
   $WudgetDatabaseManager get managers => $WudgetDatabaseManager(this);
@@ -5097,6 +5542,7 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
   late final $RecurrencesTable recurrences = $RecurrencesTable(this);
   late final $RecurrenceOverridesTable recurrenceOverrides =
       $RecurrenceOverridesTable(this);
+  late final $GoalsTable goals = $GoalsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5112,7 +5558,8 @@ abstract class _$WudgetDatabase extends GeneratedDatabase {
         featureFlags,
         analyticsEvents,
         recurrences,
-        recurrenceOverrides
+        recurrenceOverrides,
+        goals
       ];
 }
 
@@ -5168,6 +5615,20 @@ final class $$AccountsTableReferences
         .filter((f) => f.accountId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_postingsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$GoalsTable, List<Goal>> _goalsRefsTable(
+          _$WudgetDatabase db) =>
+      MultiTypedResultKey.fromTable(db.goals,
+          aliasName: $_aliasNameGenerator(db.accounts.id, db.goals.accountId));
+
+  $$GoalsTableProcessedTableManager get goalsRefs {
+    final manager = $$GoalsTableTableManager($_db, $_db.goals)
+        .filter((f) => f.accountId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_goalsRefsTable($_db));
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
@@ -5241,6 +5702,27 @@ class $$AccountsTableFilterComposer
             $$PostingsTableFilterComposer(
               $db: $db,
               $table: $db.postings,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> goalsRefs(
+      Expression<bool> Function($$GoalsTableFilterComposer f) f) {
+    final $$GoalsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.goals,
+        getReferencedColumn: (t) => t.accountId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GoalsTableFilterComposer(
+              $db: $db,
+              $table: $db.goals,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -5382,6 +5864,27 @@ class $$AccountsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> goalsRefs<T extends Object>(
+      Expression<T> Function($$GoalsTableAnnotationComposer a) f) {
+    final $$GoalsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.goals,
+        getReferencedColumn: (t) => t.accountId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$GoalsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.goals,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$AccountsTableTableManager extends RootTableManager<
@@ -5395,7 +5898,7 @@ class $$AccountsTableTableManager extends RootTableManager<
     $$AccountsTableUpdateCompanionBuilder,
     (Account, $$AccountsTableReferences),
     Account,
-    PrefetchHooks Function({bool postingsRefs})> {
+    PrefetchHooks Function({bool postingsRefs, bool goalsRefs})> {
   $$AccountsTableTableManager(_$WudgetDatabase db, $AccountsTable table)
       : super(TableManagerState(
           db: db,
@@ -5482,10 +5985,13 @@ class $$AccountsTableTableManager extends RootTableManager<
               .map((e) =>
                   (e.readTable(table), $$AccountsTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: ({postingsRefs = false}) {
+          prefetchHooksCallback: ({postingsRefs = false, goalsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [if (postingsRefs) db.postings],
+              explicitlyWatchedTables: [
+                if (postingsRefs) db.postings,
+                if (goalsRefs) db.goals
+              ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
@@ -5497,6 +6003,17 @@ class $$AccountsTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$AccountsTableReferences(db, table, p0)
                                 .postingsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.accountId == item.id),
+                        typedResults: items),
+                  if (goalsRefs)
+                    await $_getPrefetchedData<Account, $AccountsTable, Goal>(
+                        currentTable: table,
+                        referencedTable:
+                            $$AccountsTableReferences._goalsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$AccountsTableReferences(db, table, p0).goalsRefs,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.accountId == item.id),
@@ -5519,7 +6036,7 @@ typedef $$AccountsTableProcessedTableManager = ProcessedTableManager<
     $$AccountsTableUpdateCompanionBuilder,
     (Account, $$AccountsTableReferences),
     Account,
-    PrefetchHooks Function({bool postingsRefs})>;
+    PrefetchHooks Function({bool postingsRefs, bool goalsRefs})>;
 typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
   required String id,
   Value<String?> parentId,
@@ -7656,6 +8173,7 @@ typedef $$RecurrencesTableCreateCompanionBuilder = RecurrencesCompanion
   required int updatedAt,
   Value<int?> deletedAt,
   Value<String?> lastGenerationError,
+  Value<bool> isSubscription,
   Value<int> rowid,
 });
 typedef $$RecurrencesTableUpdateCompanionBuilder = RecurrencesCompanion
@@ -7676,6 +8194,7 @@ typedef $$RecurrencesTableUpdateCompanionBuilder = RecurrencesCompanion
   Value<int> updatedAt,
   Value<int?> deletedAt,
   Value<String?> lastGenerationError,
+  Value<bool> isSubscription,
   Value<int> rowid,
 });
 
@@ -7738,6 +8257,10 @@ class $$RecurrencesTableFilterComposer
 
   ColumnFilters<String> get lastGenerationError => $composableBuilder(
       column: $table.lastGenerationError,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isSubscription => $composableBuilder(
+      column: $table.isSubscription,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -7802,6 +8325,10 @@ class $$RecurrencesTableOrderingComposer
   ColumnOrderings<String> get lastGenerationError => $composableBuilder(
       column: $table.lastGenerationError,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isSubscription => $composableBuilder(
+      column: $table.isSubscription,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$RecurrencesTableAnnotationComposer
@@ -7860,6 +8387,9 @@ class $$RecurrencesTableAnnotationComposer
 
   GeneratedColumn<String> get lastGenerationError => $composableBuilder(
       column: $table.lastGenerationError, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSubscription => $composableBuilder(
+      column: $table.isSubscription, builder: (column) => column);
 }
 
 class $$RecurrencesTableTableManager extends RootTableManager<
@@ -7904,6 +8434,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             Value<int> updatedAt = const Value.absent(),
             Value<int?> deletedAt = const Value.absent(),
             Value<String?> lastGenerationError = const Value.absent(),
+            Value<bool> isSubscription = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               RecurrencesCompanion(
@@ -7923,6 +8454,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
             deletedAt: deletedAt,
             lastGenerationError: lastGenerationError,
+            isSubscription: isSubscription,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -7942,6 +8474,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             required int updatedAt,
             Value<int?> deletedAt = const Value.absent(),
             Value<String?> lastGenerationError = const Value.absent(),
+            Value<bool> isSubscription = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               RecurrencesCompanion.insert(
@@ -7961,6 +8494,7 @@ class $$RecurrencesTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
             deletedAt: deletedAt,
             lastGenerationError: lastGenerationError,
+            isSubscription: isSubscription,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -8167,6 +8701,307 @@ typedef $$RecurrenceOverridesTableProcessedTableManager = ProcessedTableManager<
     ),
     RecurrenceOverride,
     PrefetchHooks Function()>;
+typedef $$GoalsTableCreateCompanionBuilder = GoalsCompanion Function({
+  required String id,
+  required String name,
+  required int targetMinor,
+  required String accountId,
+  Value<int> notifiedMilestone,
+  required int updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$GoalsTableUpdateCompanionBuilder = GoalsCompanion Function({
+  Value<String> id,
+  Value<String> name,
+  Value<int> targetMinor,
+  Value<String> accountId,
+  Value<int> notifiedMilestone,
+  Value<int> updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+
+final class $$GoalsTableReferences
+    extends BaseReferences<_$WudgetDatabase, $GoalsTable, Goal> {
+  $$GoalsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $AccountsTable _accountIdTable(_$WudgetDatabase db) => db.accounts
+      .createAlias($_aliasNameGenerator(db.goals.accountId, db.accounts.id));
+
+  $$AccountsTableProcessedTableManager get accountId {
+    final $_column = $_itemColumn<String>('account_id')!;
+
+    final manager = $$AccountsTableTableManager($_db, $_db.accounts)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$GoalsTableFilterComposer
+    extends Composer<_$WudgetDatabase, $GoalsTable> {
+  $$GoalsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get targetMinor => $composableBuilder(
+      column: $table.targetMinor, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get notifiedMilestone => $composableBuilder(
+      column: $table.notifiedMilestone,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  $$AccountsTableFilterComposer get accountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.accountId,
+        referencedTable: $db.accounts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AccountsTableFilterComposer(
+              $db: $db,
+              $table: $db.accounts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GoalsTableOrderingComposer
+    extends Composer<_$WudgetDatabase, $GoalsTable> {
+  $$GoalsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get targetMinor => $composableBuilder(
+      column: $table.targetMinor, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get notifiedMilestone => $composableBuilder(
+      column: $table.notifiedMilestone,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  $$AccountsTableOrderingComposer get accountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.accountId,
+        referencedTable: $db.accounts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AccountsTableOrderingComposer(
+              $db: $db,
+              $table: $db.accounts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GoalsTableAnnotationComposer
+    extends Composer<_$WudgetDatabase, $GoalsTable> {
+  $$GoalsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get targetMinor => $composableBuilder(
+      column: $table.targetMinor, builder: (column) => column);
+
+  GeneratedColumn<int> get notifiedMilestone => $composableBuilder(
+      column: $table.notifiedMilestone, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  $$AccountsTableAnnotationComposer get accountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.accountId,
+        referencedTable: $db.accounts,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$AccountsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.accounts,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$GoalsTableTableManager extends RootTableManager<
+    _$WudgetDatabase,
+    $GoalsTable,
+    Goal,
+    $$GoalsTableFilterComposer,
+    $$GoalsTableOrderingComposer,
+    $$GoalsTableAnnotationComposer,
+    $$GoalsTableCreateCompanionBuilder,
+    $$GoalsTableUpdateCompanionBuilder,
+    (Goal, $$GoalsTableReferences),
+    Goal,
+    PrefetchHooks Function({bool accountId})> {
+  $$GoalsTableTableManager(_$WudgetDatabase db, $GoalsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GoalsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GoalsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GoalsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<int> targetMinor = const Value.absent(),
+            Value<String> accountId = const Value.absent(),
+            Value<int> notifiedMilestone = const Value.absent(),
+            Value<int> updatedAt = const Value.absent(),
+            Value<int?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              GoalsCompanion(
+            id: id,
+            name: name,
+            targetMinor: targetMinor,
+            accountId: accountId,
+            notifiedMilestone: notifiedMilestone,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String name,
+            required int targetMinor,
+            required String accountId,
+            Value<int> notifiedMilestone = const Value.absent(),
+            required int updatedAt,
+            Value<int?> deletedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              GoalsCompanion.insert(
+            id: id,
+            name: name,
+            targetMinor: targetMinor,
+            accountId: accountId,
+            notifiedMilestone: notifiedMilestone,
+            updatedAt: updatedAt,
+            deletedAt: deletedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$GoalsTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({accountId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (accountId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.accountId,
+                    referencedTable: $$GoalsTableReferences._accountIdTable(db),
+                    referencedColumn:
+                        $$GoalsTableReferences._accountIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$GoalsTableProcessedTableManager = ProcessedTableManager<
+    _$WudgetDatabase,
+    $GoalsTable,
+    Goal,
+    $$GoalsTableFilterComposer,
+    $$GoalsTableOrderingComposer,
+    $$GoalsTableAnnotationComposer,
+    $$GoalsTableCreateCompanionBuilder,
+    $$GoalsTableUpdateCompanionBuilder,
+    (Goal, $$GoalsTableReferences),
+    Goal,
+    PrefetchHooks Function({bool accountId})>;
 
 class $WudgetDatabaseManager {
   final _$WudgetDatabase _db;
@@ -8193,4 +9028,6 @@ class $WudgetDatabaseManager {
       $$RecurrencesTableTableManager(_db, _db.recurrences);
   $$RecurrenceOverridesTableTableManager get recurrenceOverrides =>
       $$RecurrenceOverridesTableTableManager(_db, _db.recurrenceOverrides);
+  $$GoalsTableTableManager get goals =>
+      $$GoalsTableTableManager(_db, _db.goals);
 }

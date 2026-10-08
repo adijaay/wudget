@@ -18,7 +18,7 @@ object PaymentParser {
         "com.shopee.id" to "ShopeePay",
     )
 
-    // Promos and money coming in also carry "Rp" amounts; they are not spending.
+    // Promos, money coming in, and wallet transfers also carry "Rp" amounts; they are not spending.
     private val skip = Regex(
         "masuk|diterima|menerima|received|top ?up|isi saldo|cashback|refund|dikembalikan|" +
             "promo|diskon|voucher|hemat|gratis|potongan|otp|kode verifikasi|jatuh tempo",

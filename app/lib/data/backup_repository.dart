@@ -37,6 +37,13 @@ class BackupRepository {
     final categories = await _db.select(_db.categories).get();
     final transactions = await _db.select(_db.transactions).get();
     final postings = await _db.select(_db.postings).get();
+    final budgets = await _db.select(_db.budgets).get();
+    final recurrences = await _db.select(_db.recurrences).get();
+    final recurrenceOverrides = await _db.select(_db.recurrenceOverrides).get();
+    final appSettings = await _db.select(_db.appSettings).get();
+    final featureFlags = await _db.select(_db.featureFlags).get();
+    final goals = await _db.select(_db.goals).get();
+    final analyticsEvents = await _db.select(_db.analyticsEvents).get();
 
     return {
       'formatVersion': _formatVersion,
@@ -45,6 +52,15 @@ class BackupRepository {
       'categories': categories.map((c) => c.toJson()).toList(),
       'transactions': transactions.map((t) => t.toJson()).toList(),
       'postings': postings.map((p) => p.toJson()).toList(),
+      'budgets': budgets.map((b) => b.toJson()).toList(),
+      'recurrences': recurrences.map((r) => r.toJson()).toList(),
+      'recurrenceOverrides': recurrenceOverrides.map((o) => o.toJson()).toList(),
+      'appSettings': appSettings.map((s) => s.toJson()).toList(),
+      'featureFlags': featureFlags.map((f) => f.toJson()).toList(),
+      'goals': goals.map((g) => g.toJson()).toList(),
+      // Exported so a beta tester can send the event log back; restore
+      // ignores it, the log belongs to the device that wrote it.
+      'analyticsEvents': analyticsEvents.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -61,10 +77,16 @@ class BackupRepository {
   /// [previewImport] first and confirm with the user — this has no undo.
   Future<void> importJson(Map<String, dynamic> json) async {
     await _db.transaction(() async {
+      await _db.delete(_db.goals).go();
       await _db.delete(_db.postings).go();
       await _db.delete(_db.transactions).go();
       await _db.delete(_db.categories).go();
       await _db.delete(_db.accounts).go();
+      await _db.delete(_db.budgets).go();
+      await _db.delete(_db.recurrenceOverrides).go();
+      await _db.delete(_db.recurrences).go();
+      await _db.delete(_db.featureFlags).go();
+      await _db.delete(_db.appSettings).go();
 
       for (final row in json['accounts'] as List) {
         await _db.into(_db.accounts).insert(Account.fromJson(row as Map<String, dynamic>));
@@ -80,9 +102,39 @@ class BackupRepository {
       for (final row in json['postings'] as List) {
         await _db.into(_db.postings).insert(Posting.fromJson(row as Map<String, dynamic>));
       }
+      
+      if (json.containsKey('budgets')) {
+        for (final row in json['budgets'] as List) {
+          await _db.into(_db.budgets).insert(Budget.fromJson(row as Map<String, dynamic>));
+        }
+      }
+      // Older backups predate goals; absent means none, not an error.
+      if (json.containsKey('goals')) {
+        for (final row in json['goals'] as List) {
+          await _db.into(_db.goals).insert(Goal.fromJson(row as Map<String, dynamic>));
+        }
+      }
+      if (json.containsKey('recurrences')) {
+        for (final row in json['recurrences'] as List) {
+          await _db.into(_db.recurrences).insert(Recurrence.fromJson({'isSubscription': false, ...row as Map<String, dynamic>}));
+        }
+      }
+      if (json.containsKey('recurrenceOverrides')) {
+        for (final row in json['recurrenceOverrides'] as List) {
+          await _db.into(_db.recurrenceOverrides).insert(RecurrenceOverride.fromJson(row as Map<String, dynamic>));
+        }
+      }
+      if (json.containsKey('appSettings')) {
+        for (final row in json['appSettings'] as List) {
+          await _db.into(_db.appSettings).insert(AppSetting.fromJson(row as Map<String, dynamic>));
+        }
+      }
+      if (json.containsKey('featureFlags')) {
+        for (final row in json['featureFlags'] as List) {
+          await _db.into(_db.featureFlags).insert(FeatureFlag.fromJson(row as Map<String, dynamic>));
+        }
+      }
     });
-    // daily_totals is a derived cache, not part of the export — rebuild it
-    // from the restored transactions/postings instead.
     await DailyTotalsRepository(_db).recomputeAll();
   }
 

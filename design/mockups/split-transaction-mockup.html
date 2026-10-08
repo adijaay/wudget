@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Split Transaction Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --border: #E5E7EB;
+    --positive: #10B981;
+    --negative: #EF4444;
+    --warning: #F59E0B;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--surface);
+    padding-bottom: 80px;
+  }
+  
+  /* Header */
+  .capture-header {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 10;
+  }
+  
+  .header-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .close-button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    color: var(--ink-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  
+  .close-button:hover {
+    background: var(--surface-elevated);
+  }
+  
+  /* Amount Display */
+  .amount-display {
+    padding: 32px 20px;
+    text-align: center;
+    background: var(--surface-elevated);
+  }
+  
+  .amount-label {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    margin-bottom: 8px;
+  }
+  
+  .amount-value {
+    font-size: 48px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+  
+  .amount-currency {
+    font-size: 24px;
+    color: var(--ink-secondary);
+    margin-right: 8px;
+  }
+  
+  /* Split Sections */
+  .split-section {
+    padding: 20px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Split Item */
+  .split-item {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .split-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .split-category {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .split-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  
+  .split-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  
+  .split-remove {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--ink-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 18px;
+  }
+  
+  .split-remove:hover {
+    background: var(--border);
+  }
+  
+  .split-amount-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  
+  .split-amount-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .split-note {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-secondary);
+  }
+  
+  /* Add Split Button */
+  .add-split-button {
+    width: 100%;
+    padding: 14px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .add-split-button:hover {
+    background: var(--surface-elevated);
+    border-color: var(--accent);
+  }
+  
+  /* Remainder Display */
+  .remainder-section {
+    padding: 20px;
+    background: var(--surface-elevated);
+    border-top: 1px solid var(--border);
+  }
+  
+  .remainder-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .remainder-label {
+    font-size: 14px;
+    color: var(--ink-secondary);
+  }
+  
+  .remainder-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .remainder-value.positive {
+    color: var(--positive);
+  }
+  
+  .remainder-value.negative {
+    color: var(--negative);
+  }
+  
+  .remainder-value.zero {
+    color: var(--ink-primary);
+  }
+  
+  .remainder-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .remainder-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+  
+  .remainder-bar-fill.complete {
+    background: var(--positive);
+  }
+  
+  .remainder-bar-fill.over {
+    background: var(--negative);
+  }
+  
+  /* Save Button */
+  .save-button {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .save-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  .save-button:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+  }
+  
+  /* Category Picker Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    align-items: flex-end;
+  }
+  
+  .modal-overlay.active {
+    display: flex;
+  }
+  
+  .modal-content {
+    background: var(--surface);
+    width: 100%;
+    max-width: 390px;
+    margin: 0 auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  
+  .category-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  
+  .category-item:hover {
+    border-color: var(--accent);
+    background: rgba(37, 99, 235, 0.05);
+  }
+  
+  .category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  
+  .category-name {
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Header -->
+  <div class="capture-header">
+    <div class="header-title">Pecah pengeluaran</div>
+    <button class="close-button">×</button>
+  </div>
+  
+  <!-- Amount Display -->
+  <div class="amount-display">
+    <div class="amount-label">Total</div>
+    <div class="amount-value">
+      <span class="amount-currency">Rp</span>150.000
+    </div>
+  </div>
+  
+  <!-- Split Items -->
+  <div class="split-section">
+    <div class="section-title">Pecah ke kategori</div>
+    
+    <div class="split-item">
+      <div class="split-item-header">
+        <div class="split-category">
+          <div class="split-icon" style="background: #FEF3C7;">🍜</div>
+          <div class="split-name">Makanan</div>
+        </div>
+        <button class="split-remove">×</button>
+      </div>
+      <input type="text" class="split-amount-input" value="80.000" oninput="updateRemainder()">
+      <div class="split-note">Makan siang di warteg</div>
+    </div>
+    
+    <div class="split-item">
+      <div class="split-item-header">
+        <div class="split-category">
+          <div class="split-icon" style="background: #DBEAFE;">🚗</div>
+          <div class="split-name">Transport</div>
+        </div>
+        <button class="split-remove">×</button>
+      </div>
+      <input type="text" class="split-amount-input" value="50.000" oninput="updateRemainder()">
+      <div class="split-note">Grab ke kantor</div>
+    </div>
+    
+    <button class="add-split-button" onclick="openCategoryPicker()">
+      <span>+</span>
+      <span>Tambah kategori</span>
+    </button>
+  </div>
+  
+  <!-- Remainder Display -->
+  <div class="remainder-section">
+    <div class="remainder-display">
+      <div class="remainder-label">Sisa</div>
+      <div class="remainder-value zero" id="remainderValue">Rp 20.000</div>
+    </div>
+    <div class="remainder-bar">
+      <div class="remainder-bar-fill" id="remainderBar" style="width: 86.7%;"></div>
+    </div>
+  </div>
+  
+  <!-- Save Button -->
+  <button class="save-button" id="saveButton">Simpan</button>
+  
+</div>
+
+<!-- Category Picker Modal -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Pilih kategori</div>
+      <button class="close-button" onclick="closeCategoryPicker()">×</button>
+    </div>
+    
+    <div class="category-grid">
+      <div class="category-item" onclick="selectCategory('Belanja', '🛍️', '#FCE7F3')">
+        <div class="category-icon" style="background: #FCE7F3;">🛍️</div>
+        <div class="category-name">Belanja</div>
+      </div>
+      <div class="category-item" onclick="selectCategory('Minuman', '☕', '#D1FAE5')">
+        <div class="category-icon" style="background: #D1FAE5;">☕</div>
+        <div class="category-name">Minuman</div>
+      </div>
+      <div class="category-item" onclick="selectCategory('Pulsa', '📱', '#E0E7FF')">
+        <div class="category-icon" style="background: #E0E7FF;">📱</div>
+        <div class="category-name">Pulsa</div>
+      </div>
+      <div class="category-item" onclick="selectCategory('Kesehatan', '💊', '#FEE2E2')">
+        <div class="category-icon" style="background: #FEE2E2;">💊</div>
+        <div class="category-name">Kesehatan</div>
+      </div>
+      <div class="category-item" onclick="selectCategory('Hiburan', '🎬', '#F3E8FF')">
+        <div class="category-icon" style="background: #F3E8FF;">🎬</div>
+        <div class="category-name">Hiburan</div>
+      </div>
+      <div class="category-item" onclick="selectCategory('Lainnya', '📦', '#F1F5F9')">
+        <div class="category-icon" style="background: #F1F5F9;">📦</div>
+        <div class="category-name">Lainnya</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const totalAmount = 150000;
+  let splitAmounts = [80000, 50000];
+  
+  function updateRemainder() {
+    const inputs = document.querySelectorAll('.split-amount-input');
+    let allocated = 0;
+    
+    inputs.forEach(input => {
+      const value = parseInt(input.value.replace(/\./g, '')) || 0;
+      allocated += value;
+    });
+    
+    const remainder = totalAmount - allocated;
+    const remainderEl = document.getElementById('remainderValue');
+    const barEl = document.getElementById('remainderBar');
+    const percentage = (allocated / totalAmount) * 100;
+    
+    remainderEl.textContent = `Rp ${Math.abs(remainder).toLocaleString('id-ID')}`;
+    barEl.style.width = `${Math.min(percentage, 100)}%`;
+    
+    if (remainder === 0) {
+      remainderEl.className = 'remainder-value zero';
+      remainderEl.textContent = 'Rp 0';
+      barEl.className = 'remainder-bar-fill complete';
+    } else if (remainder > 0) {
+      remainderEl.className = 'remainder-value positive';
+      barEl.className = 'remainder-bar-fill';
+    } else {
+      remainderEl.className = 'remainder-value negative';
+      remainderEl.textContent = `-Rp ${Math.abs(remainder).toLocaleString('id-ID')}`;
+      barEl.className = 'remainder-bar-fill over';
+    }
+    
+    // Disable save button if not balanced
+    document.getElementById('saveButton').disabled = remainder !== 0;
+  }
+  
+  function openCategoryPicker() {
+    document.getElementById('categoryModal').classList.add('active');
+  }
+  
+  function closeCategoryPicker() {
+    document.getElementById('categoryModal').classList.remove('active');
+  }
+  
+  function selectCategory(name, icon, color) {
+    closeCategoryPicker();
+    // In real implementation, this would add a new split item
+    alert(`Added ${name} category`);
+  }
+  
+  // Initialize
+  updateRemainder();
+</script>
+</body>
+</html>

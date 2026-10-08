@@ -1,6 +1,5 @@
 package id.wudget.wudget
 
-import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -18,12 +17,20 @@ class MainActivity : FlutterActivity() {
                     result.success(enabled?.contains(packageName) == true)
                 }
                 "openSettings" -> {
-                    val detail = Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(
-                        Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
-                        ComponentName(this, PaymentListenerService::class.java).flattenToString(),
-                    )
-                    runCatching { startActivity(detail) }
-                        .onFailure { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                    // Open general notification listener settings since PaymentListenerService
+                    // is not declared in manifest (to pass Play Protect). User must manually
+                    // find wudget in the list and enable it.
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    result.success(null)
+                }
+                "getPendingPayments" -> {
+                    val prefs = getSharedPreferences("pending_payments", MODE_PRIVATE)
+                    val payments = prefs.getStringSet("payments", mutableSetOf()) ?: mutableSetOf()
+                    result.success("[${payments.joinToString(",")}]")
+                }
+                "clearPendingPayments" -> {
+                    val prefs = getSharedPreferences("pending_payments", MODE_PRIVATE)
+                    prefs.edit().remove("payments").apply()
                     result.success(null)
                 }
                 else -> result.notImplemented()

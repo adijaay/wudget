@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Goals Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --border: #E5E7EB;
+    --positive: #10B981;
+    --warning: #F59E0B;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  
+  .section {
+    margin-bottom: 32px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  /* Goal Card */
+  .goal-card {
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  
+  .goal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  
+  .goal-amount {
+    font-size: 14px;
+    color: var(--ink-secondary);
+  }
+  
+  .goal-progress {
+    margin-bottom: 16px;
+  }
+  
+  .progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+  
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--ink-secondary);
+  }
+  
+  .milestone-chips {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .milestone-chip {
+    flex: 1;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .milestone-chip.achieved {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  
+  /* Surplus Sweep */
+  .surplus-card {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .surplus-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .surplus-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  .surplus-amount {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .surplus-desc {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-bottom: 16px;
+  }
+  
+  .surplus-button {
+    width: 100%;
+    padding: 12px;
+    background: white;
+    color: var(--positive);
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  /* Goal Creation */
+  .create-goal-form {
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  
+  .form-field {
+    margin-bottom: 16px;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .form-select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+  }
+  
+  .primary-button {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  
+  .primary-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  /* Milestone Notification */
+  .milestone-notification {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+    align-items: center;
+    gap: 12px;
+    z-index: 1000;
+  }
+  
+  .milestone-notification.show {
+    display: flex;
+    animation: slideDown 0.3s ease;
+  }
+  
+  @keyframes slideDown {
+    from {
+      transform: translateX(-50%) translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .milestone-icon {
+    font-size: 24px;
+  }
+  
+  .milestone-text {
+    font-size: 14px;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Milestone Notification -->
+  <div class="milestone-notification" id="milestoneNotif">
+    <div class="milestone-icon">🎉</div>
+    <div class="milestone-text">Milestone tercapai: 50% Dana Darurat!</div>
+  </div>
+  
+  <!-- Section 1: Active Goals -->
+  <div class="section">
+    <div class="section-title">Target aktif</div>
+    
+    <div class="goal-card">
+      <div class="goal-header">
+        <div>
+          <div class="goal-title">Dana Darurat</div>
+          <div class="goal-amount">Rp 5.000.000 / Rp 10.000.000</div>
+        </div>
+      </div>
+      <div class="goal-progress">
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: 50%"></div>
+        </div>
+        <div class="progress-text">
+          <span>50% tercapai</span>
+          <span>6 bulan lagi</span>
+        </div>
+      </div>
+      <div class="milestone-chips">
+        <div class="milestone-chip achieved">25%</div>
+        <div class="milestone-chip achieved">50%</div>
+        <div class="milestone-chip">75%</div>
+        <div class="milestone-chip">100%</div>
+      </div>
+    </div>
+    
+    <div class="goal-card">
+      <div class="goal-header">
+        <div>
+          <div class="goal-title">Liburan Bali</div>
+          <div class="goal-amount">Rp 3.200.000 / Rp 8.000.000</div>
+        </div>
+      </div>
+      <div class="goal-progress">
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" style="width: 40%"></div>
+        </div>
+        <div class="progress-text">
+          <span>40% tercapai</span>
+          <span>4 bulan lagi</span>
+        </div>
+      </div>
+      <div class="milestone-chips">
+        <div class="milestone-chip achieved">25%</div>
+        <div class="milestone-chip">50%</div>
+        <div class="milestone-chip">75%</div>
+        <div class="milestone-chip">100%</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Section 2: Surplus Sweep -->
+  <div class="section">
+    <div class="section-title">Periode ini</div>
+    
+    <div class="surplus-card">
+      <div class="surplus-header">
+        <div class="surplus-title">Sisa anggaran</div>
+      </div>
+      <div class="surplus-amount">Rp 850.000</div>
+      <div class="surplus-desc">Kamu spend lebih hemat dari biasanya. Mau simpan ke target?</div>
+      <button class="surplus-button" onclick="showMilestone()">Sweep ke Dana Darurat</button>
+    </div>
+  </div>
+  
+  <!-- Section 3: Create Goal -->
+  <div class="section">
+    <div class="section-title">Buat target baru</div>
+    
+    <div class="create-goal-form">
+      <div class="form-field">
+        <label class="form-label">Nama target</label>
+        <input type="text" class="form-input" placeholder="contoh: Beli laptop baru">
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label">Jumlah target</label>
+        <input type="text" class="form-input" placeholder="Rp 15.000.000">
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label">Kantong tujuan</label>
+        <select class="form-select">
+          <option>Tabungan</option>
+          <option>BCA</option>
+          <option>GoPay</option>
+        </select>
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label">Target tercapai dalam</label>
+        <select class="form-select">
+          <option>3 bulan</option>
+          <option>6 bulan</option>
+          <option>12 bulan</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      
+      <button class="primary-button">Buat target</button>
+    </div>
+  </div>
+  
+</div>
+
+<script>
+  function showMilestone() {
+    const notif = document.getElementById('milestoneNotif');
+    notif.classList.add('show');
+    
+    setTimeout(() => {
+      notif.classList.remove('show');
+    }, 3000);
+  }
+</script>
+</body>
+</html>

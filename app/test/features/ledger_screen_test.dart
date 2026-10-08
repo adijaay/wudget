@@ -108,6 +108,10 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('7'), findsOneWidget); // a numpad digit key
     expect(find.textContaining('15.000'), findsWidgets);
+    
+    // Note field is collapsed by default, expand it first
+    await tester.tap(find.text('Tambah catatan'));
+    await tester.pumpAndSettle();
     expect(find.text('sarapan'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());

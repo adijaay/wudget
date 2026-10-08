@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'analytics_repository.dart';
 import 'database.dart';
 
 /// The pace-first vs. remaining-first Pantau framing, per plan/05-sprints.md
@@ -24,6 +27,18 @@ class FeatureFlagsRepository {
     return row?.value ?? defaultValue;
   }
 
+  /// Gives this install a framing once, at random, and logs which one, so a
+  /// beta build splits its users between the two. Returns the variant.
+  Future<bool> assignPaceFirstVariant([Random? random]) async {
+    final row = await (_db.select(_db.featureFlags)..where((f) => f.key.equals(paceFirstFlagKey))).getSingleOrNull();
+    if (row != null) return row.value;
+    final paceFirst = (random ?? Random()).nextBool();
+    await setBool(paceFirstFlagKey, paceFirst);
+    await AnalyticsRepository(_db)
+        .logEvent('variant_assigned', props: {'variant': paceFirst ? 'pace_first' : 'remaining_first'});
+    return paceFirst;
+  }
+
   Future<void> setBool(String key, bool value) {
     return _db.into(_db.featureFlags).insertOnConflictUpdate(
           FeatureFlagsCompanion.insert(key: key, value: value),
@@ -36,3 +51,7 @@ class FeatureFlagsRepository {
 const eveningReminderKey = 'reminder_evening';
 const paydayReminderKey = 'reminder_payday';
 const weeklyRecapReminderKey = 'reminder_weekly_recap';
+
+/// Set once the first-run tour has been seen or skipped. Absent (and so
+/// false) on a new install, which is what makes the tour show.
+const onboardingCompletedKey = 'onboarding_completed';

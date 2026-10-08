@@ -66,4 +66,27 @@ void main() {
     expect(result.importedCount, 1);
     expect((await db.select(db.categories).get()).single.name, 'Lainnya');
   });
+
+  test('a CSV row with two account columns and no category imports as a balanced transfer', () async {
+    final parsed = parseImportRows(
+      headers: ['Date', 'Amount', 'Category', 'From', 'To'],
+      dataRows: [
+        ['2026-10-01', '500000', '', 'BCA', 'Tunai'],
+        ['2026-10-01', '-20000', 'Makan', 'Tunai', ''],
+      ],
+      mapping: const ColumnMapping(
+        dateColumn: 'Date', amountColumn: 'Amount', categoryColumn: 'Category',
+        accountColumn: 'From', toAccountColumn: 'To',
+      ),
+    );
+    expect([for (final r in parsed.rows) r.kind], ['transfer', 'expense']);
+
+    final result = await repo.importRows(parsed.rows, currency: 'IDR');
+    expect(result.importedCount, 2);
+    final tx = await (db.select(db.transactions)..where((t) => t.kind.equals('transfer'))).getSingle();
+    final legs = await (db.select(db.postings)..where((p) => p.transactionId.equals(tx.id))).get();
+    final names = {for (final a in await db.select(db.accounts).get()) a.id: a.name};
+    expect({for (final l in legs) names[l.accountId]: l.amountMinor}, {'BCA': -500000, 'Tunai': 500000});
+    expect(legs.every((l) => l.categoryId == null), isTrue);
+  });
 }

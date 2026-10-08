@@ -11,7 +11,10 @@ import 'package:path_provider/path_provider.dart';
 import 'core/providers.dart';
 import 'data/analytics_repository.dart';
 import 'data/database.dart';
+import 'data/feature_flags_repository.dart';
+import 'data/goals_repository.dart';
 import 'data/notification_scheduler.dart';
+import 'data/payment_auto_save_repository.dart';
 import 'data/recurrence_repository.dart';
 import 'data/reminder_orchestrator.dart';
 import 'design/tokens.dart';
@@ -20,6 +23,7 @@ import 'features/comeback/comeback_screen.dart';
 import 'domain/default_categories.dart';
 import 'features/capture/capture_sheet.dart';
 import 'features/ledger/ledger_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/pantau/pantau_screen.dart';
 import 'features/settings/backup_screen.dart';
 import 'features/settings/saya_screen.dart';
@@ -72,6 +76,11 @@ Future<void> main() async {
     return;
   }
 
+  await FeatureFlagsRepository(db).assignPaceFirstVariant();
+
+  // Process any auto-saved payments from the notification listener
+  await PaymentAutoSaveRepository(db).processPendingPayments();
+
   runApp(
     ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
@@ -100,13 +109,33 @@ Future<void> main() async {
   db
       .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.featureFlags, db.appSettings]))
       .listen((_) => retention = retention.catchError((_) {}).then((_) => scheduleRetentionReminders(db, notificationScheduler)));
+  // A milestone is announced once, whichever write moved the wallet.
+  final goals = GoalsRepository(db);
+  var milestones = goals.announceMilestones(notificationScheduler.showNow);
+  db
+      .tableUpdates(TableUpdateQuery.onAllTables([db.postings, db.goals]))
+      .listen((_) => milestones = milestones.catchError((_) {}).then((_) => goals.announceMilestones(notificationScheduler.showNow)));
 }
 
-/// Cold launch: the comeback screen after a gap, else the capture sheet.
+/// Cold launch: the first-run tour if it has never been seen, else the
+/// comeback screen after a gap, else the capture sheet.
 Future<void> showLaunchSurface(WudgetDatabase db) async {
   final context = navigatorKey.currentContext;
   if (context != null && context.mounted) {
-    // A failed check just means no welcome screen this time.
+    final toured = await FeatureFlagsRepository(db)
+        .getBool(onboardingCompletedKey, defaultValue: false)
+        .catchError((_) => false);
+    if (!toured) {
+          // The tour is a new install's launch surface. The capture sheet used to
+          // open here instead, which asked someone to record an expense before
+          // anything had explained what recording means. Not awaited, so launch
+          // work (materialisation, reminders) still runs behind the tour.
+          unawaited(Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const OnboardingScreen())));
+          return;
+        }
+
+        // A failed check just means no welcome screen this time.
     final comeback = await loadComeback(db, todayDayBucket()).catchError((_) => null);
     if (comeback != null && context.mounted) {
       unawaited(AnalyticsRepository(db).logEvent('comeback_shown', props: {'lastEntryDay': comeback.lastEntryDay}));

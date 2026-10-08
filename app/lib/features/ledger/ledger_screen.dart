@@ -103,7 +103,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     // notification catches that.
     final db = ref.read(databaseProvider);
     _txChangesSubscription = db
-        .tableUpdates(TableUpdateQuery.onAllTables([db.transactions, db.budgets, db.appSettings]))
+        .tableUpdates(TableUpdateQuery.onAllTables(
+            [db.transactions, db.budgets, db.appSettings]))
         .listen((_) => _loadFirstPage());
   }
 
@@ -117,9 +118,20 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
 
   void _onScroll() {
     if (!_hasMore || _loading) return;
-    if (_scrollController.position.pixels > _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >
+        _scrollController.position.maxScrollExtent - 200) {
       _loadNextPage();
     }
+  }
+
+  /// The manual fallback for the one case the table listener cannot cover: a
+  /// change it missed. Logged because whether anyone ever needs it is the
+  /// only way to judge if the automatic path is actually reliable.
+  Future<void> _refresh() {
+    ref
+        .read(analyticsRepositoryProvider)
+        .logEvent('pull_to_refresh', props: {'screen': 'catat'});
+    return _loadFirstPage();
   }
 
   Future<void> _loadFirstPage() async {
@@ -145,12 +157,15 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     final today = todayDayBucket();
     // The effective period, read fresh: a just-saved "Atur sekarang" must
     // move the jatah and the strip without waiting on a provider stream.
-    final period = await ref.read(settingsRepositoryProvider).effectivePeriodFor(today);
+    final period =
+        await ref.read(settingsRepositoryProvider).effectivePeriodFor(today);
     final queries = ref.read(periodAggregateQueriesProvider);
     bool stale() => !mounted || generation != _loadGeneration;
 
-    final chips = await ref.read(captureQueriesProvider).quickChips(DateTime.now());
-    final payday = (await AsyncValue.guard(() => loadPaydayCard(ref, today))).valueOrNull;
+    final chips =
+        await ref.read(captureQueriesProvider).quickChips(DateTime.now());
+    final payday =
+        (await AsyncValue.guard(() => loadPaydayCard(ref, today))).valueOrNull;
     if (stale()) return;
     setState(() {
       _today = today;
@@ -165,9 +180,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       // First run has no history to propose kantong from, so the review puts
       // everything in Tabungan; until kantong exist, that is the spendable money.
       final budgets = kantong.values.any((v) => v > 0) ? kantong : all;
-      final budgetTotal = budgets.values.fold<int>(0, (sum, amount) => sum + amount);
+      final budgetTotal =
+          budgets.values.fold<int>(0, (sum, amount) => sum + amount);
       final totals = await queries.totalsFor(period);
-      final todaySpend = await queries.dailyExpenseMinorInRange(today, today + 1);
+      final todaySpend =
+          await queries.dailyExpenseMinorInRange(today, today + 1);
       return TodayHeaderData(
         todayDay: today,
         todaySpendMinor: todaySpend[today] ?? 0,
@@ -202,33 +219,52 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     final ranks = ref.read(categoryRankQueriesProvider);
     final analytics = ref.read(analyticsRepositoryProvider);
 
-    List<({String key, String name, int amountMinor, int hueIndex})> rows(List<CategoryRank> r) => [
-          for (final c in r) (key: c.key, name: c.name, amountMinor: c.amountMinor, hueIndex: c.hueIndex)
+    List<({String key, String name, int amountMinor, int hueIndex})> rows(
+            List<CategoryRank> r) =>
+        [
+          for (final c in r)
+            (
+              key: c.key,
+              name: c.name,
+              amountMinor: c.amountMinor,
+              hueIndex: c.hueIndex
+            )
         ];
     final thisWeek = await ranks.rankedSpend(today - 6, today + 1);
     final lastWeek = await ranks.rankedSpend(today - 13, today - 6);
     final patternStart = today - 55;
     final last = period.previous;
     final lastTotals = await queries.totalsFor(last);
-    final lastRanks = await ranks.rankedSpend(last.startDay, last.endDayExclusive);
+    final lastRanks =
+        await ranks.rankedSpend(last.startDay, last.endDayExclusive);
 
     final candidates = insightCandidates(
-      weekDeltas: lastWeek.isEmpty ? const [] : buildCategoryDeltas(current: rows(thisWeek), previous: rows(lastWeek)),
+      weekDeltas: lastWeek.isEmpty
+          ? const []
+          : buildCategoryDeltas(
+              current: rows(thisWeek), previous: rows(lastWeek)),
       pattern: computeWeekdayPattern(
-        dailyExpenseMinor: await queries.dailyExpenseMinorInRange(patternStart, today + 1),
+        dailyExpenseMinor:
+            await queries.dailyExpenseMinorInRange(patternStart, today + 1),
         sinceDayInclusive: patternStart,
         untilDayExclusive: today + 1,
       ),
       lastPeriodFlow: buildFlowBreakdown(
         incomeMinor: lastTotals.incomeMinor,
         expenseMinor: lastTotals.expenseMinor,
-        ranks: [for (final r in lastRanks) (name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)],
+        ranks: [
+          for (final r in lastRanks)
+            (name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+        ],
       ),
     );
     final recent = await analytics.recentInsights();
-    final picked = pickDailyInsight(candidates: candidates, recent: recent, today: today);
-    if (picked != null && !recent.any((r) => r.day == today && r.key == picked.key)) {
-      await analytics.logEvent('insight_shown', props: {'day': today, 'key': picked.key});
+    final picked =
+        pickDailyInsight(candidates: candidates, recent: recent, today: today);
+    if (picked != null &&
+        !recent.any((r) => r.day == today && r.key == picked.key)) {
+      await analytics
+          .logEvent('insight_shown', props: {'day': today, 'key': picked.key});
     }
     return picked;
   }
@@ -241,12 +277,14 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         .page(limit: _pageSize, offset: _entries.length, filter: _filter);
 
     final days = {
-      for (final e in page) dayBucketFor(e.occurredAtUtcMillis, e.tzOffsetMinutes),
+      for (final e in page)
+        dayBucketFor(e.occurredAtUtcMillis, e.tzOffsetMinutes),
     };
     final db = ref.read(databaseProvider);
     for (final day in days.difference(_dayTotals.keys.toSet())) {
-      final row =
-          await (db.select(db.dailyTotals)..where((t) => t.day.equals(day))).getSingleOrNull();
+      final row = await (db.select(db.dailyTotals)
+            ..where((t) => t.day.equals(day)))
+          .getSingleOrNull();
       _dayTotals[day] = row?.netMinor ?? 0;
     }
 
@@ -259,15 +297,18 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   }
 
   Future<void> _deleteEntry(LedgerEntry entry) async {
-    await ref.read(postingsRepositoryProvider).deleteTransaction(entry.transactionId);
+    await ref
+        .read(postingsRepositoryProvider)
+        .deleteTransaction(entry.transactionId);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Transaksi dihapus'),
         action: SnackBarAction(
           label: 'Batalkan',
-          onPressed: () =>
-              ref.read(postingsRepositoryProvider).restoreTransaction(entry.transactionId),
+          onPressed: () => ref
+              .read(postingsRepositoryProvider)
+              .restoreTransaction(entry.transactionId),
         ),
       ),
     );
@@ -278,9 +319,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   /// wallet, date, photo, all of it — rather than a one-field dialog that
   /// could only ever touch the note. See CaptureSheet.editingTransactionId.
   void _editEntry(LedgerEntry entry) {
-    final occurredAt =
-        DateTime.fromMillisecondsSinceEpoch(entry.occurredAtUtcMillis, isUtc: true)
-            .add(Duration(minutes: entry.tzOffsetMinutes));
+    final occurredAt = DateTime.fromMillisecondsSinceEpoch(
+            entry.occurredAtUtcMillis,
+            isUtc: true)
+        .add(Duration(minutes: entry.tzOffsetMinutes));
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -292,7 +334,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         },
         initialAmountMinor: entry.amountMinor.abs(),
         initialCategoryId: entry.categoryParentId ?? entry.categoryId,
-        initialSubcategoryId: entry.categoryParentId == null ? null : entry.categoryId,
+        initialSubcategoryId:
+            entry.categoryParentId == null ? null : entry.categoryId,
         initialAccountId: entry.accountId,
         initialToAccountId: entry.toAccountId,
         initialNote: entry.note,
@@ -359,33 +402,37 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                 },
               ),
             ),
-          if (_hasActiveFilter) _ActiveFilterChips(
-            categoryName: _categoryName,
-            accountName: _accountName,
-            noteQuery: _noteQuery,
-            hasAmountFilter: _minAmountMinor != null || _maxAmountMinor != null,
-            onClearCategory: () => setState(() {
-              _categoryId = null;
-              _categoryName = null;
-              _loadFirstPage();
-            }),
-            onClearAccount: () => setState(() {
-              _accountId = null;
-              _accountName = null;
-              _loadFirstPage();
-            }),
-            onClearNote: () => setState(() {
-              _noteQuery = '';
-              _searchController.clear();
-              _loadFirstPage();
-            }),
-            onClearAmount: () => setState(() {
-              _minAmountMinor = null;
-              _maxAmountMinor = null;
-              _loadFirstPage();
-            }),
+          if (_hasActiveFilter)
+            _ActiveFilterChips(
+              categoryName: _categoryName,
+              accountName: _accountName,
+              noteQuery: _noteQuery,
+              hasAmountFilter:
+                  _minAmountMinor != null || _maxAmountMinor != null,
+              onClearCategory: () => setState(() {
+                _categoryId = null;
+                _categoryName = null;
+                _loadFirstPage();
+              }),
+              onClearAccount: () => setState(() {
+                _accountId = null;
+                _accountName = null;
+                _loadFirstPage();
+              }),
+              onClearNote: () => setState(() {
+                _noteQuery = '';
+                _searchController.clear();
+                _loadFirstPage();
+              }),
+              onClearAmount: () => setState(() {
+                _minAmountMinor = null;
+                _maxAmountMinor = null;
+                _loadFirstPage();
+              }),
+            ),
+          Expanded(
+            child: RefreshIndicator(onRefresh: _refresh, child: _body()),
           ),
-          Expanded(child: _body()),
         ],
       ),
     );
@@ -399,7 +446,10 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_payday != null && _entries.isNotEmpty) ...[
-            PaydayCard(data: _payday!, todayDay: _today, onChanged: () => _loadTodayHeader(_loadGeneration)),
+            PaydayCard(
+                data: _payday!,
+                todayDay: _today,
+                onChanged: () => _loadTodayHeader(_loadGeneration)),
             const SizedBox(height: WudgetTokens.space3),
           ],
           TodayHeader(
@@ -411,8 +461,11 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             onOpenKantong: widget.onOpenKantong == null
                 ? null
                 : () {
-                    ref.read(analyticsRepositoryProvider).logEvent('home_open_kantong',
-                        props: {'budgetSet': _jatah.valueOrNull?.allowance != null});
+                    ref
+                        .read(analyticsRepositoryProvider)
+                        .logEvent('home_open_kantong', props: {
+                      'budgetSet': _jatah.valueOrNull?.allowance != null
+                    });
                     widget.onOpenKantong!();
                   },
             onSetNow: () => startSetNow(context, ref),
@@ -458,7 +511,9 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
               }),
             )
           : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
               children: [_homeHeader()],
             );
     }
@@ -467,12 +522,16 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     // rows underneath rather than floating above a continuous list.
     final groups = <int, List<LedgerEntry>>{};
     for (final e in _entries) {
-      groups.putIfAbsent(dayBucketFor(e.occurredAtUtcMillis, e.tzOffsetMinutes), () => []).add(e);
+      groups
+          .putIfAbsent(
+              dayBucketFor(e.occurredAtUtcMillis, e.tzOffsetMinutes), () => [])
+          .add(e);
     }
     final days = groups.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return ListView.builder(
       controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         WudgetTokens.space4,
         0,
@@ -535,7 +594,8 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
       isScrollControlled: true,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + WudgetTokens.space4,
+          bottom:
+              MediaQuery.of(context).viewInsets.bottom + WudgetTokens.space4,
           left: WudgetTokens.space4,
           right: WudgetTokens.space4,
           top: WudgetTokens.space4,
@@ -556,13 +616,17 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Kategori'),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('Semua kategori')),
-                      for (final c in categories) DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      const DropdownMenuItem(
+                          value: null, child: Text('Semua kategori')),
+                      for (final c in categories)
+                        DropdownMenuItem(value: c.id, child: Text(c.name)),
                     ],
                     onChanged: (id) {
                       category = id;
-                      categoryName =
-                          categories.where((c) => c.id == id).map((c) => c.name).firstOrNull;
+                      categoryName = categories
+                          .where((c) => c.id == id)
+                          .map((c) => c.name)
+                          .firstOrNull;
                     },
                   );
                 },
@@ -577,12 +641,17 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Kantong'),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('Semua kantong')),
-                      for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                      const DropdownMenuItem(
+                          value: null, child: Text('Semua kantong')),
+                      for (final a in accounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
                     ],
                     onChanged: (id) {
                       account = id;
-                      accountName = accounts.where((a) => a.id == id).map((a) => a.name).firstOrNull;
+                      accountName = accounts
+                          .where((a) => a.id == id)
+                          .map((a) => a.name)
+                          .firstOrNull;
                     },
                   );
                 },
@@ -592,16 +661,22 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
                 children: [
                   Expanded(
                     child: TextField(
-                      decoration: const InputDecoration(labelText: 'Minimal (Rp)'),
+                      decoration:
+                          const InputDecoration(labelText: 'Minimal (Rp)'),
                       keyboardType: TextInputType.number,
+                      controller: TextEditingController(
+                          text: minAmount?.toString() ?? ''),
                       onChanged: (v) => minAmount = int.tryParse(v),
                     ),
                   ),
                   const SizedBox(width: WudgetTokens.space3),
                   Expanded(
                     child: TextField(
-                      decoration: const InputDecoration(labelText: 'Maksimal (Rp)'),
+                      decoration:
+                          const InputDecoration(labelText: 'Maksimal (Rp)'),
                       keyboardType: TextInputType.number,
+                      controller: TextEditingController(
+                          text: maxAmount?.toString() ?? ''),
                       onChanged: (v) => maxAmount = int.tryParse(v),
                     ),
                   ),
@@ -638,13 +713,17 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateTime.fromMillisecondsSinceEpoch(day * 86400000, isUtc: true);
+    final date =
+        DateTime.fromMillisecondsSinceEpoch(day * 86400000, isUtc: true);
     final today = DateTime.now();
-    final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+    final isToday = date.year == today.year &&
+        date.month == today.month &&
+        date.day == today.day;
     // The year only appears once the date is not in this one: printing it on
     // every header is noise while scrolling this month, and dropping it
     // entirely makes a row from a previous year unreadable.
-    final pattern = date.year == today.year ? 'EEEE, d MMM' : 'EEEE, d MMM yyyy';
+    final pattern =
+        date.year == today.year ? 'EEEE, d MMM' : 'EEEE, d MMM yyyy';
     final label = isToday
         ? 'Hari ini, ${DateFormat('d MMM', 'id_ID').format(date)}'
         : DateFormat(pattern, 'id_ID').format(date);
@@ -663,14 +742,18 @@ class _DayHeader extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontSize: 13),
             ),
           ),
           AmountText(
             minor: netMinor,
             sign: MoneySign.explicit,
             colorBySign: true,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
+            style:
+                Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
           ),
         ],
       ),
@@ -679,7 +762,8 @@ class _DayHeader extends StatelessWidget {
 }
 
 class _EntryRow extends StatelessWidget {
-  const _EntryRow({required this.entry, required this.onDelete, required this.onEdit});
+  const _EntryRow(
+      {required this.entry, required this.onDelete, required this.onEdit});
   final LedgerEntry entry;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
@@ -688,7 +772,8 @@ class _EntryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     final time = DateFormat('HH:mm').format(
-      DateTime.fromMillisecondsSinceEpoch(entry.occurredAtUtcMillis, isUtc: true)
+      DateTime.fromMillisecondsSinceEpoch(entry.occurredAtUtcMillis,
+              isUtc: true)
           .add(Duration(minutes: entry.tzOffsetMinutes)),
     );
     final hue = entry.categoryHueIndex;
@@ -784,7 +869,8 @@ class _ActiveFilterChips extends StatelessWidget {
           if (noteQuery.isNotEmpty)
             InputChip(label: Text('"$noteQuery"'), onDeleted: onClearNote),
           if (hasAmountFilter)
-            InputChip(label: const Text('rentang nominal'), onDeleted: onClearAmount),
+            InputChip(
+                label: const Text('rentang nominal'), onDeleted: onClearAmount),
         ],
       ),
     );
@@ -803,6 +889,7 @@ class _FilteredEmpty extends StatelessWidget {
     final tokens = Theme.of(context).extension<WudgetTokens>()!;
     final text = Theme.of(context).textTheme;
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         WudgetTokens.space4,
         0,
@@ -816,7 +903,8 @@ class _FilteredEmpty extends StatelessWidget {
             children: [
               Icon(Icons.filter_list_off, size: 26, color: tokens.ink2),
               const SizedBox(height: WudgetTokens.space3),
-              Text('Tidak ada transaksi untuk $description.', style: text.titleLarge),
+              Text('Tidak ada transaksi untuk $description.',
+                  style: text.titleLarge),
               const SizedBox(height: WudgetTokens.space2),
               Text(
                 'Filternya menyaring semua catatan yang ada. Lepas satu filter '
@@ -824,7 +912,9 @@ class _FilteredEmpty extends StatelessWidget {
                 style: text.bodyMedium,
               ),
               const SizedBox(height: WudgetTokens.space4),
-              FilledButton(onPressed: onClearAll, child: const Text('Hapus semua filter')),
+              FilledButton(
+                  onPressed: onClearAll,
+                  child: const Text('Hapus semua filter')),
             ],
           ),
         ),
@@ -852,7 +942,8 @@ class _QuickChips extends StatelessWidget {
           // Sentence case like the other home labels; SectionLabel shouts (R-06).
           Padding(
             padding: const EdgeInsets.only(bottom: WudgetTokens.space2),
-            child: Text('Sering kamu catat jam segini', style: Theme.of(context).textTheme.labelMedium),
+            child: Text('Sering kamu catat jam segini',
+                style: Theme.of(context).textTheme.labelMedium),
           ),
           Wrap(
             spacing: WudgetTokens.space2,
@@ -860,16 +951,21 @@ class _QuickChips extends StatelessWidget {
             children: [
               for (final chip in chips)
                 ActionChip(
-                  key: Key('quickChip_${chip.note}_${chip.categoryId}_${chip.amountMinor}'),
+                  key: Key(
+                      'quickChip_${chip.note}_${chip.categoryId}_${chip.amountMinor}'),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(WudgetTokens.radiusChip),
+                    borderRadius:
+                        BorderRadius.circular(WudgetTokens.radiusChip),
                     side: BorderSide(color: tokens.border),
                   ),
-                  avatar: CircleAvatar(radius: 5, backgroundColor: tokens.hueFor(chip.hueIndex)),
+                  avatar: CircleAvatar(
+                      radius: 5, backgroundColor: tokens.hueFor(chip.hueIndex)),
                   label: Text.rich(TextSpan(children: [
                     TextSpan(text: '${chip.note} '),
                     TextSpan(
-                      text: _formatter.format(Money.fromMinor(chip.amountMinor, 'IDR'), showSymbol: false),
+                      text: _formatter.format(
+                          Money.fromMinor(chip.amountMinor, 'IDR'),
+                          showSymbol: false),
                       style: TextStyle(color: tokens.ink2),
                     ),
                   ])),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -84,6 +85,35 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
     await _load();
   }
 
+  void _editRecurring(BuildContext context, Recurrence row) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _EditRecurringSheet(recurrence: row),
+    ).then((_) => _load());
+  }
+
+  Future<void> _deleteRecurring(BuildContext context, Recurrence row) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus item berulang?'),
+        content: const Text('Item yang sudah dibuat tidak akan terpengaruh.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    
+    final db = ref.read(databaseProvider);
+    final now = DateTime.now().toUtc().millisecondsSinceEpoch;
+    await (db.update(db.recurrences)..where((r) => r.id.equals(row.id)))
+        .write(RecurrencesCompanion(deletedAt: Value(now)));
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final upcoming = _upcoming;
@@ -93,6 +123,7 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
     }
 
     final today = _todayDayBucket();
+    final subscriptions = [for (final r in active) if (r.isSubscription) r];
 
     return Scaffold(
       appBar: AppBar(
@@ -128,6 +159,25 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
                   ),
               ],
             ),
+          if (subscriptions.isNotEmpty) ...[
+            const SizedBox(height: WudgetTokens.space5),
+            const SectionLabel('Langganan'),
+            CardGroup(
+              children: [
+                for (final row in subscriptions)
+                  _ActiveTile(
+                    row: row,
+                    today: today,
+                    onEdit: () => _editRecurring(context, row),
+                    onDelete: () => _deleteRecurring(context, row),
+                  ),
+                CardRow(
+                  title: 'Total per bulan',
+                  trailing: AmountText(minor: subscriptionMonthlyMinor(subscriptions)),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: WudgetTokens.space5),
           const SectionLabel('Aktif'),
           if (active.isEmpty)
@@ -150,7 +200,15 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
             )
           else
             CardGroup(
-              children: [for (final row in active) _ActiveTile(row: row, today: today)],
+              children: [
+                for (final row in active)
+                  _ActiveTile(
+                    row: row,
+                    today: today,
+                    onEdit: () => _editRecurring(context, row),
+                    onDelete: () => _deleteRecurring(context, row),
+                  ),
+              ],
             ),
         ],
       ),
@@ -172,6 +230,7 @@ class _CreateRecurringSheetState extends ConsumerState<_CreateRecurringSheet> {
   String? _categoryId;
   String? _accountId;
   WeekendRule _weekendRule = WeekendRule.none;
+  bool _isSubscription = false;
 
   @override
   void dispose() {
@@ -205,6 +264,7 @@ class _CreateRecurringSheetState extends ConsumerState<_CreateRecurringSheet> {
         note: _noteController.text.isEmpty ? null : _noteController.text,
       ),
       rule: rule,
+      isSubscription: _isSubscription,
     );
 
     if (!mounted) return;
@@ -278,6 +338,174 @@ class _CreateRecurringSheetState extends ConsumerState<_CreateRecurringSheet> {
               ],
               onChanged: (v) => setState(() => _weekendRule = v ?? WeekendRule.none),
             ),
+            const SizedBox(height: WudgetTokens.space3),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Langganan'),
+              subtitle: const Text('Masuk daftar langganan, mis. Netflix atau Spotify'),
+              value: _isSubscription,
+              onChanged: (v) => setState(() => _isSubscription = v),
+            ),
+            const SizedBox(height: WudgetTokens.space4),
+            FilledButton(onPressed: _save, child: const Text('Simpan')),
+            const SizedBox(height: WudgetTokens.space4),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditRecurringSheet extends ConsumerStatefulWidget {
+  const _EditRecurringSheet({required this.recurrence});
+  final Recurrence recurrence;
+
+  @override
+  ConsumerState<_EditRecurringSheet> createState() => _EditRecurringSheetState();
+}
+
+class _EditRecurringSheetState extends ConsumerState<_EditRecurringSheet> {
+  late final TextEditingController _noteController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _dayController;
+  String? _categoryId;
+  String? _accountId;
+  WeekendRule _weekendRule = WeekendRule.none;
+  bool _isSubscription = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final template = RecurrenceTemplate.fromJson(
+      jsonDecode(widget.recurrence.templateJson) as Map<String, Object?>,
+    );
+    _noteController = TextEditingController(text: template.note ?? '');
+    _amountController = TextEditingController(
+      text: (template.fixedAmountMinor ?? 0).toString(),
+    );
+    _dayController = TextEditingController(
+      text: (widget.recurrence.byMonthDay ?? 1).toString(),
+    );
+    _categoryId = template.categoryId;
+    _accountId = template.accountId;
+    _weekendRule = WeekendRule.values.byName(widget.recurrence.weekendRule);
+    _isSubscription = widget.recurrence.isSubscription;
+  }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    _amountController.dispose();
+    _dayController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final amountMinor = int.tryParse(_amountController.text);
+    final dayOfMonth = int.tryParse(_dayController.text);
+    if (amountMinor == null || amountMinor <= 0 || dayOfMonth == null || _categoryId == null || _accountId == null) {
+      return;
+    }
+
+    final db = ref.read(databaseProvider);
+    final template = RecurrenceTemplate(
+      kind: 'expense',
+      accountId: _accountId,
+      categoryId: _categoryId,
+      currency: 'IDR',
+      fixedAmountMinor: amountMinor,
+      note: _noteController.text.isEmpty ? null : _noteController.text,
+    );
+
+    await (db.update(db.recurrences)..where((r) => r.id.equals(widget.recurrence.id))).write(
+      RecurrencesCompanion(
+        templateJson: Value(jsonEncode(template.toJson())),
+        byMonthDay: Value(dayOfMonth),
+        weekendRule: Value(_weekendRule.name),
+        isSubscription: Value(_isSubscription),
+        updatedAt: Value(DateTime.now().toUtc().millisecondsSinceEpoch),
+      ),
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final db = ref.watch(databaseProvider);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: WudgetTokens.space4,
+        right: WudgetTokens.space4,
+        top: WudgetTokens.space4,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Edit item berulang', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(controller: _noteController, decoration: const InputDecoration(labelText: 'Nama (mis. Listrik)')),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Jumlah (Rp)'),
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            TextField(
+              controller: _dayController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Tanggal tiap bulan (1-31)'),
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            StreamBuilder<List<Category>>(
+              stream: db.select(db.categories).watch(),
+              builder: (context, snapshot) {
+                final categories = snapshot.data ?? const [];
+                return DropdownButtonFormField<String?>(
+                  value: _categoryId,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [for (final c in categories) DropdownMenuItem(value: c.id, child: Text(c.name))],
+                  onChanged: (id) => setState(() => _categoryId = id),
+                );
+              },
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            StreamBuilder<List<Account>>(
+              stream: db.select(db.accounts).watch(),
+              builder: (context, snapshot) {
+                final accounts = snapshot.data ?? const [];
+                return DropdownButtonFormField<String?>(
+                  value: _accountId,
+                  decoration: const InputDecoration(labelText: 'Dompet'),
+                  items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))],
+                  onChanged: (id) => setState(() => _accountId = id),
+                );
+              },
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            DropdownButtonFormField<WeekendRule>(
+              value: _weekendRule,
+              decoration: const InputDecoration(labelText: 'Jika jatuh di akhir pekan'),
+              items: const [
+                DropdownMenuItem(value: WeekendRule.none, child: Text('Tetap di tanggal itu')),
+                DropdownMenuItem(value: WeekendRule.before, child: Text('Majukan ke Jumat')),
+                DropdownMenuItem(value: WeekendRule.after, child: Text('Undurkan ke Senin')),
+              ],
+              onChanged: (v) => setState(() => _weekendRule = v ?? WeekendRule.none),
+            ),
+            const SizedBox(height: WudgetTokens.space3),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Langganan'),
+              subtitle: const Text('Masuk daftar langganan, mis. Netflix atau Spotify'),
+              value: _isSubscription,
+              onChanged: (v) => setState(() => _isSubscription = v),
+            ),
             const SizedBox(height: WudgetTokens.space4),
             FilledButton(onPressed: _save, child: const Text('Simpan')),
             const SizedBox(height: WudgetTokens.space4),
@@ -335,9 +563,11 @@ class _UpcomingTile extends StatelessWidget {
 }
 
 class _ActiveTile extends StatelessWidget {
-  const _ActiveTile({required this.row, required this.today});
+  const _ActiveTile({required this.row, required this.today, required this.onEdit, required this.onDelete});
   final Recurrence row;
   final int today;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -372,11 +602,26 @@ class _ActiveTile extends StatelessWidget {
       subtitle: error != null
           ? 'Gagal membuat: $error'
           : 'Berikutnya ${_dateFormat.format(_dateForDay(nextDue))}',
-      trailing: Text(
-        amountLabel,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            amountLabel,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 20),
+            tooltip: 'Edit',
+            onPressed: onEdit,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 20),
+            tooltip: 'Hapus',
+            onPressed: onDelete,
+          ),
+        ],
       ),
     );
   }

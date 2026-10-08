@@ -244,3 +244,112 @@ whichever device syncs last.
 failure: the local ledger stays authoritative and usable, with a visible, non-blocking
 indicator of when it last synced. `[04]` A stale ledger presented as current is the failure
 mode that destroyed trust in the bank-synced benchmarks.
+
+---
+
+## 11. QRIS and payment capture
+
+The principle: an automatic guess earns its place only when it is visible and one tap from
+being corrected. `[06, item 4]` An invisible wrong guess costs trust in every total. A QRIS
+payment is made in a wallet or bank app, so this is a capture flow and not a payment flow:
+wudget never holds the money and never sees the payment succeed.
+
+This is a design, not built code. The notification parsing it would lean on exists in the
+repo, in `app/android/app/src/main/kotlin/id/wudget/wudget/PaymentParser.kt` and
+`PaymentListenerService.kt`, with `app/lib/data/payment_auto_save_repository.dart`, but there
+is no scan, no suggestion surface and no confirm step wired to any screen. The whole flow sits
+behind the same unresolved question as the notification-capture policy spike: whether a
+distributed Android app may hold a notification listener for this at all. `[01]`, `[06]`
+
+**wudget does not scan the QRIS code.** A merchant-presented QRIS is either static, the same
+code on the counter every time with no amount in it, or dynamic, with the amount embedded and
+generated per transaction. The dynamic code is scanned by the paying app in the user's hand,
+so the amount lands inside GoPay or the bank app and wudget cannot see it. The static code
+carries no amount, so decoding it recovers at most a merchant identity that the notification
+already supplies. The amount and the merchant are therefore read from the payment notification
+the wallet or bank app posts, which is text already on the device with no server involved.
+Camera scanning and screenshot reading are both out of this design, because each adds a
+permission and a decode step to recover fields the notification already gives, and neither
+confirms that the payment succeeded.
+
+1. A payment happens in a shop. The user scans the merchant's QRIS with GoPay, Livin' by
+   Mandiri, Jago, ShopeePay or a bank app and pays. wudget is not in this loop.
+2. The paying app posts a notification, and often the receiving bank posts one too. If the
+   notification listener is running and the package is one of the known labels, the parser
+   reads an amount (an `Rp` or `IDR` figure with separators stripped), a loose merchant string
+   after `ke`, `di`, `kepada`, `to` or `at`, and the app label. Anything matching the skip list
+   is dropped: money in, top-ups, cashback, promos, and OTP or verification codes are not
+   spending.
+3. wudget holds the parse as a suggestion, not as a transaction. The suggestion appears as a
+   row in Catat marked unconfirmed and, when the user has allowed it, as a wudget notification.
+   Nothing reaches the ledger until the user acts, which is the contract the parser states:
+   the owner confirms every suggestion before anything is saved.
+4. The suggestion shows what was guessed and where each field came from. Amount and merchant
+   come from the notification. The wallet is mapped from the app label to a wallet with that
+   provider where one exists. The category is the guess, and a notification carries a merchant
+   name, not a category.
+5. Accept is one tap and writes the expense, with the same undo affordance as any other save
+   and no dialog. Correct is one tap that opens the capture sheet already filled through the
+   `CaptureLaunch` prefill, where the wrong field is changed and the sheet saved.
+6. An unacted suggestion expires and is never written. A phantom ledger row the user did not
+   accept is worse than no automation at all. `[06, item 4]`
+
+**Taps, counted from the steps above.** Accept-the-guess is one tap. Correct-one-field is
+three: open the suggestion, change the field, save, and if the field is the amount, one tap
+per digit typed. No notification, which is the case for cash and for any app outside the known
+labels, is the plain sheet: a category tap, the amount digits, and save, unchanged.
+
+The manual baseline is the same three taps plus the amount digits that `capture_sheet.dart`
+builds. `[07]` Against that baseline, honestly:
+
+- A correct guess saves two taps and every amount digit. This is the whole prize, and it only
+  exists when the category guess is right.
+- A wrong guess saves the amount digits only, and adds a suggestion to the screen that a plain
+  manual capture did not have.
+- No notification saves nothing at all.
+
+So the automation buys the amount and the merchant, never the category. The category stays a
+real decision, because knowing a merchant is not knowing what the purchase was: a Tokopedia
+notification could be Belanja, Transport or anything else. The shipped code guesses the first
+expense category and the first wallet, which is arbitrary rather than useful. Making the guess
+good means learning a merchant-to-category and merchant-to-wallet map from the user's own
+history, and that is a design item, not a built one. The capture sheet already ranks categories
+by hour and remembers the last wallet used per category, so the machinery exists, it is just
+not wired to the parser.
+
+**Wrong guess.** The guess is never saved invisibly. Accepting is a deliberate tap, and an
+accepted auto-guess keeps a marker on its ledger row naming the app it came from. Tapping that
+row offers correct and delete, and the delete is the same undoable soft delete the ledger
+already uses. `[04]`
+
+**Two notifications for one payment.** One payment often posts twice, from the paying app and
+from the receiving bank. `PaymentListenerService` drops a second parse with the same amount
+inside a three-minute window, which covers that shape. Two limits are open: a genuine second
+payment of the same amount within three minutes is merged and lost, and a pair of notifications
+for one payment that report different amounts both survive and produce two entries. The guard
+compares amounts only, never the merchant or the app, so it cannot tell those cases apart.
+
+**States.** Empty: no pending suggestion renders nothing, not an empty inbox. Loading: none,
+all of it is on-device. Unconfirmed suggestion: a distinct row treatment plus the parsed app
+label, so the user can see this came from a wallet app and not from their own typing. Error
+parsing: an unparseable notification is silently ignored rather than shown as a broken
+suggestion. `[07]`
+
+**Would it be built.** The re-entry condition is the one already recorded: the
+notification-listener policy question answered, and manual capture measurably the reason users
+churn. `[01]`, `[03]`, `[06]` If the policy answer is no, the alternative is the SNAP open API
+and the aggregators that implement it, which carry cost, compliance and the breakage the
+benchmark reviews describe. `[04]`, `[05, section 15]`
+
+**Open questions inside this design.**
+
+- The static-versus-dynamic QRIS split is stated here from the shape of merchant-presented
+  QRIS rather than from a specification read in this repo, so it should be checked against Bank
+  Indonesia's QRIS merchant-presented specification before it is treated as settled.
+- `payment_auto_save_repository.dart` inserts a transaction for every parsed payment with no
+  confirmation, which is what `PaymentParser.kt` and `PaymentListenerService.kt` say does not
+  happen. The design in this section follows the Kotlin comments; the repository contradicts
+  them and is an implementation gap to close, not a behaviour to trust.
+- Whether notification listening covers QRIS spend reliably on the devices this audience uses,
+  and whether the two-notification dedup holds across apps whose wording changes without
+  notice, are both unverified from the outside. `[06]`

@@ -112,7 +112,34 @@ Database _buildV4Fixture() {
   return db;
 }
 
+/// A v12 recurrences table, before is_subscription existed.
+Database _buildV12RecurrencesFixture() {
+  final db = sqlite3.openInMemory();
+  db.execute('''
+    CREATE TABLE recurrences (
+      id TEXT NOT NULL PRIMARY KEY, template_json TEXT NOT NULL, freq TEXT NOT NULL,
+      interval_n INTEGER NOT NULL DEFAULT 1, by_month_day INTEGER, by_weekday INTEGER,
+      weekend_rule TEXT NOT NULL DEFAULT 'none', amount_mode TEXT NOT NULL DEFAULT 'fixed',
+      expected_min_minor INTEGER, expected_max_minor INTEGER, starts_on INTEGER NOT NULL,
+      ends_on INTEGER, generated_until INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+      deleted_at INTEGER, last_generation_error TEXT
+    );
+    INSERT INTO recurrences (id, template_json, freq, starts_on, generated_until, updated_at)
+      VALUES ('r1', '{}', 'monthly', 1, 0, 0);
+  ''');
+  db.userVersion = 12;
+  return db;
+}
+
 void main() {
+  test('opening a v12 fixture adds is_subscription, false for existing rules', () async {
+    final wudget = WudgetDatabase(NativeDatabase.opened(_buildV12RecurrencesFixture()));
+    addTearDown(wudget.close);
+    final row = await wudget.select(wudget.recurrences).getSingle();
+    expect(row.id, 'r1');
+    expect(row.isSubscription, isFalse);
+  });
+
   test('opening a v1 fixture upgrades to v2 and preserves every row', () async {
     final rawDb = _buildV1Fixture();
     final wudget = WudgetDatabase(NativeDatabase.opened(rawDb));
@@ -144,6 +171,7 @@ void main() {
     expect(settings.customPeriodStart, isNull);
     expect(settings.lastSalaryMinor, isNull);
     expect(settings.budgetSnapshotsJson, isNull);
+    expect(await wudget.select(wudget.goals).get(), isEmpty); // v12 table created
   });
 
   test('R3.1: an existing user without a settings row keeps start day 1', () async {

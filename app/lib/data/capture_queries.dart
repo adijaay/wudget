@@ -62,10 +62,13 @@ class CaptureQueries {
   }
 
   Future<List<_Entry>> _recent(String kind, DateTime now) async {
-    final since = now.toUtc().millisecondsSinceEpoch - _lookbackDays * _millisPerDay;
+    final since =
+        now.toUtc().millisecondsSinceEpoch - _lookbackDays * _millisPerDay;
     final rows = await (_db.select(_db.postings).join([
-      innerJoin(_db.transactions, _db.transactions.id.equalsExp(_db.postings.transactionId)),
-      innerJoin(_db.categories, _db.categories.id.equalsExp(_db.postings.categoryId)),
+      innerJoin(_db.transactions,
+          _db.transactions.id.equalsExp(_db.postings.transactionId)),
+      innerJoin(
+          _db.categories, _db.categories.id.equalsExp(_db.postings.categoryId)),
     ])
           ..where(_db.transactions.kind.equals(kind) &
               isActualTransaction(_db.transactions) &
@@ -99,7 +102,8 @@ class CaptureQueries {
     for (final e in entries) {
       score[e.topKey] = (score[e.topKey] ?? 0) + _weight(e.hour, now);
     }
-    return (score.keys.toList()..sort((a, b) => score[b]!.compareTo(score[a]!)));
+    return (score.keys.toList()
+      ..sort((a, b) => score[b]!.compareTo(score[a]!)));
   }
 
   /// Past expenses with a note, grouped by note, category and amount, ranked
@@ -115,10 +119,14 @@ class CaptureQueries {
       score[key] = (score[key] ?? 0) + _weight(e.hour, now);
       chips[key] = e;
     }
-    final keys = score.keys.toList()..sort((a, b) => score[b]!.compareTo(score[a]!));
+    final keys = score.keys.toList()
+      ..sort((a, b) => score[b]!.compareTo(score[a]!));
     final topIds = {for (final k in keys.take(limit)) chips[k]!.topKey};
     final tops = {
-      for (final c in await (_db.select(_db.categories)..where((c) => c.id.isIn(topIds))).get()) c.id: c,
+      for (final c in await (_db.select(_db.categories)
+            ..where((c) => c.id.isIn(topIds)))
+          .get())
+        c.id: c,
     };
     return [
       for (final k in keys.take(limit))
@@ -127,7 +135,8 @@ class CaptureQueries {
           categoryId: chips[k]!.category.id,
           topCategoryId: chips[k]!.topKey,
           categoryName: chips[k]!.category.name,
-          hueIndex: tops[chips[k]!.topKey]?.hueIndex ?? chips[k]!.category.hueIndex,
+          hueIndex:
+              tops[chips[k]!.topKey]?.hueIndex ?? chips[k]!.category.hueIndex,
           amountMinor: chips[k]!.amountMinor,
         ),
     ];
@@ -144,13 +153,50 @@ class CaptureQueries {
     return row.id;
   }
 
+  /// The wallet the last entry in [categoryId] came out of, or null when
+  /// that category has no history. Read from the postings rather than stored
+  /// as a preference, so it can never disagree with what is actually
+  /// recorded. A subcategory inherits its parent's last wallet, because the
+  /// parent is where most entries land.
+  Future<String?> lastAccountIdForCategory(String categoryId) async {
+    final parent = await (_db.select(_db.categories)
+          ..where((c) => c.id.equals(categoryId)))
+        .getSingleOrNull();
+    final keys = {categoryId, if (parent?.parentId != null) parent!.parentId!};
+
+    final accountLeg = _db.alias(_db.postings, 'last_acct');
+    final categoryLeg = _db.alias(_db.postings, 'last_cat');
+    final rows = await (_db.select(_db.transactions).join([
+      innerJoin(
+          accountLeg,
+          accountLeg.transactionId.equalsExp(_db.transactions.id) &
+              accountLeg.accountId.isNotNull()),
+      innerJoin(
+          categoryLeg,
+          categoryLeg.transactionId.equalsExp(_db.transactions.id) &
+              categoryLeg.categoryId.isNotNull()),
+    ])
+          ..where(_db.transactions.kind.equals('expense') &
+              isActualTransaction(_db.transactions) &
+              categoryLeg.categoryId.isIn(keys))
+          ..orderBy([OrderingTerm.desc(_db.transactions.occurredAt)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.readTable(accountLeg).accountId;
+  }
+
   /// The kantong's budget minus this period's spend in it, or null when the
   /// category has no budget.
   Future<int?> kantongRemaining(String topCategoryId, Period period) async {
-    final budget = await (_db.select(_db.budgets)..where((b) => b.key.equals(topCategoryId))).getSingleOrNull();
+    final budget = await (_db.select(_db.budgets)
+          ..where((b) => b.key.equals(topCategoryId)))
+        .getSingleOrNull();
     if (budget == null) return null;
-    final ranks = await CategoryRankQueries(_db).rankedSpend(period.startDay, period.endDayExclusive);
-    final spent = ranks.where((r) => r.key == topCategoryId).firstOrNull?.amountMinor ?? 0;
+    final ranks = await CategoryRankQueries(_db)
+        .rankedSpend(period.startDay, period.endDayExclusive);
+    final spent =
+        ranks.where((r) => r.key == topCategoryId).firstOrNull?.amountMinor ??
+            0;
     return budget.amountMinor - spent;
   }
 }

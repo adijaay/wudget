@@ -13,6 +13,7 @@ import '../../data/category_rank_queries.dart';
 import '../../data/feature_flags_repository.dart';
 import '../../data/period_aggregate_queries.dart';
 import '../../design/components.dart';
+import '../../design/pantau_skeleton.dart';
 import '../../design/tokens.dart';
 import '../../domain/flow.dart';
 import '../../domain/pace.dart';
@@ -111,36 +112,45 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     if (lastAck != null && beforeClosing.startDay > lastAck) {
       await showModalBottomSheet(
         context: context,
-        builder: (_) => LapsedReturnSheet(onClose: () => Navigator.of(context).pop()),
+        builder: (_) =>
+            LapsedReturnSheet(onClose: () => Navigator.of(context).pop()),
       );
       await settings.setLastAcknowledgedPeriodClose(closing.startDay);
       return;
     }
 
     final totals = await periodQueries.totalsFor(closing);
-    final closingRanks = await rankQueries.rankedSpend(closing.startDay, closing.endDayExclusive);
-    final previousRanks =
-        await rankQueries.rankedSpend(beforeClosing.startDay, beforeClosing.endDayExclusive);
+    final closingRanks = await rankQueries.rankedSpend(
+        closing.startDay, closing.endDayExclusive);
+    final previousRanks = await rankQueries.rankedSpend(
+        beforeClosing.startDay, beforeClosing.endDayExclusive);
 
     final summary = buildPeriodCloseSummary(
       incomeMinor: totals.incomeMinor,
       expenseMinor: totals.expenseMinor,
       closingRanks: [
-        for (final r in closingRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)
+        for (final r in closingRanks)
+          (key: r.key, name: r.name, amountMinor: r.amountMinor)
       ],
       previousRanks: [
-        for (final r in previousRanks) (key: r.key, name: r.name, amountMinor: r.amountMinor)
+        for (final r in previousRanks)
+          (key: r.key, name: r.name, amountMinor: r.amountMinor)
       ],
     );
-    if (summary == null) return; // no data for the closing period — skip the ritual entirely
+    if (summary == null)
+      return; // no data for the closing period — skip the ritual entirely
 
-    final plan = await ref.read(budgetsRepositoryProvider).planFor(closing.startDay);
+    final plan =
+        await ref.read(budgetsRepositoryProvider).planFor(closing.startDay);
     final history = ref.read(budgetHistoryQueriesProvider);
     final recap = buildPeriodRecap(
       summary: summary,
       planByKey: plan,
-      spentByKey: await history.categorySpendByKey(closing.startDay, closing.endDayExclusive),
-      nameByKey: {for (final key in plan.keys) key: await history.displayNameFor(key)},
+      spentByKey: await history.categorySpendByKey(
+          closing.startDay, closing.endDayExclusive),
+      nameByKey: {
+        for (final key in plan.keys) key: await history.displayNameFor(key)
+      },
     );
 
     if (!mounted) return;
@@ -150,14 +160,14 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       builder: (_) => PeriodCloseSheet(
         summary: summary,
         recap: recap,
-        rangeLabel: '${_dayMonth.format(closing.startDate)} sampai ${_dayMonth.format(closing.lastDate)}',
+        rangeLabel:
+            '${_dayMonth.format(closing.startDate)} sampai ${_dayMonth.format(closing.lastDate)}',
         periodLabel: periodCloseLabel(closing.startDate),
         onClose: () => Navigator.of(context).pop(),
       ),
     );
     await settings.setLastAcknowledgedPeriodClose(closing.startDay);
   }
-
 
   /// Pola and Aliran cost four extra period-bounded reads, so they load on
   /// first open of their segment rather than with the screen.
@@ -182,8 +192,11 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
 
     final weekdayStart = firstDay == null
         ? today
-        : (today - _weekdayWindowDays + 1 < firstDay ? firstDay : today - _weekdayWindowDays + 1);
-    final weekdayExpense = await queries.dailyExpenseMinorInRange(weekdayStart, today + 1);
+        : (today - _weekdayWindowDays + 1 < firstDay
+            ? firstDay
+            : today - _weekdayWindowDays + 1);
+    final weekdayExpense =
+        await queries.dailyExpenseMinorInRange(weekdayStart, today + 1);
     final largest = await queries.largestExpenses(period, limit: 3);
 
     // A period that starts before the user's first transaction would show
@@ -229,9 +242,8 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     // The previous period is only read when there is a closed period to
     // compare it against, so the common case pays for one query less.
     final previousRanks = isClosed
-        ? await ref
-            .read(categoryRankQueriesProvider)
-            .rankedSpend(period.previous.startDay, period.previous.endDayExclusive)
+        ? await ref.read(categoryRankQueriesProvider).rankedSpend(
+            period.previous.startDay, period.previous.endDayExclusive)
         : const <CategoryRank>[];
 
     final aliranData = AliranData(
@@ -243,7 +255,11 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
               expenseMinor: totals.expenseMinor,
               ranks: [
                 for (final r in ranks)
-                  (name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+                  (
+                    name: r.name,
+                    amountMinor: r.amountMinor,
+                    hueIndex: r.hueIndex
+                  )
               ],
             ),
       deltas: !isClosed
@@ -251,17 +267,36 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
           : buildCategoryDeltas(
               current: [
                 for (final r in ranks)
-                  (key: r.key, name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+                  (
+                    key: r.key,
+                    name: r.name,
+                    amountMinor: r.amountMinor,
+                    hueIndex: r.hueIndex
+                  )
               ],
               previous: [
                 for (final r in previousRanks)
-                  (key: r.key, name: r.name, amountMinor: r.amountMinor, hueIndex: r.hueIndex)
+                  (
+                    key: r.key,
+                    name: r.name,
+                    amountMinor: r.amountMinor,
+                    hueIndex: r.hueIndex
+                  )
               ],
             ),
       previousLabel: _monthLabel.format(period.previous.startDate),
     );
 
     return (polaData, aliranData);
+  }
+
+  /// The manual fallback for a change the table listener missed. Logged so a
+  /// dogfooding pass can tell whether the automatic path ever needs it.
+  Future<void> _refresh() {
+    ref
+        .read(analyticsRepositoryProvider)
+        .logEvent('pull_to_refresh', props: {'screen': 'pantau'});
+    return _load();
   }
 
   Future<void> _load() async {
@@ -274,10 +309,12 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     final totals = await queries.totalsFor(period);
     final daily = await queries.dailyExpenseMinor(period);
     final baseline = await queries.previousPeriodBaselineExpenseMinor(period);
-    final ranks =
-        await ref.read(categoryRankQueriesProvider).rankedSpend(period.startDay, period.endDayExclusive);
+    final ranks = await ref
+        .read(categoryRankQueriesProvider)
+        .rankedSpend(period.startDay, period.endDayExclusive);
     final weekDays = List<int>.generate(7, (i) => today - 6 + i);
-    final weekExpense = await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
+    final weekExpense =
+        await queries.dailyExpenseMinorInRange(weekDays.first, today + 1);
     final kantong = await AsyncValue.guard(() => _loadKantong(period));
 
     final paceFirst = await ref
@@ -307,7 +344,8 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     final db = ref.read(databaseProvider);
     final plan = await ref.read(budgetsRepositoryProvider).getAll();
     final history = ref.read(budgetHistoryQueriesProvider);
-    final spent = await history.categorySpendByKey(period.startDay, period.endDayExclusive);
+    final spent = await history.categorySpendByKey(
+        period.startDay, period.endDayExclusive);
     final categories = {
       for (final c in await db.select(db.categories).get()) c.id: c,
     };
@@ -332,7 +370,14 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
     if (!_loaded) {
       return Scaffold(
         appBar: AppBar(title: const Text('Pantau')),
-        body: const Center(child: CircularProgressIndicator()),
+        body: RefreshIndicator(
+          onRefresh: _refresh,
+          child: const SingleChildScrollView(
+            physics: AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(WudgetTokens.space4),
+            child: PantauSkeleton(),
+          ),
+        ),
       );
     }
 
@@ -344,26 +389,30 @@ class _PantauScreenState extends ConsumerState<PantauScreen> {
       appBar: AppBar(title: const Text('Pantau')),
       // During the first fortnight Pola and Aliran would be empty states,
       // so the waiting state stands in for the whole screen.
-      body: daysSinceFirst < _waitingDays
-          ? _WaitingState(
-              daysSoFar: daysSinceFirst,
-              totals: _totals!,
-              daysElapsedInPeriod: (todayDay - period.startDay + 1)
-                  .clamp(1, period.endDayExclusive - period.startDay),
-            )
-          : _ReviewBody(
-              totals: _totals!,
-              dailyExpense: _dailyExpense,
-              baselineExpenseMinor: _baselineExpenseMinor,
-              todayDay: todayDay,
-              categoryRanks: _categoryRanks,
-              weekDays: _weekDays,
-              weekExpense: _weekExpense,
-              kantong: _kantong,
-              onOpenPatterns: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                builder: (_) => _PatternsPage(data: _loadSecondaryViews()),
-              )),
-            ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: daysSinceFirst < _waitingDays
+            ? _WaitingState(
+                daysSoFar: daysSinceFirst,
+                totals: _totals!,
+                daysElapsedInPeriod: (todayDay - period.startDay + 1)
+                    .clamp(1, period.endDayExclusive - period.startDay),
+              )
+            : _ReviewBody(
+                totals: _totals!,
+                dailyExpense: _dailyExpense,
+                baselineExpenseMinor: _baselineExpenseMinor,
+                todayDay: todayDay,
+                categoryRanks: _categoryRanks,
+                weekDays: _weekDays,
+                weekExpense: _weekExpense,
+                kantong: _kantong,
+                onOpenPatterns: () =>
+                    Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => _PatternsPage(data: _loadSecondaryViews()),
+                )),
+              ),
+      ),
     );
   }
 }
@@ -414,7 +463,8 @@ class _ReviewBody extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Sisa periode ini', style: Theme.of(context).textTheme.titleLarge),
+              Text('Sisa periode ini',
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: WudgetTokens.space2),
               AmountText(
                 minor: remaining,
@@ -450,7 +500,9 @@ class _ReviewBody extends ConsumerWidget {
     // started tracking) gets its own state rather than a pace ring and a
     // chart with nothing honest to draw — plan/04-ux-design.md, "Pantau,
     // empty period: which period is empty, how to reach one that is not."
-    if (totals.expenseMinor == 0 && totals.incomeMinor == 0 && categoryRanks.isEmpty) {
+    if (totals.expenseMinor == 0 &&
+        totals.incomeMinor == 0 &&
+        categoryRanks.isEmpty) {
       return ListView(
         padding: padding,
         children: [
@@ -462,7 +514,8 @@ class _ReviewBody extends ConsumerWidget {
               children: [
                 Icon(Icons.event_busy_outlined, size: 26, color: tokens.ink2),
                 const SizedBox(height: WudgetTokens.space3),
-                Text('Tidak ada catatan di periode ini', style: text.titleLarge),
+                Text('Tidak ada catatan di periode ini',
+                    style: text.titleLarge),
                 const SizedBox(height: WudgetTokens.space2),
                 Text(
                   'Geser ke periode lain pakai tanda panah di atas untuk melihat riwayat.',
@@ -478,12 +531,15 @@ class _ReviewBody extends ConsumerWidget {
     final paceFirst = ref.watch(paceFirstFramingProvider).valueOrNull ?? true;
     final pace = _computePace(period);
     final remaining = totals.incomeMinor - totals.expenseMinor;
-    final todayIndex = period.contains(todayDay) ? todayDay - period.startDay : null;
+    final todayIndex =
+        period.contains(todayDay) ? todayDay - period.startDay : null;
 
-    final sorted = sortKantongByPace(kantong.valueOrNull ?? const [], pace.elapsedFraction);
+    final sorted = sortKantongByPace(
+        kantong.valueOrNull ?? const [], pace.elapsedFraction);
     final kantongSentence = kantongPaceSentence(sorted, _rp);
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: padding,
       children: [
         const PeriodSelector(),
@@ -492,12 +548,12 @@ class _ReviewBody extends ConsumerWidget {
           WudgetCard(child: Text(kantongSentence, style: text.bodyLarge)),
           const SizedBox(height: WudgetTokens.space3),
         ],
-        if (kantong.hasError)
-          ...[
-            const InsetNotice(icon: Icons.error_outline, message: 'Kantong belum bisa dimuat. Buka Pantau lagi nanti.'),
-            const SizedBox(height: WudgetTokens.space3),
-          ]
-        else if (sorted.isNotEmpty) ...[
+        if (kantong.hasError) ...[
+          const InsetNotice(
+              icon: Icons.error_outline,
+              message: 'Kantong belum bisa dimuat. Buka Pantau lagi nanti.'),
+          const SizedBox(height: WudgetTokens.space3),
+        ] else if (sorted.isNotEmpty) ...[
           KantongPaceList(sorted: sorted),
           const SizedBox(height: WudgetTokens.space3),
         ],
@@ -517,7 +573,12 @@ class _ReviewBody extends ConsumerWidget {
           _TapRow(
             icon: Icons.account_balance_wallet_outlined,
             label: 'Lihat sisa anggaran',
-            onTap: () => _showRemainingBalance(context),
+            onTap: () {
+              ref
+                  .read(analyticsRepositoryProvider)
+                  .logEvent('pantau_reveal', props: {'variant': 'pace_first'});
+              _showRemainingBalance(context);
+            },
           ),
         ] else ...[
           // The other arm of the framing experiment: remaining first, pace
@@ -528,7 +589,9 @@ class _ReviewBody extends ConsumerWidget {
               children: [
                 Text('SISA PERIODE INI', style: text.labelMedium),
                 const SizedBox(height: WudgetTokens.space1),
-                AmountText(minor: remaining, style: text.headlineMedium?.copyWith(fontSize: 30)),
+                AmountText(
+                    minor: remaining,
+                    style: text.headlineMedium?.copyWith(fontSize: 30)),
               ],
             ),
           ),
@@ -536,28 +599,32 @@ class _ReviewBody extends ConsumerWidget {
           _TapRow(
             icon: Icons.insights_outlined,
             label: 'Lihat laju & perkiraan',
-            onTap: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (context) => SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(WudgetTokens.space4),
-                  child: Column(
-                    children: [
-                      _PaceCard(pace: pace),
-                      const SizedBox(height: WudgetTokens.space3),
-                      _ForecastCard(
-                        pace: pace,
-                        period: period,
-                        dailyExpense: dailyExpense,
-                        todayIndex: todayIndex,
-                      ),
-                    ],
+            onTap: () {
+              ref.read(analyticsRepositoryProvider).logEvent('pantau_reveal',
+                  props: {'variant': 'remaining_first'});
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(WudgetTokens.space4),
+                    child: Column(
+                      children: [
+                        _PaceCard(pace: pace),
+                        const SizedBox(height: WudgetTokens.space3),
+                        _ForecastCard(
+                          pace: pace,
+                          period: period,
+                          dailyExpense: dailyExpense,
+                          todayIndex: todayIndex,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
         const SizedBox(height: WudgetTokens.space5),
@@ -568,7 +635,10 @@ class _ReviewBody extends ConsumerWidget {
         const SizedBox(height: WudgetTokens.space5),
         CategoryRankedList(ranks: categoryRanks),
         const SizedBox(height: WudgetTokens.space3),
-        _TapRow(icon: Icons.bar_chart, label: 'Lihat pola dan aliran', onTap: onOpenPatterns),
+        _TapRow(
+            icon: Icons.bar_chart,
+            label: 'Lihat pola dan aliran',
+            onTap: onOpenPatterns),
       ],
     );
   }
@@ -584,10 +654,12 @@ class _PaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final sentence = pace.sentence((minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR')));
+    final sentence = pace.sentence(
+        (minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR')));
     final fraction = pace.spendFractionOfBaseline;
-    final deltaPoints =
-        fraction == null ? null : ((fraction - pace.elapsedFraction) * 100).round();
+    final deltaPoints = fraction == null
+        ? null
+        : ((fraction - pace.elapsedFraction) * 100).round();
 
     return WudgetCard(
       child: Column(
@@ -605,7 +677,8 @@ class _PaceCard extends StatelessWidget {
                     Text('LAJU BELANJA', style: text.labelMedium),
                     const SizedBox(height: WudgetTokens.space1),
                     Text(
-                      sentence ?? 'Belum ada periode sebelumnya untuk dibandingkan.',
+                      sentence ??
+                          'Belum ada periode sebelumnya untuk dibandingkan.',
                       style: text.bodyLarge,
                     ),
                     if (pace.baselineTotalMinor != null) ...[
@@ -667,18 +740,21 @@ class _ForecastCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('Perkiraan akhir periode', style: text.titleLarge),
-              AmountText(minor: pace.forecastTotalMinor, style: text.titleLarge),
+              AmountText(
+                  minor: pace.forecastTotalMinor, style: text.titleLarge),
             ],
           ),
           const SizedBox(height: WudgetTokens.space1),
           Text(
             switch (over) {
-              null => 'Belum ada periode sebelumnya untuk dibandingkan, jadi ini laju kamu sendiri.',
+              null =>
+                'Belum ada periode sebelumnya untuk dibandingkan, jadi ini laju kamu sendiri.',
               final o when o > 0 =>
                 'Kalau lajunya begini terus, lewat ${_formatter.format(Money.fromMinor(o, 'IDR'))} dari biasanya.',
               final o when o < 0 =>
                 'Kalau lajunya begini terus, ${_formatter.format(Money.fromMinor(-o, 'IDR'))} lebih hemat dari biasanya.',
-              _ => 'Kalau lajunya begini terus, hasilnya mirip seperti biasanya.',
+              _ =>
+                'Kalau lajunya begini terus, hasilnya mirip seperti biasanya.',
             },
             style: text.bodyMedium,
           ),
@@ -712,7 +788,8 @@ class _TapRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: WudgetTokens.minTapTarget),
+          constraints:
+              const BoxConstraints(minHeight: WudgetTokens.minTapTarget),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: WudgetTokens.space4,
@@ -725,7 +802,10 @@ class _TapRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 13.5),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontSize: 13.5),
                   ),
                 ),
                 Icon(Icons.chevron_right, size: 18, color: tokens.ink2),
@@ -758,9 +838,12 @@ class _WaitingState extends StatelessWidget {
     final done = daysSoFar.clamp(0, _waitingDays);
     final remaining = _waitingDays - done;
     final proposalDate = DateTime.now().add(Duration(days: remaining));
-    final perDay = daysElapsedInPeriod <= 0 ? 0 : totals.expenseMinor ~/ daysElapsedInPeriod;
+    final perDay = daysElapsedInPeriod <= 0
+        ? 0
+        : totals.expenseMinor ~/ daysElapsedInPeriod;
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         WudgetTokens.space4,
         0,
@@ -808,7 +891,9 @@ class _WaitingState extends StatelessWidget {
               ),
               const SizedBox(height: WudgetTokens.space4),
               Text(
-                done <= 0 ? 'Belum ada yang bisa dibaca' : 'Masih ngumpulin kebiasaanmu',
+                done <= 0
+                    ? 'Belum ada yang bisa dibaca'
+                    : 'Masih ngumpulin kebiasaanmu',
                 style: text.titleLarge,
               ),
               const SizedBox(height: WudgetTokens.space2),
@@ -823,7 +908,8 @@ class _WaitingState extends StatelessWidget {
               const SizedBox(height: WudgetTokens.space3),
               InsetNotice(
                 icon: Icons.calendar_month_outlined,
-                message: 'Usulan anggaran: ${DateFormat('d MMM', 'id_ID').format(proposalDate)}',
+                message:
+                    'Usulan anggaran: ${DateFormat('d MMM', 'id_ID').format(proposalDate)}',
               ),
             ],
           ),
@@ -870,9 +956,13 @@ class _PatternsPageState extends State<_PatternsPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(WudgetTokens.space4, 0, WudgetTokens.space4, WudgetTokens.space3),
+            padding: const EdgeInsets.fromLTRB(WudgetTokens.space4, 0,
+                WudgetTokens.space4, WudgetTokens.space3),
             child: SegmentedTray<PantauView>(
-              segments: const {PantauView.pola: 'Pola', PantauView.aliran: 'Aliran'},
+              segments: const {
+                PantauView.pola: 'Pola',
+                PantauView.aliran: 'Aliran'
+              },
               value: _view,
               onChanged: (view) => setState(() => _view = view),
             ),
@@ -884,11 +974,15 @@ class _PatternsPageState extends State<_PatternsPage> {
                 if (snap.hasError) {
                   return const Padding(
                     padding: EdgeInsets.all(WudgetTokens.space4),
-                    child: InsetNotice(icon: Icons.error_outline, message: 'Pola dan aliran belum bisa dimuat. Coba buka lagi.'),
+                    child: InsetNotice(
+                        icon: Icons.error_outline,
+                        message:
+                            'Pola dan aliran belum bisa dimuat. Coba buka lagi.'),
                   );
                 }
                 final data = snap.data;
-                if (data == null) return const Center(child: CircularProgressIndicator());
+                if (data == null)
+                  return const Center(child: CircularProgressIndicator());
                 return switch (_view) {
                   PantauView.pola => PolaView(data: data.$1),
                   PantauView.aliran => AliranView(data: data.$2),

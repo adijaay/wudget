@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Onboarding Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --border: #E5E7EB;
+    --positive: #10B981;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+  }
+  
+  .screen {
+    display: none;
+    padding: 24px;
+    min-height: 100vh;
+    flex-direction: column;
+  }
+  
+  .screen.active {
+    display: flex;
+  }
+  
+  .progress-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+  
+  .progress-dot {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+  
+  .progress-dot.active {
+    background: var(--accent);
+  }
+  
+  .illustration {
+    width: 200px;
+    height: 200px;
+    margin: 48px auto;
+    background: var(--surface-elevated);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+  }
+  
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+    color: var(--ink-secondary);
+    text-align: center;
+    margin-bottom: 48px;
+    line-height: 1.6;
+  }
+  
+  .primary-button {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: auto;
+  }
+  
+  .primary-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  .secondary-button {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    color: var(--ink-secondary);
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  
+  .feature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 32px 0;
+  }
+  
+  .feature-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--surface-elevated);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  
+  .feature-text {
+    flex: 1;
+  }
+  
+  .feature-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  
+  .feature-desc {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    line-height: 1.5;
+  }
+  
+  .nav-hint {
+    display: flex;
+    gap: 16px;
+    margin: 32px 0;
+  }
+  
+  .nav-item {
+    flex: 1;
+    padding: 16px;
+    background: var(--surface-elevated);
+    border-radius: 12px;
+    text-align: center;
+  }
+  
+  .nav-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  
+  .nav-label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  
+  .privacy-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--surface-elevated);
+    border-radius: 12px;
+    margin: 24px auto;
+    font-size: 14px;
+    color: var(--ink-secondary);
+  }
+  
+  .privacy-icon {
+    font-size: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Screen 1: Capture Flow -->
+  <div class="screen active" id="screen1">
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+    </div>
+    
+    <div class="illustration">💰</div>
+    
+    <h1>Catat dalam 3 ketukan</h1>
+    <p class="subtitle">Masukkan jumlah, pilih kategori, simpan. Selesai dalam 3 detik.</p>
+    
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">1️⃣</div>
+        <div class="feature-text">
+          <div class="feature-title">Ketik jumlah</div>
+          <div class="feature-desc">Numpad besar, kalkulator otomatis</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">2️⃣</div>
+        <div class="feature-text">
+          <div class="feature-title">Pilih kategori</div>
+          <div class="feature-desc">Kategori sering muncul di atas</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">3️⃣</div>
+        <div class="feature-text">
+          <div class="feature-title">Simpan</div>
+          <div class="feature-desc">Satu ketukan, langsung tercatat</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="primary-button" onclick="nextScreen()">Lanjut</button>
+    <button class="secondary-button" onclick="skipOnboarding()">Lewati</button>
+  </div>
+  
+  <!-- Screen 2: Four Tabs -->
+  <div class="screen" id="screen2">
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+      <div class="progress-dot"></div>
+    </div>
+    
+    <div class="illustration">📊</div>
+    
+    <h1>Empat tab, satu tujuan</h1>
+    <p class="subtitle">Catat pengeluaran, pantau anggaran, kelola kantong, atur preferensi.</p>
+    
+    <div class="nav-hint">
+      <div class="nav-item">
+        <div class="nav-icon">📝</div>
+        <div class="nav-label">Catat</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">📈</div>
+        <div class="nav-label">Pantau</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">💼</div>
+        <div class="nav-label">Kantong</div>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">Saya</div>
+      </div>
+    </div>
+    
+    <button class="primary-button" onclick="nextScreen()">Lanjut</button>
+    <button class="secondary-button" onclick="skipOnboarding()">Lewati</button>
+  </div>
+  
+  <!-- Screen 3: Period Concept -->
+  <div class="screen" id="screen3">
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot"></div>
+    </div>
+    
+    <div class="illustration">📅</div>
+    
+    <h1>Periode sesuai gajimu</h1>
+    <p class="subtitle">Atur tanggal gajian, wudget hitung anggaran per periode. Bukan per bulan.</p>
+    
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-text">
+          <div class="feature-title">Tanggal gajian</div>
+          <div class="feature-desc">Setiap tanggal 25, periode baru dimulai</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📊</div>
+        <div class="feature-text">
+          <div class="feature-title">Jatah harian</div>
+          <div class="feature-desc">Berapa yang bisa kamu spend hari ini</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-text">
+          <div class="feature-title">Kecepatan spend</div>
+          <div class="feature-desc">Lebih cepat atau lambat dari biasanya</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="primary-button" onclick="nextScreen()">Lanjut</button>
+    <button class="secondary-button" onclick="skipOnboarding()">Lewati</button>
+  </div>
+  
+  <!-- Screen 4: Privacy -->
+  <div class="screen" id="screen4">
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+    </div>
+    
+    <div class="illustration">🔒</div>
+    
+    <h1>Data kamu, tetap di HP kamu</h1>
+    <p class="subtitle">Tidak ada akun, tidak ada server. Semua data tersimpan lokal di perangkatmu.</p>
+    
+    <div class="privacy-badge">
+      <span class="privacy-icon">🛡️</span>
+      <span>100% offline, tidak ada data yang dikirim keluar</span>
+    </div>
+    
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">💾</div>
+        <div class="feature-text">
+          <div class="feature-title">Backup otomatis</div>
+          <div class="feature-desc">Simpan data ke file, restore kapan saja</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🚫</div>
+        <div class="feature-text">
+          <div class="feature-title">Tanpa iklan</div>
+          <div class="feature-desc">Tidak ada tracking, tidak ada iklan</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="primary-button" onclick="finishOnboarding()">Mulai pakai wudget</button>
+  </div>
+  
+</div>
+
+<script>
+  let currentScreen = 1;
+  const totalScreens = 4;
+  
+  function nextScreen() {
+    if (currentScreen < totalScreens) {
+      document.getElementById(`screen${currentScreen}`).classList.remove('active');
+      currentScreen++;
+      document.getElementById(`screen${currentScreen}`).classList.add('active');
+    }
+  }
+  
+  function skipOnboarding() {
+    alert('Onboarding skipped. Navigate to main app.');
+  }
+  
+  function finishOnboarding() {
+    alert('Onboarding complete! Navigate to main app.');
+  }
+</script>
+</body>
+</html>

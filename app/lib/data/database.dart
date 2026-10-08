@@ -197,6 +197,9 @@ class Recurrences extends Table {
   /// with the reason."
   TextColumn get lastGenerationError => text().nullable()();
 
+  /// Shown in the Langganan section of Berulang & tagihan.
+  BoolColumn get isSubscription => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -217,6 +220,24 @@ class RecurrenceOverrides extends Table {
   Set<Column> get primaryKey => {recurrenceId, instanceDate};
 }
 
+/// A savings target on one wallet. Progress is not stored: it is the
+/// wallet's current balance over [targetMinor], both computed from
+/// postings (WalletsRepository), so a goal can never disagree with the
+/// ledger. [notifiedMilestone] is the highest quarter already announced,
+/// so a milestone fires once and not on every open.
+class Goals extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  IntColumn get targetMinor => integer()();
+  TextColumn get accountId => text().references(Accounts, #id)();
+  IntColumn get notifiedMilestone => integer().withDefault(const Constant(0))();
+  IntColumn get updatedAt => integer()();
+  IntColumn get deletedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(tables: [
   Accounts,
   Categories,
@@ -229,12 +250,13 @@ class RecurrenceOverrides extends Table {
   AnalyticsEvents,
   Recurrences,
   RecurrenceOverrides,
+  Goals,
 ])
 class WudgetDatabase extends _$WudgetDatabase {
   WudgetDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -260,6 +282,9 @@ class WudgetDatabase extends _$WudgetDatabase {
             await m.createTable(recurrences);
             await m.createTable(recurrenceOverrides);
           }
+          if (from < 12) {
+            await m.createTable(goals);
+          }
           // appSettings from < 4 is created fresh via createTable above,
           // which builds from the *current* Dart table definition (every
           // column, including this one) — so only a database that already
@@ -272,6 +297,9 @@ class WudgetDatabase extends _$WudgetDatabase {
           // this column added separately.
           if (from >= 7 && from < 9) {
             await m.addColumn(recurrences, recurrences.lastGenerationError);
+          }
+          if (from >= 7 && from < 13) {
+            await m.addColumn(recurrences, recurrences.isSubscription);
           }
           if (from >= 4 && from < 10) {
             for (final c in [

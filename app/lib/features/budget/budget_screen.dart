@@ -15,7 +15,9 @@ const _lookbackDays = 28;
 
 int _todayDayBucket() {
   final now = DateTime.now();
-  return DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(1970, 1, 1)).inDays;
+  return DateTime.utc(now.year, now.month, now.day)
+      .difference(DateTime.utc(1970, 1, 1))
+      .inDays;
 }
 
 class _BudgetRow {
@@ -81,6 +83,15 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     _load();
   }
 
+  /// The manual fallback for a change the load missed. Logged so a dogfooding
+  /// pass can tell whether the automatic path ever needs it.
+  Future<void> _refresh() {
+    ref
+        .read(analyticsRepositoryProvider)
+        .logEvent('pull_to_refresh', props: {'screen': 'kantong'});
+    return _load();
+  }
+
   Future<void> _load() async {
     final period = ref.read(currentPeriodProvider);
     final periodLengthDays = period.endDayExclusive - period.startDay;
@@ -94,20 +105,26 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
     final firstDay = await aggregateQueries.firstTransactionDay();
     final sinceDay = firstDay == null
         ? today + 1
-        : (firstDay > today - _lookbackDays + 1 ? firstDay : today - _lookbackDays + 1);
+        : (firstDay > today - _lookbackDays + 1
+            ? firstDay
+            : today - _lookbackDays + 1);
     final historyWindowDays = firstDay == null ? 0 : today - sinceDay + 1;
 
-    final lookbackSpend =
-        firstDay == null ? <String, int>{} : await historyQueries.categorySpendByKey(sinceDay, today + 1);
+    final lookbackSpend = firstDay == null
+        ? <String, int>{}
+        : await historyQueries.categorySpendByKey(sinceDay, today + 1);
     final proposals = proposeBudgets(
       spendByKey: lookbackSpend,
       historyWindowDays: historyWindowDays,
       periodLengthDays: periodLengthDays,
     );
     final saved = await budgetsRepo.getAll();
-    final currentSpend = await historyQueries.categorySpendByKey(period.startDay, period.endDayExclusive);
+    final currentSpend = await historyQueries.categorySpendByKey(
+        period.startDay, period.endDayExclusive);
     final totals = await aggregateQueries.totalsFor(period);
-    final categories = {for (final c in await db.select(db.categories).get()) c.id: c};
+    final categories = {
+      for (final c in await db.select(db.categories).get()) c.id: c
+    };
 
     // Every top-level expense category gets a row, not just the ones with
     // spend history or a saved amount. A category with no history still
@@ -153,16 +170,20 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
 
   void _edit(String key, int amountMinor) {
     setState(() {
-      _rows = [for (final r in _rows!) r.key == key ? r.withAmount(amountMinor) : r];
+      _rows = [
+        for (final r in _rows!) r.key == key ? r.withAmount(amountMinor) : r
+      ];
       _dirty = true;
     });
   }
 
   /// Saved as one action rather than field by field: the proposal is a set
   /// of numbers that only makes sense together, and its total is what the
-  /// footer is asking the user to accept.
+  /// footer is asking the user to accept. The whole previous set is kept so
+  /// one tap can put it back, since a save overwrites every row at once.
   Future<void> _saveAll() async {
     final repo = ref.read(budgetsRepositoryProvider);
+    final previous = await repo.getAll();
     for (final row in _rows!) {
       await repo.setAmount(row.key, row.amountMinor);
     }
@@ -172,7 +193,31 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
       _dirty = false;
     });
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Anggaran disimpan')));
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: const Text('Anggaran disimpan'),
+        action: SnackBarAction(
+          label: 'Batalkan',
+          onPressed: () async {
+            for (final entry in previous.entries) {
+              await repo.setAmount(entry.key, entry.value);
+            }
+            // A key that did not exist before the save has nothing to go
+            // back to, so it is one the undo has to clear rather than set.
+            final added =
+                _rows!.map((r) => r.key).where((k) => !previous.containsKey(k));
+            for (final key in added) {
+              await repo.clearAmount(key);
+            }
+            if (!mounted) return;
+            setState(() {
+              _anySaved = previous.isNotEmpty;
+              _dirty = false;
+            });
+            _load();
+          },
+        ),
+      ));
   }
 
   @override
@@ -193,34 +238,41 @@ class _BudgetScreenState extends ConsumerState<BudgetScreen> {
           ),
         ],
       ),
-      body: rows == null
-          ? const Center(child: CircularProgressIndicator())
-          : rows.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(WudgetTokens.space4),
-                  child: WudgetCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Belum ada yang bisa diusulkan', style: text.titleLarge),
-                        const SizedBox(height: WudgetTokens.space2),
-                        Text(
-                          'Anggaran di sini diambil dari pengeluaranmu sendiri, jadi '
-                          'catat dulu beberapa hari. Tidak ada angka tebakan.',
-                          style: text.bodyMedium,
-                        ),
-                      ],
-                    ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: switch (rows) {
+          null => const Center(child: CircularProgressIndicator()),
+          [] => ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(WudgetTokens.space4),
+              children: [
+                WudgetCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Belum ada yang bisa diusulkan',
+                          style: text.titleLarge),
+                      const SizedBox(height: WudgetTokens.space2),
+                      Text(
+                        'Anggaran di sini diambil dari pengeluaranmu sendiri, jadi '
+                        'catat dulu beberapa hari. Tidak ada angka tebakan.',
+                        style: text.bodyMedium,
+                      ),
+                    ],
                   ),
-                )
-              : _ProposalBody(
-                  rows: rows,
-                  incomeMinor: _incomeMinor,
-                  anySaved: _anySaved,
-                  dirty: _dirty,
-                  onEdit: _edit,
-                  onSave: _saveAll,
                 ),
+              ],
+            ),
+          final filled => _ProposalBody(
+              rows: filled,
+              incomeMinor: _incomeMinor,
+              anySaved: _anySaved,
+              dirty: _dirty,
+              onEdit: _edit,
+              onSave: _saveAll,
+            ),
+        },
+      ),
     );
   }
 }
@@ -255,6 +307,7 @@ class _ProposalBody extends StatelessWidget {
       children: [
         Expanded(
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
               WudgetTokens.space4,
               0,
@@ -272,12 +325,14 @@ class _ProposalBody extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: tokens.accent.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(WudgetTokens.radiusPill),
+                    borderRadius:
+                        BorderRadius.circular(WudgetTokens.radiusPill),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.auto_awesome_motion_outlined, size: 14, color: tokens.accent),
+                      Icon(Icons.auto_awesome_motion_outlined,
+                          size: 14, color: tokens.accent),
                       const SizedBox(width: WudgetTokens.space2),
                       Text(
                         'DARI RIWAYATMU',
@@ -287,7 +342,8 @@ class _ProposalBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: WudgetTokens.space3),
-                Text('Ini anggaran dari kebiasaanmu sendiri', style: text.headlineMedium),
+                Text('Ini anggaran dari kebiasaanmu sendiri',
+                    style: text.headlineMedium),
                 const SizedBox(height: WudgetTokens.space2),
                 Text(
                   lookbackDays > 0
@@ -302,7 +358,8 @@ class _ProposalBody extends StatelessWidget {
               CardGroup(
                 dividerIndent: 58,
                 children: [
-                  for (final row in regular) _BudgetRowTile(row: row, onEdit: onEdit),
+                  for (final row in regular)
+                    _BudgetRowTile(row: row, onEdit: onEdit),
                 ],
               ),
               for (final row in irregular) ...[
@@ -354,7 +411,9 @@ class _ProposalBody extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text('Total anggaran periode ini', style: text.titleMedium),
-                    AmountText(minor: total, style: text.titleLarge?.copyWith(fontSize: 18)),
+                    AmountText(
+                        minor: total,
+                        style: text.titleLarge?.copyWith(fontSize: 18)),
                   ],
                 ),
                 // Only stated when income for this period is actually
@@ -381,7 +440,9 @@ class _ProposalBody extends StatelessWidget {
                     Expanded(
                       child: FilledButton(
                         onPressed: anySaved && !dirty ? null : onSave,
-                        child: Text(anySaved ? 'Simpan perubahan' : 'Pakai anggaran ini'),
+                        child: Text(anySaved
+                            ? 'Simpan perubahan'
+                            : 'Pakai anggaran ini'),
                       ),
                     ),
                   ],
@@ -396,7 +457,8 @@ class _ProposalBody extends StatelessWidget {
 }
 
 class _BudgetRowTile extends StatefulWidget {
-  const _BudgetRowTile({required this.row, required this.onEdit, this.padded = true});
+  const _BudgetRowTile(
+      {required this.row, required this.onEdit, this.padded = true});
   final _BudgetRow row;
   final void Function(String key, int amountMinor) onEdit;
   final bool padded;
@@ -428,7 +490,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
     final row = widget.row;
     final over = row.amountMinor > 0 && row.spentMinor > row.amountMinor;
     final hue = row.hueIndex;
-    final perDay = row.lookbackDays <= 0 ? 0 : row.lookbackSpendMinor ~/ row.lookbackDays;
+    final perDay =
+        row.lookbackDays <= 0 ? 0 : row.lookbackSpendMinor ~/ row.lookbackDays;
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,7 +503,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
               icon: row.isIrregular
                   ? Icons.auto_awesome_outlined
                   : categoryIcon(row.iconKey ?? 'category'),
-              background: hue == null ? tokens.surfaceMuted : tokens.tintFor(hue),
+              background:
+                  hue == null ? tokens.surfaceMuted : tokens.tintFor(hue),
               foreground: hue == null ? tokens.ink2 : tokens.inkFor(hue),
             ),
             const SizedBox(width: WudgetTokens.space3),
@@ -448,7 +512,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(row.name, style: text.titleSmall?.copyWith(fontSize: 14)),
+                  Text(row.name,
+                      style: text.titleSmall?.copyWith(fontSize: 14)),
                   if (perDay > 0) ...[
                     const SizedBox(height: 1),
                     Text(
@@ -479,7 +544,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
                 onChanged: (v) {
-                  final minor = int.tryParse(v.replaceAll(RegExp(r'[^0-9]'), ''));
+                  final minor =
+                      int.tryParse(v.replaceAll(RegExp(r'[^0-9]'), ''));
                   if (minor == null) return;
                   widget.onEdit(row.key, minor);
                   final formatted = _grouped(minor);
@@ -488,7 +554,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
                     // (money is typed left to right, never inserted into).
                     _controller.value = TextEditingValue(
                       text: formatted,
-                      selection: TextSelection.collapsed(offset: formatted.length),
+                      selection:
+                          TextSelection.collapsed(offset: formatted.length),
                     );
                   }
                 },
@@ -503,7 +570,9 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
-              value: row.amountMinor <= 0 ? 0 : (row.spentMinor / row.amountMinor).clamp(0.0, 1.0),
+              value: row.amountMinor <= 0
+                  ? 0
+                  : (row.spentMinor / row.amountMinor).clamp(0.0, 1.0),
               minHeight: 6,
               color: over ? tokens.warning : tokens.accent,
               backgroundColor: tokens.surfaceMuted,
@@ -520,7 +589,8 @@ class _BudgetRowTileState extends State<_BudgetRowTile> {
                 over
                     ? 'lewat ${_formatter.format(Money.fromMinor(row.spentMinor - row.amountMinor, 'IDR'))} dari anggaran'
                     : '${_formatter.format(Money.fromMinor(row.spentMinor, 'IDR'))} terpakai periode ini',
-                style: text.bodySmall?.copyWith(color: over ? tokens.warning : tokens.ink2),
+                style: text.bodySmall
+                    ?.copyWith(color: over ? tokens.warning : tokens.ink2),
               ),
             ],
           ),

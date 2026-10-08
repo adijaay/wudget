@@ -39,6 +39,28 @@ class PostingsRepository {
     });
   }
 
+  Future<void> updateTransaction({
+    required String transactionId,
+    required TransactionsCompanion transaction,
+    required List<PostingsCompanion> postings,
+  }) {
+    final sum = postings.fold<int>(0, (acc, p) => acc + p.baseAmountMinor.value);
+    if (sum != 0) throw UnbalancedPostingsException(sum);
+
+    return _db.transaction(() async {
+      await (_db.update(_db.transactions)..where((t) => t.id.equals(transactionId)))
+          .write(transaction);
+      
+      await (_db.delete(_db.postings)..where((p) => p.transactionId.equals(transactionId))).go();
+      
+      for (final posting in postings) {
+        await _db.into(_db.postings).insert(posting);
+      }
+      
+      await _dailyTotals.recomputeForTransaction(transactionId);
+    });
+  }
+
   /// Soft delete: sets `deleted_at`, keeping the row (and its postings) for
   /// audit/undo rather than removing history. See plan/05-sprints.md
   /// Sprint 6, "Edit, soft delete, undo".

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Household Sharing Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --accent: #2563EB;
+    --accent-hover: #1D4ED8;
+    --border: #E5E7EB;
+    --positive: #10B981;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--surface);
+  }
+  
+  /* Header */
+  .screen-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .header-title {
+    font-size: 24px;
+    font-weight: 700;
+  }
+  
+  /* Coming Soon Section */
+  .coming-soon-section {
+    padding: 40px 20px;
+    text-align: center;
+  }
+  
+  .coming-soon-icon {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 24px;
+    background: var(--surface-elevated);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+  }
+  
+  .coming-soon-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  
+  .coming-soon-desc {
+    font-size: 16px;
+    color: var(--ink-secondary);
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+  
+  /* Feature Preview */
+  .feature-preview {
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    text-align: left;
+  }
+  
+  .feature-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  
+  .feature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .feature-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .feature-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  
+  .feature-text {
+    flex: 1;
+  }
+  
+  .feature-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  
+  .feature-desc {
+    font-size: 13px;
+    color: var(--ink-secondary);
+    line-height: 1.5;
+  }
+  
+  /* Interest Form */
+  .interest-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .form-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .form-desc {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    margin-bottom: 20px;
+  }
+  
+  .form-field {
+    margin-bottom: 16px;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .form-textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  
+  .primary-button {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .primary-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  /* Success Message */
+  .success-message {
+    display: none;
+    background: var(--positive);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  
+  .success-message.show {
+    display: block;
+    animation: slideIn 0.3s ease;
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .success-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  
+  .success-text {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  
+  /* Privacy Note */
+  .privacy-note {
+    padding: 16px 20px;
+    background: var(--surface-elevated);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--ink-secondary);
+    line-height: 1.6;
+  }
+  
+  .privacy-note strong {
+    color: var(--ink-primary);
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Header -->
+  <div class="screen-header">
+    <div class="header-title">Berbagi dengan keluarga</div>
+  </div>
+  
+  <!-- Coming Soon Section -->
+  <div class="coming-soon-section">
+    <div class="coming-soon-icon">👨‍👩‍👧‍👦</div>
+    <div class="coming-soon-title">Segera hadir</div>
+    <div class="coming-soon-desc">
+      Kelola keuangan bersama pasangan atau keluarga. Sinkronkan transaksi, bagi tagihan, dan pantau anggaran bersama.
+    </div>
+  </div>
+  
+  <!-- Feature Preview -->
+  <div class="feature-preview">
+    <div class="feature-title">Apa yang bisa kamu lakukan:</div>
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-text">
+          <div class="feature-name">Sinkronkan transaksi</div>
+          <div class="feature-desc">Transaksi otomatis muncul di HP semua anggota keluarga</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">💰</div>
+        <div class="feature-text">
+          <div class="feature-name">Bagi tagihan</div>
+          <div class="feature-desc">Split tagihan listrik, air, internet dengan mudah</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📊</div>
+        <div class="feature-text">
+          <div class="feature-name">Pantau bersama</div>
+          <div class="feature-desc">Lihat anggaran keluarga dan progress target bersama</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-text">
+          <div class="feature-name">Privasi terjaga</div>
+          <div class="feature-desc">Kontrol apa yang dibagi dan apa yang tetap pribadi</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Success Message -->
+  <div class="success-message" id="successMessage">
+    <div class="success-icon">✓</div>
+    <div class="success-text">Terima kasih! Kami akan kabari saat fitur ini siap.</div>
+  </div>
+  
+  <!-- Interest Form -->
+  <div class="interest-form" id="interestForm">
+    <div class="form-title">Tertarik? Daftarkan emailmu</div>
+    <div class="form-desc">Kami akan kabari saat fitur ini siap digunakan.</div>
+    
+    <div class="form-field">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-input" placeholder="email@contoh.com" id="emailInput">
+    </div>
+    
+    <div class="form-field">
+      <label class="form-label">Siapa yang akan kamu ajak berbagi? (opsional)</label>
+      <textarea class="form-textarea" placeholder="contoh: Pasangan, orang tua, adik..." id="whoInput"></textarea>
+    </div>
+    
+    <button class="primary-button" onclick="submitInterest()">Daftar</button>
+  </div>
+  
+  <!-- Privacy Note -->
+  <div class="privacy-note">
+    <strong>Privasi kamu aman.</strong> Email kamu hanya digunakan untuk notifikasi fitur ini. Tidak ada data keuangan yang dikirim ke server. Semua data tetap tersimpan lokal di HP kamu.
+  </div>
+  
+</div>
+
+<script>
+  function submitInterest() {
+    const email = document.getElementById('emailInput').value;
+    const who = document.getElementById('whoInput').value;
+    
+    if (!email || !email.includes('@')) {
+      alert('Masukkan email yang valid');
+      return;
+    }
+    
+    // In real implementation, this would send to analytics
+    console.log('Household interest:', { email, who });
+    
+    // Show success message
+    document.getElementById('interestForm').style.display = 'none';
+    document.getElementById('successMessage').classList.add('show');
+  }
+</script>
+</body>
+</html>

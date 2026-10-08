@@ -289,6 +289,7 @@ class LoggedDaysStrip extends StatelessWidget {
                     logged: data.entryDays.contains(day),
                     today: day == data.todayDay,
                     future: day > data.todayDay,
+                    dayLabel: 'Tanggal ${day - data.startDay + 1}',
                   ),
               ],
             ),
@@ -300,10 +301,11 @@ class LoggedDaysStrip extends StatelessWidget {
 }
 
 class _DaySquare extends StatelessWidget {
-  const _DaySquare({required this.logged, required this.today, required this.future});
+  const _DaySquare({required this.logged, required this.today, required this.future, this.dayLabel});
   final bool logged;
   final bool today;
   final bool future;
+  final String? dayLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -317,14 +319,22 @@ class _DaySquare extends StatelessWidget {
         border: !future && !logged ? Border.all(color: tokens.borderStrong, width: 1.5) : null,
       ),
     );
-    if (!today) return square;
-    return Container(
-      padding: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: tokens.ink1, width: 2),
-      ),
-      child: square,
+    final wrapped = today
+        ? Container(
+            padding: const EdgeInsets.all(1),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: tokens.ink1, width: 2),
+            ),
+            child: square,
+          )
+        : square;
+    
+    if (dayLabel == null) return wrapped;
+    final status = future ? 'belum tercatat' : (logged ? 'tercatat' : 'belum tercatat');
+    return Semantics(
+      label: '$dayLabel, $status${today ? ', hari ini' : ''}',
+      child: wrapped,
     );
   }
 }

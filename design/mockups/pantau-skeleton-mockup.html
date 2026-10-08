@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wudget Pantau Skeleton Loading</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --surface: #FFFFFF;
+    --surface-elevated: #F8F9FA;
+    --ink-primary: #1A1A1A;
+    --ink-secondary: #6B7280;
+    --accent: #2563EB;
+    --border: #E5E7EB;
+    --positive: #10B981;
+    --warning: #F59E0B;
+  }
+  
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
+    color: var(--ink-primary);
+    line-height: 1.5;
+  }
+  
+  .mockup-container {
+    max-width: 390px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--surface);
+  }
+  
+  /* Header */
+  .screen-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .header-title {
+    font-size: 24px;
+    font-weight: 700;
+  }
+  
+  /* Period Selector */
+  .period-selector {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .period-nav {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .period-nav:hover {
+    background: var(--surface-elevated);
+  }
+  
+  .period-text {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  
+  /* Skeleton Animation */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-elevated) 25%, #E5E7EB 50%, var(--surface-elevated) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+  
+  /* Pace Ring Skeleton */
+  .pace-ring-section {
+    padding: 32px 20px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .pace-ring-skeleton {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    position: relative;
+  }
+  
+  .pace-ring-skeleton::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--surface);
+  }
+  
+  /* Forecast Card Skeleton */
+  .forecast-section {
+    padding: 0 20px 24px;
+  }
+  
+  .forecast-card-skeleton {
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  
+  .skeleton-line {
+    height: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .skeleton-line:last-child {
+    margin-bottom: 0;
+  }
+  
+  .skeleton-line.short {
+    width: 60%;
+  }
+  
+  .skeleton-line.medium {
+    width: 80%;
+  }
+  
+  .skeleton-line.large {
+    height: 32px;
+    width: 50%;
+    margin-bottom: 16px;
+  }
+  
+  /* Category List Skeleton */
+  .category-section {
+    padding: 0 20px 24px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .category-item-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface-elevated);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .category-icon-skeleton {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  
+  .category-info-skeleton {
+    flex: 1;
+  }
+  
+  .category-name-skeleton {
+    height: 14px;
+    width: 60%;
+    margin-bottom: 8px;
+  }
+  
+  .category-amount-skeleton {
+    height: 12px;
+    width: 40%;
+  }
+  
+  /* Toggle Button */
+  .toggle-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+  }
+  
+  .toggle-button {
+    padding: 12px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+  
+  .toggle-button:hover {
+    background: #1D4ED8;
+  }
+  
+  /* Loaded State */
+  .loaded-state {
+    display: none;
+  }
+  
+  .loaded-state.active {
+    display: block;
+  }
+  
+  .pace-ring-loaded {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 16px solid var(--border);
+    border-top-color: var(--accent);
+    border-right-color: var(--accent);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  
+  .pace-percentage {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  
+  .pace-label {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    margin-top: 4px;
+  }
+  
+  .forecast-loaded {
+    background: var(--surface-elevated);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  
+  .forecast-title {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    margin-bottom: 8px;
+  }
+  
+  .forecast-amount {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--positive);
+    margin-bottom: 8px;
+  }
+  
+  .forecast-desc {
+    font-size: 14px;
+    color: var(--ink-secondary);
+  }
+  
+  .category-item-loaded {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface-elevated);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .category-icon-loaded {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  
+  .category-info-loaded {
+    flex: 1;
+  }
+  
+  .category-name-loaded {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  
+  .category-amount-loaded {
+    font-size: 14px;
+    color: var(--ink-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .category-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .category-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+<div class="mockup-container">
+  
+  <!-- Header -->
+  <div class="screen-header">
+    <div class="header-title">Pantau</div>
+  </div>
+  
+  <!-- Period Selector -->
+  <div class="period-selector">
+    <button class="period-nav">←</button>
+    <div class="period-text">25 Sep - 24 Okt 2026</div>
+    <button class="period-nav">→</button>
+  </div>
+  
+  <!-- Loading State (Skeleton) -->
+  <div id="loadingState">
+    <!-- Pace Ring Skeleton -->
+    <div class="pace-ring-section">
+      <div class="pace-ring-skeleton skeleton"></div>
+    </div>
+    
+    <!-- Forecast Card Skeleton -->
+    <div class="forecast-section">
+      <div class="forecast-card-skeleton">
+        <div class="skeleton-line short skeleton"></div>
+        <div class="skeleton-line large skeleton"></div>
+        <div class="skeleton-line medium skeleton"></div>
+      </div>
+    </div>
+    
+    <!-- Category List Skeleton -->
+    <div class="category-section">
+      <div class="section-title">Kategori pengeluaran</div>
+      
+      <div class="category-item-skeleton">
+        <div class="category-icon-skeleton skeleton"></div>
+        <div class="category-info-skeleton">
+          <div class="category-name-skeleton skeleton"></div>
+          <div class="category-amount-skeleton skeleton"></div>
+        </div>
+      </div>
+      
+      <div class="category-item-skeleton">
+        <div class="category-icon-skeleton skeleton"></div>
+        <div class="category-info-skeleton">
+          <div class="category-name-skeleton skeleton"></div>
+          <div class="category-amount-skeleton skeleton"></div>
+        </div>
+      </div>
+      
+      <div class="category-item-skeleton">
+        <div class="category-icon-skeleton skeleton"></div>
+        <div class="category-info-skeleton">
+          <div class="category-name-skeleton skeleton"></div>
+          <div class="category-amount-skeleton skeleton"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loaded State -->
+  <div id="loadedState" class="loaded-state">
+    <!-- Pace Ring Loaded -->
+    <div class="pace-ring-section">
+      <div class="pace-ring-loaded">
+        <div class="pace-percentage">75%</div>
+        <div class="pace-label">Kecepatan</div>
+      </div>
+    </div>
+    
+    <!-- Forecast Card Loaded -->
+    <div class="forecast-section">
+      <div class="forecast-loaded">
+        <div class="forecast-title">Jatah harian</div>
+        <div class="forecast-amount">Rp 85.000</div>
+        <div class="forecast-desc">Kamu spend 25% lebih lambat dari biasanya</div>
+      </div>
+    </div>
+    
+    <!-- Category List Loaded -->
+    <div class="category-section">
+      <div class="section-title">Kategori pengeluaran</div>
+      
+      <div class="category-item-loaded">
+        <div class="category-icon-loaded" style="background: #FEF3C7;">🍜</div>
+        <div class="category-info-loaded">
+          <div class="category-name-loaded">Makanan</div>
+          <div class="category-amount-loaded">Rp 450.000</div>
+        </div>
+        <div class="category-bar">
+          <div class="category-bar-fill" style="width: 80%;"></div>
+        </div>
+      </div>
+      
+      <div class="category-item-loaded">
+        <div class="category-icon-loaded" style="background: #DBEAFE;">🚗</div>
+        <div class="category-info-loaded">
+          <div class="category-name-loaded">Transport</div>
+          <div class="category-amount-loaded">Rp 280.000</div>
+        </div>
+        <div class="category-bar">
+          <div class="category-bar-fill" style="width: 50%;"></div>
+        </div>
+      </div>
+      
+      <div class="category-item-loaded">
+        <div class="category-icon-loaded" style="background: #FCE7F3;">🛍️</div>
+        <div class="category-info-loaded">
+          <div class="category-name-loaded">Belanja</div>
+          <div class="category-amount-loaded">Rp 180.000</div>
+        </div>
+        <div class="category-bar">
+          <div class="category-bar-fill" style="width: 32%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toggle Button -->
+  <div class="toggle-container">
+    <button class="toggle-button" onclick="toggleState()">
+      Toggle Loading/Loaded
+    </button>
+  </div>
+  
+</div>
+
+<script>
+  let isLoading = true;
+  
+  function toggleState() {
+    isLoading = !isLoading;
+    
+    if (isLoading) {
+      document.getElementById('loadingState').style.display = 'block';
+      document.getElementById('loadedState').classList.remove('active');
+    } else {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('loadedState').classList.add('active');
+    }
+  }
+  
+  // Auto-toggle every 3 seconds for demo
+  setInterval(() => {
+    toggleState();
+  }, 3000);
+</script>
+</body>
+</html>

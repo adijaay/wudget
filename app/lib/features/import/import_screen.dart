@@ -42,6 +42,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   String? _amountColumn;
   String? _categoryColumn;
   String? _accountColumn;
+  String? _toAccountColumn;
   String? _noteColumn;
   String? _kindColumn;
 
@@ -103,6 +104,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
       amountColumn: _amountColumn!,
       categoryColumn: _categoryColumn,
       accountColumn: _accountColumn,
+      toAccountColumn: _toAccountColumn,
       noteColumn: _noteColumn,
       kindColumn: _kindColumn,
     );
@@ -200,6 +202,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                         onChanged: (v) => setState(() => _categoryColumn = v)),
                     _ColumnPicker(label: 'Kantong', headers: _headers!, value: _accountColumn,
                         onChanged: (v) => setState(() => _accountColumn = v)),
+                    _ColumnPicker(label: 'Kantong tujuan (transfer)', headers: _headers!, value: _toAccountColumn,
+                        onChanged: (v) => setState(() => _toAccountColumn = v)),
                     _ColumnPicker(label: 'Catatan', headers: _headers!, value: _noteColumn,
                         onChanged: (v) => setState(() => _noteColumn = v)),
                     _ColumnPicker(label: 'Jenis (masuk/keluar)', headers: _headers!, value: _kindColumn,

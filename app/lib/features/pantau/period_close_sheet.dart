@@ -53,7 +53,8 @@ class PeriodCloseSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: tokens.surfaceInverse,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(WudgetTokens.radiusSheet)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(WudgetTokens.radiusSheet)),
       ),
       child: SafeArea(
         top: false,
@@ -64,27 +65,36 @@ class PeriodCloseSheet extends ConsumerWidget {
             children: [
               Text(
                 'TUTUP PERIODE',
-                style: text.labelMedium?.copyWith(color: tokens.accentOnInverse),
+                style:
+                    text.labelMedium?.copyWith(color: tokens.accentOnInverse),
               ),
               const SizedBox(height: WudgetTokens.space2),
               Text(
-                periodLabel == null ? 'Periode sudah kelar' : '$periodLabel sudah kelar',
-                style: text.headlineMedium?.copyWith(fontSize: 28, color: tokens.inkInverse),
+                periodLabel == null
+                    ? 'Periode sudah kelar'
+                    : '$periodLabel sudah kelar',
+                style: text.headlineMedium
+                    ?.copyWith(fontSize: 28, color: tokens.inkInverse),
               ),
               const SizedBox(height: WudgetTokens.space2),
               Text(
-                summary.sentence((minor) => _formatter.formatCompact(Money.fromMinor(minor, 'IDR'))),
+                summary.sentence((minor) =>
+                    _formatter.formatCompact(Money.fromMinor(minor, 'IDR'))),
                 style: text.bodyMedium?.copyWith(color: tokens.inkInverse2),
               ),
               if (recap != null) ...[
                 const SizedBox(height: WudgetTokens.space4),
-                RecapShare(recap: recap!, rangeLabel: rangeLabel, inkColor: tokens.inkInverse2),
+                RecapShare(
+                    recap: recap!,
+                    rangeLabel: rangeLabel,
+                    inkColor: tokens.inkInverse2),
               ],
               const SizedBox(height: WudgetTokens.space4),
               _InOutCard(summary: summary),
               if (recap == null && summary.surplusMinor > 0) ...[
                 const SizedBox(height: WudgetTokens.space3),
-                _SurplusCard(surplusMinor: summary.surplusMinor, onDone: onClose),
+                _SurplusCard(
+                    surplusMinor: summary.surplusMinor, onDone: onClose),
               ],
               const SizedBox(height: WudgetTokens.space4),
               Center(
@@ -92,7 +102,8 @@ class PeriodCloseSheet extends ConsumerWidget {
                   onPressed: onClose,
                   child: Text(
                     'Lanjut ke periode berikutnya',
-                    style: text.titleMedium?.copyWith(color: tokens.inkInverse2),
+                    style:
+                        text.titleMedium?.copyWith(color: tokens.inkInverse2),
                   ),
                 ),
               ),
@@ -120,7 +131,7 @@ class _InOutCard extends StatelessWidget {
       decoration: BoxDecoration(
         // A step lighter than the sheet's own ground, so it reads as a card
         // on the dark surface without introducing a second palette.
-        color: Colors.white.withOpacity(0.07),
+        color: WudgetTokens.onInverseSurfaceStep,
         borderRadius: BorderRadius.circular(WudgetTokens.radiusCard),
       ),
       padding: const EdgeInsets.all(WudgetTokens.space4),
@@ -133,31 +144,34 @@ class _InOutCard extends StatelessWidget {
                 child: _Figure(
                   label: 'MASUK',
                   minor: summary.incomeMinor,
-                  // This sheet is dark in both app themes, so its figures
-                  // take the dark-theme inks whatever the app is set to.
-                  color: WudgetTokens.dark.positive,
+                  // The sheet is dark in both app themes, so its figures
+                  // take the inverse palette whatever the app is set to.
+                  color: WudgetTokens.onInversePositive,
                 ),
               ),
-              Container(width: 1, height: 42, color: Colors.white.withOpacity(0.14)),
+              Container(
+                  width: 1, height: 42, color: WudgetTokens.onInverseHairline),
               const SizedBox(width: WudgetTokens.space3),
               Expanded(
                 child: _Figure(
                   label: 'KELUAR',
                   minor: -summary.expenseMinor,
-                  color: WudgetTokens.dark.negative,
+                  color: WudgetTokens.onInverseNegative,
                 ),
               ),
             ],
           ),
           if (changed != null) ...[
             const SizedBox(height: WudgetTokens.space3),
-            Container(height: 1, color: Colors.white.withOpacity(0.14)),
+            Container(height: 1, color: WudgetTokens.onInverseHairline),
             const SizedBox(height: WudgetTokens.space3),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  summary.mostChangedCategoryDeltaMinor >= 0 ? Icons.trending_up : Icons.trending_down,
+                  summary.mostChangedCategoryDeltaMinor >= 0
+                      ? Icons.trending_up
+                      : Icons.trending_down,
                   size: 18,
                   color: tokens.accentOnInverse,
                 ),
@@ -180,7 +194,8 @@ class _InOutCard extends StatelessWidget {
 }
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.label, required this.minor, required this.color});
+  const _Figure(
+      {required this.label, required this.minor, required this.color});
   final String label;
   final int minor;
   final Color color;
@@ -192,7 +207,8 @@ class _Figure extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: text.labelMedium?.copyWith(color: tokens.inkInverse2)),
+        Text(label,
+            style: text.labelMedium?.copyWith(color: tokens.inkInverse2)),
         const SizedBox(height: 2),
         AmountText(
           minor: minor,
@@ -207,10 +223,8 @@ class _Figure extends StatelessWidget {
 }
 
 /// The surplus, offered as a move rather than left on screen to be spent.
-/// Savings goals were cut from v1 (plan/05-sprints.md), so there is no goal
-/// to sweep into and none is invented: the offer is a transfer into a
-/// savings wallet, which the ledger already supports, and it only appears
-/// when such a wallet actually exists.
+/// The offer is a transfer into the first goal's wallet, or into a savings
+/// wallet when there is no goal, and it only appears when one exists.
 class _SurplusCard extends ConsumerWidget {
   const _SurplusCard({required this.surplusMinor, required this.onDone});
   final int surplusMinor;
@@ -246,12 +260,12 @@ class _SurplusCard extends ConsumerWidget {
           ),
           Builder(
             builder: (context) {
-              final savings = ref
-                  .watch(walletBalancesProvider)
-                  .value
-                  ?.where((w) => w.account.type == 'savings')
-                  .toList() ??
+              final wallets = ref.watch(walletBalancesProvider).value ??
                   const <WalletWithBalance>[];
+              final goal = ref.watch(goalsProvider).valueOrNull?.firstOrNull?.goal;
+              final savings = goal != null
+                  ? wallets.where((w) => w.account.id == goal.accountId).toList()
+                  : wallets.where((w) => w.account.type == 'savings').toList();
               if (savings.isEmpty) {
                 // No savings wallet, so no honest offer to make. Say what
                 // would make one possible instead of a dead button (R-26).
@@ -274,9 +288,10 @@ class _SurplusCard extends ConsumerWidget {
                       background: tokens.accent,
                       foreground: tokens.inkOnAccent,
                     ),
-                    title: target.account.name,
+                    title: goal?.name ?? target.account.name,
                     subtitle: 'Sekarang ${_formatter.format(
-                      Money.fromMinor(target.balanceMinor, target.account.currency),
+                      Money.fromMinor(
+                          target.balanceMinor, target.account.currency),
                     )}',
                   ),
                   const SizedBox(height: WudgetTokens.space2),
@@ -321,7 +336,8 @@ class LapsedReturnSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: tokens.surfaceInverse,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(WudgetTokens.radiusSheet)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(WudgetTokens.radiusSheet)),
       ),
       child: SafeArea(
         top: false,
@@ -333,7 +349,8 @@ class LapsedReturnSheet extends StatelessWidget {
             children: [
               Text(
                 'Sudah beberapa waktu',
-                style: text.headlineMedium?.copyWith(fontSize: 24, color: tokens.inkInverse),
+                style: text.headlineMedium
+                    ?.copyWith(fontSize: 24, color: tokens.inkInverse),
               ),
               const SizedBox(height: WudgetTokens.space2),
               Text(
@@ -352,4 +369,5 @@ class LapsedReturnSheet extends StatelessWidget {
 
 /// The label PantauScreen passes in, kept here so the sheet and its caller
 /// cannot disagree about how a period is named.
-String periodCloseLabel(DateTime startDate) => DateFormat('MMMM', 'id_ID').format(startDate);
+String periodCloseLabel(DateTime startDate) =>
+    DateFormat('MMMM', 'id_ID').format(startDate);

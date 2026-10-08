@@ -164,6 +164,9 @@ void main() {
     await tester.ensureVisible(find.text(incomeCategory.name));
     await tester.tap(find.text(incomeCategory.name));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Tambah catatan'));
+    await tester.tap(find.text('Tambah catatan'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('captureNote')), 'Refund');
 
     expect(find.text('Simpan saja'), findsOneWidget);

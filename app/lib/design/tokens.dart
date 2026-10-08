@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// Design tokens for wudget, ported from the mockups in `design/` (authored
 /// in OKLCH) via `tool/oklch.py`. The accent is Petrol, oklch(0.52 0.09 205),
@@ -87,13 +87,37 @@ class WudgetTokens extends ThemeExtension<WudgetTokens> {
   static const double iconChip = 38;
   static const double categoryTile = 46;
   static const double minTapTarget = 44; // R-03
-  static const double navBarHeight = 64;
+  static const double navBarContentHeight = 64; // excludes the system inset
   static const double captureButton = 56;
+
+  /// The nav bar reserves the capture button's footprint, plus a hair more
+  /// so a thumb has somewhere to land either side without switching tabs.
+  static const double navBarCaptureGap = captureButton + 20;
+
+  /// The PeriodCloseSheet is the one surface that inverts twice: it is dark
+  /// whatever the app theme is, so its palette cannot come from the theme
+  /// extension and is defined once here instead. Both figures clear 4.5:1
+  /// against [surfaceInverse] in both themes; test/domain/contrast_test.dart
+  /// asserts it.
+  static const Color onInversePositive = Color(0xFF76C788);
+  static const Color onInverseNegative = Color(0xFFEB827B);
+
+  /// A step lighter than the sheet's own ground, for a card on it: the
+  /// equivalent of [surfaceCard] where the theme cannot supply one.
+  static const Color onInverseSurfaceStep = Color(0x12FFFFFF);
+
+  /// The divider between rows inside a group on the sheet, the equivalent
+  /// of [hairline].
+  static const Color onInverseHairline = Color(0x24FFFFFF);
 
   static const String fontFamily = 'Plus Jakarta Sans';
 
   /// The platform's own faces, for any codepoint the bundled one lacks.
-  static const List<String> fontFamilyFallback = ['Roboto', 'Segoe UI', 'sans-serif'];
+  static const List<String> fontFamilyFallback = [
+    'Roboto',
+    'Segoe UI',
+    'sans-serif'
+  ];
 
   static const WudgetTokens light = WudgetTokens(
     ink1: Color(0xFF201914),
@@ -291,7 +315,8 @@ class WudgetTokens extends ThemeExtension<WudgetTokens> {
 /// The type scale from `design/Tokens.dc.html`. Sizes are the mockup's own,
 /// rounded to whole points where it made no visible difference.
 TextTheme _buildTextTheme(WudgetTokens tokens) {
-  TextStyle base(double size, FontWeight weight, {Color? color, double? height, double? spacing}) =>
+  TextStyle base(double size, FontWeight weight,
+          {Color? color, double? height, double? spacing}) =>
       TextStyle(
         fontFamily: WudgetTokens.fontFamily,
         // Plus Jakarta Sans covers Latin and Indonesian fully but not every
@@ -386,13 +411,15 @@ ThemeData buildWudgetTheme(WudgetTokens tokens, Brightness brightness) {
         side: BorderSide(color: tokens.border),
       ),
     ),
-    dividerTheme: DividerThemeData(color: tokens.hairline, thickness: 1, space: 1),
+    dividerTheme:
+        DividerThemeData(color: tokens.hairline, thickness: 1, space: 1),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: tokens.surfaceCard,
       surfaceTintColor: Colors.transparent,
       modalElevation: WudgetTokens.elevationLifted,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(WudgetTokens.radiusSheet)),
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(WudgetTokens.radiusSheet)),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
@@ -404,7 +431,8 @@ ThemeData buildWudgetTheme(WudgetTokens tokens, Brightness brightness) {
       ),
       actionTextColor: tokens.accentOnInverse,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
@@ -415,7 +443,8 @@ ThemeData buildWudgetTheme(WudgetTokens tokens, Brightness brightness) {
         // laid out at all inside a Row.
         minimumSize: const Size(0, WudgetTokens.minTapTarget),
         textStyle: text.titleMedium,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -427,14 +456,16 @@ ThemeData buildWudgetTheme(WudgetTokens tokens, Brightness brightness) {
         // laid out at all inside a Row.
         minimumSize: const Size(0, WudgetTokens.minTapTarget),
         textStyle: text.titleMedium,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: tokens.accent,
         textStyle: text.titleMedium,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(WudgetTokens.radiusControl)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(

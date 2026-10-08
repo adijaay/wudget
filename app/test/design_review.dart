@@ -22,6 +22,7 @@ import 'package:wudget/features/budget/budget_screen.dart';
 import 'package:wudget/features/payday/budget_review_screen.dart';
 import 'package:wudget/features/payday/payday_card.dart';
 import 'package:wudget/features/import/import_screen.dart';
+import 'package:wudget/features/onboarding/onboarding_screen.dart';
 import 'package:wudget/features/recurring/recurring_screen.dart';
 import 'package:wudget/features/settings/backup_screen.dart';
 import 'package:wudget/features/capture/capture_sheet.dart';
@@ -359,6 +360,12 @@ void main() {
       ));
 
   testWidgets('kantong empty', (t) async => shoot(t, 'kantong_empty', const WalletsScreen(), db: await empty()));
+
+  // Sprint 10's tour. Screen 1 is the shot: the later three share its layout,
+  // so only the first plus its dark pair is worth a file.
+  testWidgets('onboarding', (t) => shoot(t, 'onboarding', const OnboardingScreen()));
+  testWidgets('onboarding dark',
+      (t) => shoot(t, 'onboarding_dark', const OnboardingScreen(), brightness: Brightness.dark));
 
   testWidgets('recurring empty', (t) async => shoot(t, 'recurring_empty', const RecurringScreen(), db: await empty()));
 

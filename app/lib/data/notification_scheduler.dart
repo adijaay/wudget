@@ -137,6 +137,18 @@ class NotificationScheduler implements ReminderScheduler {
   @override
   Future<void> cancelReminder(int id) => _plugin.cancel(id);
 
+  /// Shown immediately, for news that has already happened (a goal
+  /// milestone) rather than a time to come.
+  Future<void> showNow(int id, String body) => _plugin.show(
+        id,
+        'Target',
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails('goals', 'Target'),
+          iOS: DarwinNotificationDetails(),
+        ),
+      );
+
   void _openFromPayload(String? payload) {
     final context = _navigatorKey.currentContext;
     if (context == null || payload == null) return;

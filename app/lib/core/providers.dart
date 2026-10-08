@@ -8,6 +8,7 @@ import '../data/capture_queries.dart';
 import '../data/category_rank_queries.dart';
 import '../data/database.dart';
 import '../data/feature_flags_repository.dart';
+import '../data/goals_repository.dart';
 import '../data/ledger_queries.dart';
 import '../data/period_aggregate_queries.dart';
 import '../data/postings_repository.dart';
@@ -49,6 +50,24 @@ final walletsRepositoryProvider = Provider<WalletsRepository>((ref) {
 /// shape is invisible there. Hoist one if a table it reads ever grows.
 final walletBalancesProvider = StreamProvider<List<WalletWithBalance>>((ref) {
   return ref.watch(walletsRepositoryProvider).watchWallets();
+});
+
+final goalsRepositoryProvider = Provider<GoalsRepository>((ref) {
+  return GoalsRepository(ref.watch(databaseProvider));
+});
+
+final _goalRowsProvider = StreamProvider<List<Goal>>((ref) {
+  return ref.watch(goalsRepositoryProvider).watchGoals();
+});
+
+/// Goals with progress, loading until both goals and balances have arrived.
+final goalsProvider = Provider<AsyncValue<List<GoalWithProgress>>>((ref) {
+  final rows = ref.watch(_goalRowsProvider);
+  final wallets = ref.watch(walletBalancesProvider);
+  if (rows.hasError) return AsyncValue.error(rows.error!, rows.stackTrace!);
+  if (wallets.hasError) return AsyncValue.error(wallets.error!, wallets.stackTrace!);
+  if (!rows.hasValue || !wallets.hasValue) return const AsyncValue.loading();
+  return AsyncValue.data(joinGoals(rows.value!, wallets.value!));
 });
 
 final ledgerQueriesProvider = Provider<LedgerQueries>((ref) {

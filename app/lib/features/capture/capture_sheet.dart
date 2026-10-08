@@ -121,6 +121,12 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   List<String> _rankedIds = const [];
   final _sinceOpen = Stopwatch()..start();
 
+  /// Non-null while an expense is being split across categories.
+  List<_SplitLine>? _split;
+
+  int get _splitRemainderMinor =>
+      _amount.minor - (_split ?? const []).fold(0, (sum, l) => sum + l.minor);
+
   static const _formatter = MoneyFormatter();
   static const _currency = 'IDR'; // only currency seeded so far; see Sprint 5
   static final _dateFormat = DateFormat('d MMM', 'id_ID');
@@ -139,12 +145,17 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       _noteController.text = widget.initialNote!;
     }
     _loadRanking();
-    unawaited(ref.read(analyticsRepositoryProvider).logEvent('capture_open', props: {'source': widget.source}));
+    unawaited(ref
+        .read(analyticsRepositoryProvider)
+        .logEvent('capture_open', props: {'source': widget.source}));
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    for (final line in _split ?? const <_SplitLine>[]) {
+      line.amount.dispose();
+    }
     super.dispose();
   }
 
@@ -153,14 +164,26 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   Future<void> _loadRanking() async {
     if (_kind == CaptureKind.transfer) return;
     final kind = _kind;
-    final ids = await ref
-        .read(captureQueriesProvider)
-        .rankedCategoryIds(kind == CaptureKind.expense ? 'expense' : 'income', DateTime.now());
+    final ids = await ref.read(captureQueriesProvider).rankedCategoryIds(
+        kind == CaptureKind.expense ? 'expense' : 'income', DateTime.now());
     if (!mounted || kind != _kind) return;
     setState(() {
       _rankedIds = ids;
       if (_categoryId == null && ids.isNotEmpty) _categoryId = ids.first;
     });
+  }
+
+  /// The wallet this category was last recorded from, so picking a category
+  /// moves the wallet with it (plan/04-ux-design.md: "the wallet defaults to
+  /// the last wallet used with the selected category, not to a global
+  /// default"). A wallet the user picked by hand wins until the category
+  /// changes, which is why this only runs on a category tap.
+  Future<void> _adoptLastWalletFor(String categoryId) async {
+    final last = await ref
+        .read(captureQueriesProvider)
+        .lastAccountIdForCategory(categoryId);
+    if (!mounted || last == null || _categoryId != categoryId) return;
+    setState(() => _accountId = last);
   }
 
   /// The buffer may hold a calculator expression like "15000+5000". Left to
@@ -190,7 +213,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       Money.fromMajor(num.tryParse(_currentOperand) ?? 0, _currency);
 
   bool get _bufferEndsWithOperator =>
-      _amountBuffer.isNotEmpty && '+-×÷'.contains(_amountBuffer[_amountBuffer.length - 1]);
+      _amountBuffer.isNotEmpty &&
+      '+-×÷'.contains(_amountBuffer[_amountBuffer.length - 1]);
 
   bool get _bufferHasExpression => _amountBuffer.contains(RegExp(r'[+\-×÷]'));
 
@@ -223,7 +247,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   }
 
   void _appendZeros() {
-    if (_amountBuffer.isEmpty || _bufferEndsWithOperator || _atDigitLimit()) return;
+    if (_amountBuffer.isEmpty || _bufferEndsWithOperator || _atDigitLimit())
+      return;
     setState(() => _amountBuffer += '000');
   }
 
@@ -248,7 +273,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
   void _backspace() {
     if (_amountBuffer.isEmpty) return;
-    setState(() => _amountBuffer = _amountBuffer.substring(0, _amountBuffer.length - 1));
+    setState(() =>
+        _amountBuffer = _amountBuffer.substring(0, _amountBuffer.length - 1));
   }
 
   Future<void> _pickDateTime() async {
@@ -265,7 +291,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     );
     if (time == null) return;
     setState(() {
-      _occurredAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _occurredAt =
+          DateTime(date.year, date.month, date.day, time.hour, time.minute);
     });
   }
 
@@ -277,8 +304,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       // No camera available (emulator, denied permission, desktop test) —
       // the photo is optional, so failing quietly is correct here.
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Kamera tidak tersedia')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kamera tidak tersedia')));
       }
     }
   }
@@ -295,6 +322,12 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
       if (_accountId == _toAccountId) {
         return 'Kantong asal dan tujuan tidak boleh sama.';
       }
+      return null;
+    }
+    if (_split case final split?) {
+      if (split.length < 2) return 'Pecah ke minimal dua kategori.';
+      if (split.any((l) => l.categoryId == null)) return 'Pilih kategori tiap bagian.';
+      if (_splitRemainderMinor != 0) return 'Sisanya harus Rp 0 dulu.';
       return null;
     }
     if (_categoryId == null) return 'Pilih kategorinya dulu.';
@@ -329,7 +362,9 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           kind: 'transfer',
           occurredAt: _occurredAt.toUtc().millisecondsSinceEpoch,
           tzOffsetMinutes: _occurredAt.timeZoneOffset.inMinutes,
-          note: _noteController.text.isEmpty ? const Value.absent() : Value(_noteController.text),
+          note: _noteController.text.isEmpty
+              ? const Value.absent()
+              : Value(_noteController.text),
           updatedAt: now.toUtc().millisecondsSinceEpoch,
         ),
         postings: [
@@ -352,8 +387,12 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         ],
       );
     } else {
-      final accountId = _accountId ?? await ref.read(captureQueriesProvider).defaultAccountId();
-      final categoryLeg = _subcategoryId ?? _categoryId!;
+      final accountId = _accountId ??
+          await ref.read(captureQueriesProvider).defaultAccountId();
+      final split = _split;
+      final categoryLegs = split == null
+          ? [(categoryId: _subcategoryId ?? _categoryId!, minor: _amount.minor)]
+          : [for (final l in split) (categoryId: l.categoryId!, minor: l.minor)];
 
       // Expense: account leg negative, category leg positive.
       // Income: account leg positive, category leg negative.
@@ -365,8 +404,11 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           kind: _kind == CaptureKind.expense ? 'expense' : 'income',
           occurredAt: _occurredAt.toUtc().millisecondsSinceEpoch,
           tzOffsetMinutes: _occurredAt.timeZoneOffset.inMinutes,
-          note: _noteController.text.isEmpty ? const Value.absent() : Value(_noteController.text),
-          photoPath: _photoPath == null ? const Value.absent() : Value(_photoPath),
+          note: _noteController.text.isEmpty
+              ? const Value.absent()
+              : Value(_noteController.text),
+          photoPath:
+              _photoPath == null ? const Value.absent() : Value(_photoPath),
           updatedAt: now.toUtc().millisecondsSinceEpoch,
         ),
         postings: [
@@ -378,14 +420,15 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
             currency: _currency,
             baseAmountMinor: sign * _amount.minor,
           ),
-          PostingsCompanion.insert(
-            id: _uuid.v4(),
-            transactionId: txId,
-            categoryId: Value(categoryLeg),
-            amountMinor: -sign * _amount.minor,
-            currency: _currency,
-            baseAmountMinor: -sign * _amount.minor,
-          ),
+          for (final leg in categoryLegs)
+            PostingsCompanion.insert(
+              id: _uuid.v4(),
+              transactionId: txId,
+              categoryId: Value(leg.categoryId),
+              amountMinor: -sign * leg.minor,
+              currency: _currency,
+              baseAmountMinor: -sign * leg.minor,
+            ),
         ],
       );
     }
@@ -431,13 +474,16 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   /// For an expense in a budgeted kantong, what is left of it this period.
   Future<String> _savedMessage(WudgetDatabase db) async {
     final plain = 'Tersimpan: ${_formatter.format(_amount)}';
-    if (_kind != CaptureKind.expense) return plain;
+    if (_kind != CaptureKind.expense || _split != null) return plain;
     final queries = ref.read(captureQueriesProvider);
-    final period = await ref.read(settingsRepositoryProvider).effectivePeriodFor(todayDayBucket());
+    final period = await ref
+        .read(settingsRepositoryProvider)
+        .effectivePeriodFor(todayDayBucket());
     final remaining = await queries.kantongRemaining(_categoryId!, period);
     if (remaining == null) return plain;
-    final category =
-        await (db.select(db.categories)..where((c) => c.id.equals(_categoryId!))).getSingle();
+    final category = await (db.select(db.categories)
+          ..where((c) => c.id.equals(_categoryId!)))
+        .getSingle();
     return 'Tersimpan. Kantong ${category.name} sisa '
         '${_formatter.format(Money.fromMinor(remaining, _currency))} '
         'sampai ${_dateFormat.format(period.lastDate)}.';
@@ -449,14 +495,16 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     final db = ref.watch(databaseProvider);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: WudgetTokens.space2, bottom: WudgetTokens.space3),
+              padding: const EdgeInsets.only(
+                  top: WudgetTokens.space2, bottom: WudgetTokens.space3),
               child: Container(
                 width: 36,
                 height: 4,
@@ -476,7 +524,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: WudgetTokens.space4),
                       child: Row(
                         children: [
                           Expanded(
@@ -503,7 +552,9 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                           ),
                           const SizedBox(width: WudgetTokens.space2),
                           _SquareIconButton(
-                            icon: _photoPath == null ? Icons.photo_camera_outlined : Icons.photo_camera,
+                            icon: _photoPath == null
+                                ? Icons.photo_camera_outlined
+                                : Icons.photo_camera,
                             tooltip: 'Kamera struk',
                             active: _photoPath != null,
                             onPressed: _pickReceiptPhoto,
@@ -512,10 +563,32 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                       ),
                     ),
                     if (_kind == CaptureKind.transfer) _transferAccounts(db),
+                    if (_kind != CaptureKind.transfer)
+                      _walletSelector(db, tokens),
                     _amountDisplay(tokens),
                     _noteLine(),
-                    if (_kind != CaptureKind.transfer) _categories(db, tokens),
-                    if (_categoryId != null) _subcategories(db, tokens),
+                    if (_kind != CaptureKind.transfer)
+                      _frequentTemplates(db, tokens),
+                    if (_split != null)
+                      _splitSection(db, tokens)
+                    else ...[
+                      if (_kind != CaptureKind.transfer) _categories(db, tokens),
+                      if (_categoryId != null) _subcategories(db, tokens),
+                      if (_kind == CaptureKind.expense &&
+                          widget.editingTransactionId == null)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            key: const Key('captureSplitStart'),
+                            icon: const Icon(Icons.call_split, size: 18),
+                            label: const Text('Pecah ke beberapa kategori'),
+                            onPressed: () => setState(() => _split = [
+                                  _SplitLine(_categoryId, _amount.minor),
+                                  _SplitLine(null, 0),
+                                ]),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -555,10 +628,12 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           );
         }
         _accountId ??= accounts.first.id;
-        _toAccountId ??= accounts.firstWhere(
-          (a) => a.id != _accountId,
-          orElse: () => accounts.last,
-        ).id;
+        _toAccountId ??= accounts
+            .firstWhere(
+              (a) => a.id != _accountId,
+              orElse: () => accounts.last,
+            )
+            .id;
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             WudgetTokens.space4,
@@ -574,7 +649,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Dari'),
                   items: [
-                    for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    for (final a in accounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
                   ],
                   onChanged: (id) => setState(() => _accountId = id),
                 ),
@@ -589,7 +665,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Ke'),
                   items: [
-                    for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    for (final a in accounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
                   ],
                   onChanged: (id) => setState(() => _toAccountId = id),
                 ),
@@ -601,24 +678,189 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     );
   }
 
+  /// Where the entry goes, drawn as the mockup's `[GoPay v]` chip. The sheet
+  /// used to pick the oldest wallet silently and offer no way to change it,
+  /// which made Sprint 4's "allow override of auto-selection" unbuilt. One
+  /// wallet is a plain label, since there is nothing to choose between.
+  Widget _walletSelector(WudgetDatabase db, WudgetTokens tokens) {
+    return StreamBuilder<List<Account>>(
+      stream: (db.select(db.accounts)
+            ..where((a) => a.archivedAt.isNull() & a.deletedAt.isNull())
+            ..orderBy([(a) => OrderingTerm.asc(a.rowId)]))
+          .watch(),
+      builder: (context, snapshot) {
+        final accounts = snapshot.data ?? const <Account>[];
+        if (accounts.isEmpty) return const SizedBox.shrink();
+
+        final selected = accounts.firstWhere(
+          (a) => a.id == _accountId,
+          orElse: () => accounts.first,
+        );
+        final text = Theme.of(context).textTheme;
+        final label = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(walletTypeIcon(selected.type), size: 14, color: tokens.ink2),
+            const SizedBox(width: 4),
+            Text(selected.name,
+                style: text.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            if (accounts.length > 1) ...[
+              const SizedBox(width: 2),
+              Icon(Icons.arrow_drop_down, size: 16, color: tokens.ink2),
+            ],
+          ],
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: accounts.length == 1
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: WudgetTokens.space2),
+                    child: label,
+                  )
+                : PopupMenuButton<Account>(
+                    tooltip: 'Ganti kantong',
+                    position: PopupMenuPosition.under,
+                    onSelected: (a) => setState(() => _accountId = a.id),
+                    itemBuilder: (_) => [
+                      for (final a in accounts)
+                        PopupMenuItem(
+                          value: a,
+                          child: Row(
+                            children: [
+                              Icon(walletTypeIcon(a.type),
+                                  size: 16, color: tokens.ink2),
+                              const SizedBox(width: WudgetTokens.space2),
+                              Text(a.name),
+                              if (a.id == selected.id) ...[
+                                const Spacer(),
+                                Icon(Icons.check,
+                                    size: 16, color: tokens.accent),
+                              ],
+                            ],
+                          ),
+                        ),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: WudgetTokens.space3),
+                      child: label,
+                    ),
+                  ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _frequentTemplates(WudgetDatabase db, WudgetTokens tokens) {
+    return FutureBuilder<
+        List<({String categoryId, int amountMinor, String? note})>>(
+      future: _loadFrequentTemplates(db),
+      builder: (context, snapshot) {
+        final templates = snapshot.data ?? [];
+        if (templates.isEmpty) return const SizedBox.shrink();
+
+        return SizedBox(
+          height: 60,
+          child: StreamBuilder<List<Category>>(
+            stream: db.select(db.categories).watch(),
+            builder: (context, catSnapshot) {
+              final categories = {
+                for (final c in catSnapshot.data ?? <Category>[]) c.id: c
+              };
+              return ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+                itemCount: templates.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: WudgetTokens.space2),
+                itemBuilder: (context, index) {
+                  final template = templates[index];
+                  final category = categories[template.categoryId];
+                  if (category == null) return const SizedBox.shrink();
+
+                  return ActionChip(
+                    label: Text(
+                      '${category.name} ${_formatter.format(Money.fromMinor(template.amountMinor, _currency))}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _categoryId = template.categoryId;
+                        _subcategoryId = null;
+                        final info = CurrencyInfo.of(_currency);
+                        _amountBuffer = info.exponent == 0
+                            ? template.amountMinor.toString()
+                            : (template.amountMinor / info.minorUnitsPerMajor)
+                                .toString();
+                        if (template.note != null) {
+                          _noteController.text = template.note!;
+                        }
+                      });
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<List<({String categoryId, int amountMinor, String? note})>>
+      _loadFrequentTemplates(
+    WudgetDatabase db,
+  ) async {
+    final kind = _kind == CaptureKind.expense ? 'expense' : 'income';
+    final query = '''
+      SELECT p.category_id, p.amount_minor, t.note, COUNT(*) as cnt
+      FROM transactions t
+      JOIN postings p ON t.id = p.transaction_id
+      WHERE t.kind = ? AND t.deleted_at IS NULL AND p.category_id IS NOT NULL
+      GROUP BY p.category_id, p.amount_minor, t.note
+      ORDER BY cnt DESC, MAX(t.occurred_at) DESC
+      LIMIT 5
+    ''';
+    final result =
+        await db.customSelect(query, variables: [Variable<String>(kind)]).get();
+    return result
+        .map((row) => (
+              categoryId: row.read<String>('category_id'),
+              amountMinor: row.read<int>('amount_minor'),
+              note: row.read<String?>('note'),
+            ))
+        .toList();
+  }
+
   Widget _categories(WudgetDatabase db, WudgetTokens tokens) {
     return StreamBuilder<List<Category>>(
       stream: (db.select(db.categories)
-            ..where((c) => c.kind.equals(_kind == CaptureKind.expense ? 'expense' : 'income'))
+            ..where((c) => c.kind
+                .equals(_kind == CaptureKind.expense ? 'expense' : 'income'))
             ..where((c) => c.parentId.isNull())
             ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
           .watch(),
       builder: (context, snapshot) {
-        final rank = {for (var i = 0; i < _rankedIds.length; i++) _rankedIds[i]: i};
-        final categories = [...?snapshot.data]
-          ..sort((a, b) => (rank[a.id] ?? rank.length).compareTo(rank[b.id] ?? rank.length));
+        final rank = {
+          for (var i = 0; i < _rankedIds.length; i++) _rankedIds[i]: i
+        };
+        final categories = [...?snapshot.data]..sort((a, b) =>
+            (rank[a.id] ?? rank.length).compareTo(rank[b.id] ?? rank.length));
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_rankedIds.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    WudgetTokens.space4, WudgetTokens.space3, WudgetTokens.space4, WudgetTokens.space2),
+                    WudgetTokens.space4,
+                    WudgetTokens.space3,
+                    WudgetTokens.space4,
+                    WudgetTokens.space2),
                 child: Text('Kategori, diurutkan dari kebiasaanmu jam segini',
                     style: Theme.of(context).textTheme.labelMedium),
               ),
@@ -627,10 +869,14 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
               tokens: tokens,
               selectedId: _categoryId,
               onCreate: () => _createCategory(categories),
-              onSelected: (id) => setState(() {
-                _categoryId = id;
-                _subcategoryId = null;
-              }),
+              onSelected: (id) {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  _categoryId = id;
+                  _subcategoryId = null;
+                });
+                _adoptLastWalletFor(id);
+              },
             ),
           ],
         );
@@ -668,7 +914,9 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
 
   Widget _subcategories(WudgetDatabase db, WudgetTokens tokens) {
     return StreamBuilder<List<Category>>(
-      stream: (db.select(db.categories)..where((c) => c.parentId.equals(_categoryId!))).watch(),
+      stream: (db.select(db.categories)
+            ..where((c) => c.parentId.equals(_categoryId!)))
+          .watch(),
       builder: (context, snapshot) {
         final subcategories = snapshot.data ?? const [];
         if (subcategories.isEmpty) return const SizedBox.shrink();
@@ -677,7 +925,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           selectedId: _subcategoryId,
           hueIndex: subcategories.first.hueIndex,
           tokens: tokens,
-          onSelected: (id) => setState(() => _subcategoryId = _subcategoryId == id ? null : id),
+          onSelected: (id) =>
+              setState(() => _subcategoryId = _subcategoryId == id ? null : id),
         );
       },
     );
@@ -686,7 +935,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
   Widget _amountDisplay(WudgetTokens tokens) {
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.only(top: WudgetTokens.space4, bottom: WudgetTokens.space2),
+      padding: const EdgeInsets.only(
+          top: WudgetTokens.space4, bottom: WudgetTokens.space2),
       child: Column(
         children: [
           Row(
@@ -696,7 +946,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
             children: [
               Text(
                 CurrencyInfo.of(_currency).symbol,
-                style: text.titleLarge?.copyWith(fontSize: 20, color: tokens.ink2),
+                style:
+                    text.titleLarge?.copyWith(fontSize: 20, color: tokens.ink2),
               ),
               const SizedBox(width: WudgetTokens.space2),
               // The operand being typed, with what is waiting for it on the
@@ -726,7 +977,8 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
           if (_pendingExpression.isNotEmpty) ...[
             const SizedBox(height: WudgetTokens.space1),
             Text(
-              _pendingExpression.replaceAllMapped(RegExp(r'[+\-×÷]'), (m) => ' ${m[0]} '),
+              _pendingExpression.replaceAllMapped(
+                  RegExp(r'[+\-×÷]'), (m) => ' ${m[0]} '),
               style: text.bodySmall?.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -737,7 +989,35 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     );
   }
 
+  bool _noteExpanded = false;
+  bool _noteManuallyExpanded = false;
+
   Widget _noteLine() {
+    if (!_noteExpanded) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+        child: InkWell(
+          onTap: () => setState(() => _noteExpanded = true),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: WudgetTokens.space2),
+            child: Row(
+              children: [
+                Icon(Icons.add,
+                    size: 16, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: WudgetTokens.space2),
+                Text(
+                  'Tambah catatan',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
       child: TextField(
@@ -745,8 +1025,113 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
         controller: _noteController,
         textCapitalization: TextCapitalization.sentences,
         textAlign: TextAlign.center,
-        decoration: const InputDecoration(hintText: 'Catatan, boleh kosong'),
+        decoration: InputDecoration(
+          hintText: 'Catatan, boleh kosong',
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.close, size: 16),
+            onPressed: () {
+              _noteController.clear();
+              setState(() => _noteExpanded = false);
+            },
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _splitSection(WudgetDatabase db, WudgetTokens tokens) {
+    final split = _split!;
+    final remainder = _splitRemainderMinor;
+    return StreamBuilder<List<Category>>(
+      stream: (db.select(db.categories)
+            ..where((c) => c.kind.equals('expense'))
+            ..orderBy([(c) => OrderingTerm.asc(c.sortOrder)]))
+          .watch(),
+      builder: (context, snapshot) {
+        final categories = snapshot.data ?? const <Category>[];
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WudgetTokens.space4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Pecah ke kategori',
+                        style: Theme.of(context).textTheme.labelMedium),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      for (final l in split) {
+                        l.amount.dispose();
+                      }
+                      _split = null;
+                    }),
+                    child: const Text('Batal pecah'),
+                  ),
+                ],
+              ),
+              for (final (i, line) in split.indexed)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: WudgetTokens.space2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: DropdownButtonFormField<String>(
+                          key: Key('splitCategory_$i'),
+                          value: line.categoryId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'Kategori'),
+                          items: [
+                            for (final c in categories)
+                              DropdownMenuItem(value: c.id, child: Text(c.name)),
+                          ],
+                          onChanged: (id) => setState(() => line.categoryId = id),
+                        ),
+                      ),
+                      const SizedBox(width: WudgetTokens.space2),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          key: Key('splitAmount_$i'),
+                          controller: line.amount,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Rp'),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'Hapus bagian',
+                        onPressed: () => setState(() => split.removeAt(i).amount.dispose()),
+                      ),
+                    ],
+                  ),
+                ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    key: const Key('splitAdd'),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Tambah kategori'),
+                    onPressed: () => setState(() => split.add(_SplitLine(null, 0))),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Sisa ${_formatter.format(Money.fromMinor(remainder, _currency))}',
+                    key: const Key('splitRemainder'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: remainder == 0 ? tokens.ink2 : tokens.warning,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -756,15 +1141,19 @@ class _CaptureSheetState extends ConsumerState<CaptureSheet> {
     return StreamBuilder<List<Category>>(
       stream: db.select(db.categories).watch(),
       builder: (context, snapshot) {
-        final names = {for (final c in snapshot.data ?? const <Category>[]) c.id: c.name};
+        final names = {
+          for (final c in snapshot.data ?? const <Category>[]) c.id: c.name
+        };
         final amount = _amount.isZero ? '' : ' ${_formatter.format(_amount)}';
-        final category = names[_subcategoryId ?? _categoryId ?? ''];
+        final category =
+            _split != null ? null : names[_subcategoryId ?? _categoryId ?? ''];
         final label = switch (_kind) {
           // Income on a normal day; the gajian split arrives with payday (R3).
           CaptureKind.income => 'Simpan saja',
           CaptureKind.transfer => 'Simpan$amount',
-          CaptureKind.expense =>
-            category == null || amount.isEmpty ? 'Simpan$amount' : 'Simpan$amount ke $category',
+          CaptureKind.expense => category == null || amount.isEmpty
+              ? 'Simpan$amount'
+              : 'Simpan$amount ke $category',
         };
         final canSave = _blockingSave == null;
         return Padding(
@@ -830,9 +1219,11 @@ class _SquareIconButton extends StatelessWidget {
               height: WudgetTokens.minTapTarget,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(WudgetTokens.radiusControl),
-                border: Border.all(color: active ? tokens.accent : tokens.borderStrong),
+                border: Border.all(
+                    color: active ? tokens.accent : tokens.borderStrong),
               ),
-              child: Icon(icon, size: 20, color: active ? tokens.inkOnAccent : tokens.ink1),
+              child: Icon(icon,
+                  size: 20, color: active ? tokens.inkOnAccent : tokens.ink1),
             ),
           ),
         ),
@@ -902,57 +1293,59 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-            final c = category;
-            final hue = tokens.hueFor(c.hueIndex);
-            return Semantics(
-              selected: selected,
-              button: true,
-              label: c.name,
-              excludeSemantics: true,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
-                child: SizedBox(
-                  width: 58,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: WudgetTokens.categoryTile,
-                        height: WudgetTokens.categoryTile,
-                        decoration: BoxDecoration(
-                          color: selected ? tokens.tintFor(c.hueIndex) : tokens.surfaceMuted,
-                          borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
-                          // The selected tile carries a border as well as a
-                          // fill, so selection survives not seeing hue.
-                          border: Border.all(
-                            color: selected ? hue : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Icon(
-                          categoryIcon(c.iconKey),
-                          size: 22,
-                          color: selected ? tokens.inkFor(c.hueIndex) : tokens.ink2,
-                        ),
-                      ),
-                      const SizedBox(height: WudgetTokens.space1),
-                      Text(
-                        c.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontFamily: WudgetTokens.fontFamily,
-                          fontSize: 11,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected ? tokens.ink1 : tokens.ink2,
-                        ),
-                      ),
-                    ],
+    final c = category;
+    final hue = tokens.hueFor(c.hueIndex);
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: c.name,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+        child: SizedBox(
+          width: 58,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: WudgetTokens.categoryTile,
+                height: WudgetTokens.categoryTile,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? tokens.tintFor(c.hueIndex)
+                      : tokens.surfaceMuted,
+                  borderRadius: BorderRadius.circular(WudgetTokens.radiusTile),
+                  // The selected tile carries a border as well as a
+                  // fill, so selection survives not seeing hue.
+                  border: Border.all(
+                    color: selected ? hue : Colors.transparent,
+                    width: 2,
                   ),
                 ),
+                child: Icon(
+                  categoryIcon(c.iconKey),
+                  size: 22,
+                  color: selected ? tokens.inkFor(c.hueIndex) : tokens.ink2,
+                ),
               ),
-            );
+              const SizedBox(height: WudgetTokens.space1),
+              Text(
+                c.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: WudgetTokens.fontFamily,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? tokens.ink1 : tokens.ink2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1031,7 +1424,8 @@ class _SubcategoryChips extends StatelessWidget {
           children: [
             for (var i = 0; i < subcategories.length; i++) ...[
               if (i > 0) const SizedBox(width: WudgetTokens.space2),
-              _subcategoryChip(subcategories[i], subcategories[i].id == selectedId),
+              _subcategoryChip(
+                  subcategories[i], subcategories[i].id == selectedId),
             ],
           ],
         ),
@@ -1040,24 +1434,25 @@ class _SubcategoryChips extends StatelessWidget {
   }
 
   Widget _subcategoryChip(Category s, bool selected) {
-            return ChoiceChip(
-              label: Text(s.name),
-              selected: selected,
-              // The same treatment as a selected category tile: the hue's
-              // tint as the ground and its darker ink as the label, plus a
-              // hue border. Filling with the hue itself and writing white on
-              // it measured 3.56:1 on the lightest hue, below the 4.5 a
-              // label needs (test/domain/contrast_test.dart).
-              selectedColor: tokens.tintFor(hueIndex),
-              side: BorderSide(color: selected ? tokens.hueFor(hueIndex) : tokens.border),
-              labelStyle: TextStyle(
-                fontFamily: WudgetTokens.fontFamily,
-                fontSize: 12.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? tokens.inkFor(hueIndex) : tokens.ink1,
-              ),
-              onSelected: (_) => onSelected(s.id),
-            );
+    return ChoiceChip(
+      label: Text(s.name),
+      selected: selected,
+      // The same treatment as a selected category tile: the hue's
+      // tint as the ground and its darker ink as the label, plus a
+      // hue border. Filling with the hue itself and writing white on
+      // it measured 3.56:1 on the lightest hue, below the 4.5 a
+      // label needs (test/domain/contrast_test.dart).
+      selectedColor: tokens.tintFor(hueIndex),
+      side:
+          BorderSide(color: selected ? tokens.hueFor(hueIndex) : tokens.border),
+      labelStyle: TextStyle(
+        fontFamily: WudgetTokens.fontFamily,
+        fontSize: 12.5,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        color: selected ? tokens.inkFor(hueIndex) : tokens.ink1,
+      ),
+      onSelected: (_) => onSelected(s.id),
+    );
   }
 }
 
@@ -1133,7 +1528,9 @@ class _Numpad extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = <List<Widget>>[
       [
-        _digit('1'), _digit('2'), _digit('3'),
+        _digit('1'),
+        _digit('2'),
+        _digit('3'),
         _NumpadKey(
           key: const Key('numpadKey_backspace'),
           icon: Icons.backspace_outlined,
@@ -1143,7 +1540,9 @@ class _Numpad extends StatelessWidget {
         ),
       ],
       [
-        _digit('4'), _digit('5'), _digit('6'),
+        _digit('4'),
+        _digit('5'),
+        _digit('6'),
         _NumpadKey(
           key: const Key('numpadKey_calculator'),
           icon: Icons.calculate_outlined,
@@ -1153,7 +1552,9 @@ class _Numpad extends StatelessWidget {
         ),
       ],
       [
-        _digit('7'), _digit('8'), _digit('9'),
+        _digit('7'),
+        _digit('8'),
+        _digit('9'),
         _NumpadKey(
           key: const Key('numpadKey_date'),
           label: dateLabel,
@@ -1167,7 +1568,8 @@ class _Numpad extends StatelessWidget {
         showDecimal ? _digit('.') : const SizedBox.shrink(),
         _digit('0'),
         showZeros
-            ? _NumpadKey(key: const Key('numpadKey_000'), label: '000', onTap: onZeros)
+            ? _NumpadKey(
+                key: const Key('numpadKey_000'), label: '000', onTap: onZeros)
             : const SizedBox.shrink(),
         const SizedBox.shrink(),
       ],
@@ -1276,7 +1678,9 @@ class _NumpadKey extends StatelessWidget {
                         maxLines: 1,
                         style: TextStyle(
                           fontFamily: WudgetTokens.fontFamily,
-                          fontSize: caption != null ? 12.5 : (label!.length > 2 ? 16 : 21),
+                          fontSize: caption != null
+                              ? 12.5
+                              : (label!.length > 2 ? 16 : 21),
                           fontWeight: FontWeight.w600,
                           color: foreground,
                           fontFeatures: const [FontFeature.tabularFigures()],
@@ -1299,4 +1703,13 @@ class _NumpadKey extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SplitLine {
+  _SplitLine(this.categoryId, int minor)
+      : amount = TextEditingController(text: minor == 0 ? '' : '$minor');
+  String? categoryId;
+  final TextEditingController amount;
+
+  int get minor => int.tryParse(amount.text.replaceAll('.', '')) ?? 0;
 }

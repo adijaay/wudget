@@ -28,9 +28,16 @@ class BudgetsRepository {
   Future<void> setAmount(String key, int amountMinor) {
     final now = DateTime.now().toUtc().millisecondsSinceEpoch;
     return _db.into(_db.budgets).insertOnConflictUpdate(
-          BudgetsCompanion.insert(key: key, amountMinor: amountMinor, updatedAt: now),
+          BudgetsCompanion.insert(
+              key: key, amountMinor: amountMinor, updatedAt: now),
         );
   }
+
+  /// Removes a key entirely, for an undo putting back a set that never had
+  /// it. A budget of Rp 0 is still a saved budget, so the undo cannot fake
+  /// this with setAmount(key, 0).
+  Future<void> clearAmount(String key) =>
+      (_db.delete(_db.budgets)..where((b) => b.key.equals(key))).go();
 
   /// Keeps today's plan as the plan of the period starting [periodStartDay],
   /// so that period's recap still compares against it after Budgets changes.
@@ -38,7 +45,8 @@ class BudgetsRepository {
     final all = await _snapshots();
     all['$periodStartDay'] = await getAll();
     await _db.into(_db.appSettings).insertOnConflictUpdate(
-          AppSettingsCompanion(id: const Value(0), budgetSnapshotsJson: Value(jsonEncode(all))),
+          AppSettingsCompanion(
+              id: const Value(0), budgetSnapshotsJson: Value(jsonEncode(all))),
         );
   }
 
@@ -47,11 +55,14 @@ class BudgetsRepository {
       (await _snapshots())['$periodStartDay'] ?? await getAll();
 
   Future<Map<String, Map<String, int>>> _snapshots() async {
-    final row = await (_db.select(_db.appSettings)..where((s) => s.id.equals(0))).getSingleOrNull();
+    final row = await (_db.select(_db.appSettings)
+          ..where((s) => s.id.equals(0)))
+        .getSingleOrNull();
     final raw = row?.budgetSnapshotsJson;
     if (raw == null) return {};
     return {
-      for (final MapEntry(:key, :value) in (jsonDecode(raw) as Map<String, dynamic>).entries)
+      for (final MapEntry(:key, :value)
+          in (jsonDecode(raw) as Map<String, dynamic>).entries)
         key: (value as Map<String, dynamic>).cast<String, int>(),
     };
   }

@@ -49,6 +49,9 @@ void main() {
     expect(find.text('Pilih kategorinya dulu.'), findsOneWidget,
         reason: 'an amount with no category is the next thing missing');
 
+    await tester.ensureVisible(find.text('Makan').first);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Makan').first);
     await tester.pumpAndSettle();
     expect(find.text('Pilih kategorinya dulu.'), findsNothing);

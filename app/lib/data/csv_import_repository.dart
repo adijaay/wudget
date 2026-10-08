@@ -40,6 +40,33 @@ class CsvImportRepository {
     for (final row in rows) {
       try {
         final accountId = await _resolveAccount(row.accountName, currency, accountIdByName, now);
+        if (row.kind == 'transfer') {
+          final toId = await _resolveAccount(row.toAccountName, currency, accountIdByName, now);
+          final txId = _uuid.v4();
+          await _postings.insertTransaction(
+            transaction: TransactionsCompanion.insert(
+              id: txId,
+              kind: 'transfer',
+              occurredAt: row.occurredAtUtcMillis,
+              tzOffsetMinutes: 0,
+              note: row.note == null ? const Value.absent() : Value(row.note),
+              updatedAt: now,
+            ),
+            postings: [
+              for (final (suffix, id, sign) in [('a', accountId, -1), ('b', toId, 1)])
+                PostingsCompanion.insert(
+                  id: '${txId}_$suffix',
+                  transactionId: txId,
+                  accountId: Value(id),
+                  amountMinor: sign * row.amountMinor,
+                  currency: currency,
+                  baseAmountMinor: sign * row.amountMinor,
+                ),
+            ],
+          );
+          imported++;
+          continue;
+        }
         final categoryId = await _resolveCategory(row.categoryName, row.kind, categoryIdByName, now);
         if (categoryId == null) {
           failures.add(ImportRowFailure(rowNumber: row.rowNumber, reason: 'Tidak ada kategori tujuan'));
